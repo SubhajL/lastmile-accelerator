@@ -31,11 +31,10 @@ describe('Config', () => {
   const setRequiredEnvVars = () => {
     process.env.SERVICE_NAME = 'test-lab-service';
     process.env.DATABASE_URL = 'postgres://user:pass@localhost:5432/testlab';
-    const host = 'localhost';
-    process.env.REDIS_URL = 'r' + 'edis://' + host + ':6379';
-    process.env.NATS_URL = 'n' + 'ats://' + host + ':4222';
-    process.env.OTEL_EXPORTER_OTLP_ENDPOINT = 'h' + 'ttp://' + host + ':4318';
-    process.env.JWT_JWKS_URL = 'h' + 'ttp://' + host + '/.well-known/jwks.json';
+    process.env.REDIS_URL = 'redis://localhost:6379';
+    process.env.NATS_URL = 'nats://localhost:4222';
+    process.env.OTEL_EXPORTER_OTLP_ENDPOINT = 'http://localhost:4318';
+    process.env.JWT_JWKS_URL = 'http://localhost:8080/.well-known/jwks.json';
     process.env.S3_BUCKET_PREVIEWS = 'test-previews';
     process.env.BROWSER_GRID_URL = 'http://selenium-grid:4444';
     process.env.VAULT_ADDR = 'http://vault:8200';
@@ -57,10 +56,10 @@ describe('Config', () => {
       expect(config.port).toBe(7202);
       expect(config.serviceName).toBe('test-lab-service');
       expect(config.databaseUrl).toBe('postgres://user:pass@localhost:5432/testlab');
-      expect(config.redisUrl).toBe('r' + 'edis://' + 'localhost:6379');
-      expect(config.natsUrl).toBe('n' + 'ats://' + 'localhost:4222');
-      expect(config.otelEndpoint).toBe('h' + 'ttp://' + 'localhost:4318');
-      expect(config.jwtJwksUrl).toBe('h' + 'ttp://' + 'localhost/.well-known/jwks.json');
+      expect(config.redisUrl).toBe('redis://localhost:6379');
+      expect(config.natsUrl).toBe('nats://localhost:4222');
+      expect(config.otelEndpoint).toBe('http://localhost:4318');
+      expect(config.jwtJwksUrl).toBe('http://localhost:8080/.well-known/jwks.json');
       expect(config.s3BucketPreviews).toBe('test-previews');
       expect(config.browserGridUrl).toBe('http://selenium-grid:4444');
       expect(config.env).toBe('dev');
