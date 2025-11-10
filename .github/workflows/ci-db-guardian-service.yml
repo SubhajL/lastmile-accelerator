@@ -1,0 +1,12 @@
+name: ci-db-guardian-service
+on:
+  push: { branches: [ main ], paths: [ 'services/db-guardian-service/**', 'packages/contracts/**' ] }
+  pull_request: { paths: [ 'services/db-guardian-service/**', 'packages/contracts/**' ] }
+jobs:
+  call:
+    uses: ./.github/workflows/_service-ci.yml
+    with:
+      lang: go
+      context: services/db-guardian-service
+      dockerfile: services/db-guardian-service/Dockerfile
+      image_suffix: db-guardian-service

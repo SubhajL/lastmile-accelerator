@@ -1,0 +1,6 @@
+title = "LMA gitleaks"
+[allowlist]
+paths = [
+  '''^packages/contracts/.*\.(json|yaml)$''',
+  '''^.*\.md$''',
+]

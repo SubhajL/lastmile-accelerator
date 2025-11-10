@@ -1,0 +1,12 @@
+name: ci-rate-limit-service
+on:
+  push: { branches: [ main ], paths: [ 'services/rate-limit-service/**', 'packages/contracts/**' ] }
+  pull_request: { paths: [ 'services/rate-limit-service/**', 'packages/contracts/**' ] }
+jobs:
+  call:
+    uses: ./.github/workflows/_service-ci.yml
+    with:
+      lang: go
+      context: services/rate-limit-service
+      dockerfile: services/rate-limit-service/Dockerfile
+      image_suffix: rate-limit-service

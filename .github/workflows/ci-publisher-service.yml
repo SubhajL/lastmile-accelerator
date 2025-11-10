@@ -1,0 +1,12 @@
+name: ci-publisher-service
+on:
+  push: { branches: [ main ], paths: [ 'services/publisher-service/**', 'packages/contracts/**' ] }
+  pull_request: { paths: [ 'services/publisher-service/**', 'packages/contracts/**' ] }
+jobs:
+  call:
+    uses: ./.github/workflows/_service-ci.yml
+    with:
+      lang: go
+      context: services/publisher-service
+      dockerfile: services/publisher-service/Dockerfile
+      image_suffix: publisher-service

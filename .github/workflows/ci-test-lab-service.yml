@@ -1,0 +1,12 @@
+name: ci-test-lab-service
+on:
+  push: { branches: [ main ], paths: [ 'services/test-lab-service/**', 'packages/contracts/**' ] }
+  pull_request: { paths: [ 'services/test-lab-service/**', 'packages/contracts/**' ] }
+jobs:
+  call:
+    uses: ./.github/workflows/_service-ci.yml
+    with:
+      lang: node
+      context: services/test-lab-service
+      dockerfile: services/test-lab-service/Dockerfile
+      image_suffix: test-lab-service

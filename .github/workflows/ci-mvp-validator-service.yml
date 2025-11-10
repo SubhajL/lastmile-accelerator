@@ -1,0 +1,12 @@
+name: ci-mvp-validator-service
+on:
+  push: { branches: [ main ], paths: [ 'services/mvp-validator-service/**', 'packages/contracts/**' ] }
+  pull_request: { paths: [ 'services/mvp-validator-service/**', 'packages/contracts/**' ] }
+jobs:
+  call:
+    uses: ./.github/workflows/_service-ci.yml
+    with:
+      lang: node
+      context: services/mvp-validator-service
+      dockerfile: services/mvp-validator-service/Dockerfile
+      image_suffix: mvp-validator-service

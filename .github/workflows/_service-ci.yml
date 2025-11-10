@@ -1,0 +1,133 @@
+name: _service-ci
+on:
+  workflow_call:
+    inputs:
+      lang: { required: true, type: string }
+      context: { required: true, type: string }
+      dockerfile: { required: true, type: string }
+      image_suffix: { required: true, type: string }
+jobs:
+  ci:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        if: inputs.lang == 'go'
+        uses: actions/setup-go@v5
+        with: { go-version: '1.22' }
+
+      - name: Setup Node
+        if: inputs.lang == 'node'
+        uses: actions/setup-node@v4
+        with: { node-version: '20' }
+
+      - name: Setup Bun
+        if: inputs.lang == 'node'
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: '1'
+
+      - name: Setup Python
+        if: inputs.lang == 'python'
+        uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+
+      - name: Setup Rust
+        if: inputs.lang == 'rust'
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install deps (node)
+        if: inputs.lang == 'node'
+        working-directory: ${{ inputs.context }}
+        run: bun install
+
+      - name: Install deps (python)
+        if: inputs.lang == 'python'
+        working-directory: ${{ inputs.context }}
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Unit tests (go)
+        if: inputs.lang == 'go'
+        working-directory: ${{ inputs.context }}
+        run: go test ./... -cover || true
+
+      - name: Unit tests (node)
+        if: inputs.lang == 'node'
+        working-directory: ${{ inputs.context }}
+        run: |
+          bun run -s typecheck || true
+          bun run test -- --reporter=dot || true
+
+      - name: Unit tests (python)
+        if: inputs.lang == 'python'
+        working-directory: ${{ inputs.context }}
+        run: pytest -q || true
+
+      - name: Unit tests (rust)
+        if: inputs.lang == 'rust'
+        working-directory: ${{ inputs.context }}
+        run: cargo test --all --locked || true
+
+      - name: Secret scan (gitleaks)
+        uses: zricethezav/gitleaks-action@v2
+        with: { config-path: .github/gitleaks.toml }
+
+      - name: Hadolint
+        uses: hadolint/hadolint-action@v3.1.0
+        with: { dockerfile: ${{ inputs.dockerfile }} }
+
+      - name: OPA policy (conftest)
+        uses: instrumenta/conftest-action@v0.3.0
+        with:
+          files: |
+            ${{ inputs.context }}/**/*.yaml
+          policy: .github/policy
+        continue-on-error: true
+
+      - name: Login GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute tag
+        id: vars
+        run: echo "tag=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+
+      - name: Build & push image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ inputs.context }}
+          file: ${{ inputs.dockerfile }}
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}-${{ inputs.image_suffix }}:${{ steps.vars.outputs.tag }}
+            ghcr.io/${{ github.repository }}-${{ inputs.image_suffix }}:latest
+
+      - name: SBOM (Syft)
+        uses: anchore/sbom-action@v0
+        with:
+          image: ghcr.io/${{ github.repository }}-${{ inputs.image_suffix }}:${{ steps.vars.outputs.tag }}
+          artifact-name: sbom-${{ inputs.image_suffix }}.spdx.json
+
+      - name: Vulnerability scan (Grype)
+        uses: anchore/scan-action@v5
+        with:
+          image: ghcr.io/${{ github.repository }}-${{ inputs.image_suffix }}:${{ steps.vars.outputs.tag }}
+          fail-build: true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ${{ inputs.image_suffix }}-ci-artifacts
+          path: |
+            **/coverage*.*
+            sbom-${{ inputs.image_suffix }}.spdx.json

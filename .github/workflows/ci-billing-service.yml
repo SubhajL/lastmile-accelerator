@@ -1,0 +1,12 @@
+name: ci-billing-service
+on:
+  push: { branches: [ main ], paths: [ 'services/billing-service/**', 'packages/contracts/**' ] }
+  pull_request: { paths: [ 'services/billing-service/**', 'packages/contracts/**' ] }
+jobs:
+  call:
+    uses: ./.github/workflows/_service-ci.yml
+    with:
+      lang: go
+      context: services/billing-service
+      dockerfile: services/billing-service/Dockerfile
+      image_suffix: billing-service

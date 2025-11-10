@@ -1,0 +1,12 @@
+name: ci-spec-memory-service
+on:
+  push: { branches: [ main ], paths: [ 'services/spec-memory-service/**', 'packages/contracts/**' ] }
+  pull_request: { paths: [ 'services/spec-memory-service/**', 'packages/contracts/**' ] }
+jobs:
+  call:
+    uses: ./.github/workflows/_service-ci.yml
+    with:
+      lang: go
+      context: services/spec-memory-service
+      dockerfile: services/spec-memory-service/Dockerfile
+      image_suffix: spec-memory-service

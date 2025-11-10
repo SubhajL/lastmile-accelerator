@@ -1,0 +1,12 @@
+name: ci-notification-service
+on:
+  push: { branches: [ main ], paths: [ 'services/notification-service/**', 'packages/contracts/**' ] }
+  pull_request: { paths: [ 'services/notification-service/**', 'packages/contracts/**' ] }
+jobs:
+  call:
+    uses: ./.github/workflows/_service-ci.yml
+    with:
+      lang: node
+      context: services/notification-service
+      dockerfile: services/notification-service/Dockerfile
+      image_suffix: notification-service

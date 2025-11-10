@@ -1,0 +1,12 @@
+name: ci-scm-app-service
+on:
+  push: { branches: [ main ], paths: [ 'services/scm-app-service/**', 'packages/contracts/**' ] }
+  pull_request: { paths: [ 'services/scm-app-service/**', 'packages/contracts/**' ] }
+jobs:
+  call:
+    uses: ./.github/workflows/_service-ci.yml
+    with:
+      lang: go
+      context: services/scm-app-service
+      dockerfile: services/scm-app-service/Dockerfile
+      image_suffix: scm-app-service

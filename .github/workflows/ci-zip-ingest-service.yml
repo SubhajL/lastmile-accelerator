@@ -1,0 +1,12 @@
+name: ci-zip-ingest-service
+on:
+  push: { branches: [ main ], paths: [ 'services/zip-ingest-service/**', 'packages/contracts/**' ] }
+  pull_request: { paths: [ 'services/zip-ingest-service/**', 'packages/contracts/**' ] }
+jobs:
+  call:
+    uses: ./.github/workflows/_service-ci.yml
+    with:
+      lang: node
+      context: services/zip-ingest-service
+      dockerfile: services/zip-ingest-service/Dockerfile
+      image_suffix: zip-ingest-service

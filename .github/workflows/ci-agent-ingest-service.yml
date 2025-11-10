@@ -1,0 +1,12 @@
+name: ci-agent-ingest-service
+on:
+  push: { branches: [ main ], paths: [ 'services/agent-ingest-service/**', 'packages/contracts/**' ] }
+  pull_request: { paths: [ 'services/agent-ingest-service/**', 'packages/contracts/**' ] }
+jobs:
+  call:
+    uses: ./.github/workflows/_service-ci.yml
+    with:
+      lang: go
+      context: services/agent-ingest-service
+      dockerfile: services/agent-ingest-service/Dockerfile
+      image_suffix: agent-ingest-service

@@ -1,0 +1,12 @@
+name: ci-positioning-engine-service
+on:
+  push: { branches: [ main ], paths: [ 'services/positioning-engine-service/**', 'packages/contracts/**' ] }
+  pull_request: { paths: [ 'services/positioning-engine-service/**', 'packages/contracts/**' ] }
+jobs:
+  call:
+    uses: ./.github/workflows/_service-ci.yml
+    with:
+      lang: python
+      context: services/positioning-engine-service
+      dockerfile: services/positioning-engine-service/Dockerfile
+      image_suffix: positioning-engine-service

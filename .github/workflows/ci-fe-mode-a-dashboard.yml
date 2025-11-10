@@ -1,0 +1,11 @@
+name: ci-fe-mode-a-dashboard
+on:
+  push: { branches: [ main ], paths: [ 'frontends/mode-a-dashboard/**', 'packages/contracts/**' ] }
+  pull_request: { paths: [ 'frontends/mode-a-dashboard/**', 'packages/contracts/**' ] }
+jobs:
+  call:
+    uses: ./.github/workflows/_frontend-ci.yml
+    with:
+      context: frontends/mode-a-dashboard
+      dockerfile: frontends/mode-a-dashboard/Dockerfile
+      image_suffix: fe-mode-a-dashboard

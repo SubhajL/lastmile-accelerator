@@ -1,0 +1,12 @@
+name: ci-snapshot-orchestrator-service
+on:
+  push: { branches: [ main ], paths: [ 'services/snapshot-orchestrator-service/**', 'packages/contracts/**' ] }
+  pull_request: { paths: [ 'services/snapshot-orchestrator-service/**', 'packages/contracts/**' ] }
+jobs:
+  call:
+    uses: ./.github/workflows/_service-ci.yml
+    with:
+      lang: go
+      context: services/snapshot-orchestrator-service
+      dockerfile: services/snapshot-orchestrator-service/Dockerfile
+      image_suffix: snapshot-orchestrator-service

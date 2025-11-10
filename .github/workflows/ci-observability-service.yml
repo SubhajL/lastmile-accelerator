@@ -1,0 +1,12 @@
+name: ci-observability-service
+on:
+  push: { branches: [ main ], paths: [ 'services/observability-service/**', 'packages/contracts/**' ] }
+  pull_request: { paths: [ 'services/observability-service/**', 'packages/contracts/**' ] }
+jobs:
+  call:
+    uses: ./.github/workflows/_service-ci.yml
+    with:
+      lang: go
+      context: services/observability-service
+      dockerfile: services/observability-service/Dockerfile
+      image_suffix: observability-service

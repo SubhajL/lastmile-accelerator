@@ -1,0 +1,12 @@
+name: ci-perf-coach-service
+on:
+  push: { branches: [ main ], paths: [ 'services/perf-coach-service/**', 'packages/contracts/**' ] }
+  pull_request: { paths: [ 'services/perf-coach-service/**', 'packages/contracts/**' ] }
+jobs:
+  call:
+    uses: ./.github/workflows/_service-ci.yml
+    with:
+      lang: go
+      context: services/perf-coach-service
+      dockerfile: services/perf-coach-service/Dockerfile
+      image_suffix: perf-coach-service

@@ -1,0 +1,12 @@
+name: ci-projects-service
+on:
+  push: { branches: [ main ], paths: [ 'services/projects-service/**', 'packages/contracts/**' ] }
+  pull_request: { paths: [ 'services/projects-service/**', 'packages/contracts/**' ] }
+jobs:
+  call:
+    uses: ./.github/workflows/_service-ci.yml
+    with:
+      lang: node
+      context: services/projects-service
+      dockerfile: services/projects-service/Dockerfile
+      image_suffix: projects-service

@@ -1,0 +1,12 @@
+name: ci-scaffold-secure-service
+on:
+  push: { branches: [ main ], paths: [ 'services/scaffold-secure-service/**', 'packages/contracts/**' ] }
+  pull_request: { paths: [ 'services/scaffold-secure-service/**', 'packages/contracts/**' ] }
+jobs:
+  call:
+    uses: ./.github/workflows/_service-ci.yml
+    with:
+      lang: node
+      context: services/scaffold-secure-service
+      dockerfile: services/scaffold-secure-service/Dockerfile
+      image_suffix: scaffold-secure-service

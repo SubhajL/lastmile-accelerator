@@ -1,0 +1,12 @@
+name: ci-webhook-relay-service
+on:
+  push: { branches: [ main ], paths: [ 'services/webhook-relay-service/**', 'packages/contracts/**' ] }
+  pull_request: { paths: [ 'services/webhook-relay-service/**', 'packages/contracts/**' ] }
+jobs:
+  call:
+    uses: ./.github/workflows/_service-ci.yml
+    with:
+      lang: go
+      context: services/webhook-relay-service
+      dockerfile: services/webhook-relay-service/Dockerfile
+      image_suffix: webhook-relay-service

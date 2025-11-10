@@ -1,0 +1,12 @@
+name: ci-authz-matrix-service
+on:
+  push: { branches: [ main ], paths: [ 'services/authz-matrix-service/**', 'packages/contracts/**' ] }
+  pull_request: { paths: [ 'services/authz-matrix-service/**', 'packages/contracts/**' ] }
+jobs:
+  call:
+    uses: ./.github/workflows/_service-ci.yml
+    with:
+      lang: node
+      context: services/authz-matrix-service
+      dockerfile: services/authz-matrix-service/Dockerfile
+      image_suffix: authz-matrix-service

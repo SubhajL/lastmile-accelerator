@@ -1,0 +1,12 @@
+name: ci-ai-debugger-service
+on:
+  push: { branches: [ main ], paths: [ 'services/ai-debugger-service/**', 'packages/contracts/**' ] }
+  pull_request: { paths: [ 'services/ai-debugger-service/**', 'packages/contracts/**' ] }
+jobs:
+  call:
+    uses: ./.github/workflows/_service-ci.yml
+    with:
+      lang: python
+      context: services/ai-debugger-service
+      dockerfile: services/ai-debugger-service/Dockerfile
+      image_suffix: ai-debugger-service
