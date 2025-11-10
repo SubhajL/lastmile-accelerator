@@ -1,0 +1,27 @@
+image:
+  repository: ghcr.io/{{ORG}}/{{REPO}}-observability-service
+  tag: dev
+service:
+  port: 7301
+env:
+  ENV: dev
+  SERVICE_PORT: '7301'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.lma-dev.svc.cluster.local:4317
+  ALERT_EMAIL_FROM: ''
+  SLO_BUDGETS_JSON: ''
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+hpa:
+  enabled: false
+externalSecrets:
+  enabled: true
+  storeRefName: vault-dev
+  targetName: observability-service-secrets
+  remotePath: secret/data/lma/observability-service/dev
+  keys:
+  - PAGERDUTY_ROUTING_KEY

@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: billing-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: billing-service }
+  template:
+    metadata:
+      labels: { app: billing-service }
+    spec:
+      securityContext:
+        runAsNonRoot: true
+      containers:
+        - name: billing-service
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          env:
+          {{- range $name, $val := .Values.env }}
+            - name: {{ $name }}
+              value: {{ $val | quote }}
+          {{- end }}
+          {{- if .Values.externalSecrets.enabled }}
+          envFrom:
+            - secretRef:
+                name: {{ .Values.externalSecrets.targetName }}
+          {{- end }}
+          ports:
+            - containerPort: 7901
+          readinessProbe:
+            httpGet: { path: /healthz, port: 7901 }
+            initialDelaySeconds: 2
+          livenessProbe:
+            httpGet: { path: /healthz, port: 7901 }
+            initialDelaySeconds: 10
+          resources:
+            requests:
+              cpu: "{{ .Values.resources.requests.cpu }}"
+              memory: "{{ .Values.resources.requests.memory }}"
+            limits:
+              cpu: "{{ .Values.resources.limits.cpu }}"
+              memory: "{{ .Values.resources.limits.memory }}"

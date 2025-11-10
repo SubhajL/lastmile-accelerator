@@ -1,0 +1,29 @@
+image:
+  repository: ghcr.io/{{ORG}}/{{REPO}}-observability-service
+  tag: replace-with-ci-tag
+service:
+  port: 7301
+env:
+  ENV: prod
+  SERVICE_PORT: '7301'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.lma-prod.svc.cluster.local:4317
+  ALERT_EMAIL_FROM: ''
+  SLO_BUDGETS_JSON: ''
+resources:
+  requests:
+    cpu: 300m
+    memory: 512Mi
+  limits:
+    cpu: '2'
+    memory: 2Gi
+hpa:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+externalSecrets:
+  enabled: true
+  storeRefName: vault-prod
+  targetName: observability-service-secrets
+  remotePath: secret/data/lma/observability-service/prod
+  keys:
+  - PAGERDUTY_ROUTING_KEY

@@ -1,0 +1,11 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: finops-service-deny-all
+spec:
+  podSelector:
+    matchLabels:
+      app: finops-service
+  policyTypes: ["Ingress","Egress"]
+  ingress: [{}]
+  egress: [{}]
