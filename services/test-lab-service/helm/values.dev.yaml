@@ -1,0 +1,27 @@
+image:
+  repository: ghcr.io/{{ORG}}/{{REPO}}-test-lab-service
+  tag: dev
+service:
+  port: 7202
+env:
+  ENV: dev
+  SERVICE_PORT: '7202'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.lma-dev.svc.cluster.local:4317
+  PLAYWRIGHT_WORKERS: ''
+  GRID_URL: ''
+  PREVIEW_TTL_MIN: ''
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+hpa:
+  enabled: false
+externalSecrets:
+  enabled: true
+  storeRefName: vault-dev
+  targetName: test-lab-service-secrets
+  remotePath: secret/data/lma/test-lab-service/dev
+  keys: []

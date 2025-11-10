@@ -1,0 +1,30 @@
+image:
+  repository: ghcr.io/{{ORG}}/{{REPO}}-fix-engine-service
+  tag: replace-with-ci-tag
+service:
+  port: 7151
+env:
+  ENV: staging
+  SERVICE_PORT: '7151'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.lma-staging.svc.cluster.local:4317
+  PATCH_MAX_FILES: ''
+  PATCH_MAX_LOC: ''
+  PATCH_TTL_DAYS: ''
+  DIFF_ENGINE: ''
+resources:
+  requests:
+    cpu: 200m
+    memory: 256Mi
+  limits:
+    cpu: '1'
+    memory: 1Gi
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+externalSecrets:
+  enabled: true
+  storeRefName: vault-staging
+  targetName: fix-engine-service-secrets
+  remotePath: secret/data/lma/fix-engine-service/staging
+  keys: []

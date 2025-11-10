@@ -1,0 +1,29 @@
+image:
+  repository: ghcr.io/{{ORG}}/{{REPO}}-ai-debugger-service
+  tag: replace-with-ci-tag
+service:
+  port: 7102
+env:
+  ENV: staging
+  SERVICE_PORT: '7102'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.lma-staging.svc.cluster.local:4317
+  REDIS_URL: ''
+  S3_BUCKET_REPROS: ''
+resources:
+  requests:
+    cpu: 200m
+    memory: 256Mi
+  limits:
+    cpu: '1'
+    memory: 1Gi
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+externalSecrets:
+  enabled: true
+  storeRefName: vault-staging
+  targetName: ai-debugger-service-secrets
+  remotePath: secret/data/lma/ai-debugger-service/staging
+  keys:
+  - LLM_API_KEY
