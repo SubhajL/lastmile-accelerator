@@ -15,18 +15,18 @@ func TestLoad_Success(t *testing.T) {
 	setEnv("SERVICE_NAME", "observability-service")
 	setEnv("SERVICE_PORT", "7301")
 	setEnv("GRPC_PORT", "50081")
-    setEnv("DB_URL", "pg"+"sql://user:pass@localhost:5432/obs")
-    setEnv("REDIS_URL", "r"+"edis://localhost:6379")
-    setEnv("NATS_URL", "n"+"ats://localhost:4222")
-    setEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "h"+"ttp://localhost:4317")
-setEnv("JWKS_URL", "h"+"ttps://auth.example.com/.well-known/jwks.json")
-setEnv("JWT_ISSUER", "h"+"ttps://auth.example.com/")
-setEnv("TEMPO_URL", "h"+"ttp://localhost:3200")
-setEnv("LOKI_URL", "h"+"ttp://localhost:3100")
-    setEnv("VAULT_ADDR", "h"+"ttp://localhost:8200")
-    setEnv("VAULT_ROLE_ID", "test-role")
+	setEnv("DB_URL", "postgres://user:pass@localhost:5432/obs")
+	setEnv("REDIS_URL", "redis://localhost:6379")
+	setEnv("NATS_URL", "nats://localhost:4222")
+	setEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
+setEnv("JWKS_URL", "https://auth.example.com/.well-known/jwks.json")
+setEnv("JWT_ISSUER", "https://auth.example.com/")
+setEnv("TEMPO_URL", "http://localhost:3200")
+setEnv("LOKI_URL", "http://localhost:3100")
+	setEnv("VAULT_ADDR", "http://localhost:8200")
+	setEnv("VAULT_ROLE_ID", "test-role")
 	setEnv("VAULT_SECRET_ID", "test-secret")
-setEnv("PROMETHEUS_URL", "h"+"ttp://localhost:9090")
+	setEnv("PROMETHEUS_URL", "http://localhost:9090")
 
 	cfg, err := Load()
 	if err != nil {
@@ -62,15 +62,15 @@ func TestLoad_InvalidPort(t *testing.T) {
 	t.Setenv("SERVICE_NAME", "observability-service")
 	t.Setenv("SERVICE_PORT", "99999")
 	t.Setenv("GRPC_PORT", "50081")
-    t.Setenv("DB_URL", "pg"+"sql://localhost/db")
-    t.Setenv("REDIS_URL", "r"+"edis://localhost:6379")
-    t.Setenv("NATS_URL", "n"+"ats://localhost:4222")
-    t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "h"+"ttp://localhost:4317")
-t.Setenv("JWKS_URL", "h"+"ttps://auth.example.com/jwks.json")
-t.Setenv("JWT_ISSUER", "h"+"ttps://auth.example.com/")
-t.Setenv("TEMPO_URL", "h"+"ttp://localhost:3200")
-t.Setenv("LOKI_URL", "h"+"ttp://localhost:3100")
-    t.Setenv("VAULT_ADDR", "h"+"ttp://localhost:8200")
+	t.Setenv("DB_URL", "postgres://localhost/db")
+	t.Setenv("REDIS_URL", "redis://localhost:6379")
+	t.Setenv("NATS_URL", "nats://localhost:4222")
+	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
+t.Setenv("JWKS_URL", "https://auth.example.com/jwks.json")
+t.Setenv("JWT_ISSUER", "https://auth.example.com/")
+t.Setenv("TEMPO_URL", "http://localhost:3200")
+t.Setenv("LOKI_URL", "http://localhost:3100")
+	t.Setenv("VAULT_ADDR", "http://localhost:8200")
 	t.Setenv("VAULT_ROLE_ID", "test-role")
 	t.Setenv("VAULT_SECRET_ID", "test-secret")
 
@@ -87,18 +87,18 @@ func TestValidate_Success(t *testing.T) {
 		ServiceName:     "observability-service",
 		ServicePort:     "7301",
 		GRPCPort:        "50081",
-        DatabaseURL:     "pg"+"sql://localhost/db",
-        RedisURL:        "r"+"edis://localhost:6379",
-        NATSURL:         "n"+"ats://localhost:4222",
-        OTelEndpoint:    "h"+"ttp://localhost:4317",
-JWKSURL: "h"+"ttps://auth.example.com/jwks.json",
-JWTIssuer: "h"+"ttps://auth.example.com/",
-TempoURL: "h"+"ttp://localhost:3200",
-LokiURL: "h"+"ttp://localhost:3100",
-        VaultAddr:       "h"+"ttp://localhost:8200",
+		DatabaseURL:     "postgres://localhost/db",
+		RedisURL:        "redis://localhost:6379",
+		NATSURL:         "nats://localhost:4222",
+		OTelEndpoint:    "http://localhost:4317",
+JWKSURL: "https://auth.example.com/jwks.json",
+JWTIssuer: "https://auth.example.com/",
+TempoURL: "http://localhost:3200",
+LokiURL: "http://localhost:3100",
+		VaultAddr:       "http://localhost:8200",
 		VaultRoleID:     "role",
 		VaultSecretID: "secret",
-        PrometheusURL: "h"+"ttp://localhost:9090",
+		PrometheusURL: "http://localhost:9090",
 	}
 
 	err := cfg.Validate()
@@ -115,15 +115,15 @@ func TestValidate_InvalidOTelEndpoint(t *testing.T) {
 		ServiceName:     "observability-service",
 		ServicePort:     "7301",
 		GRPCPort:        "50081",
-        DatabaseURL:     "pg"+"sql://localhost/db",
-        RedisURL:        "r"+"edis://localhost:6379",
-        NATSURL:         "n"+"ats://localhost:4222",
+		DatabaseURL:     "postgres://localhost/db",
+		RedisURL:        "redis://localhost:6379",
+		NATSURL:         "nats://localhost:4222",
 		OTelEndpoint:    "not-a-url",
-JWKSURL: "h"+"ttps://auth.example.com/jwks.json",
-JWTIssuer: "h"+"ttps://auth.example.com/",
-TempoURL: "h"+"ttp://localhost:3200",
-LokiURL: "h"+"ttp://localhost:3100",
-        VaultAddr:       "h"+"ttp://localhost:8200",
+JWKSURL: "https://auth.example.com/jwks.json",
+JWTIssuer: "https://auth.example.com/",
+TempoURL: "http://localhost:3200",
+LokiURL: "http://localhost:3100",
+		VaultAddr:       "http://localhost:8200",
 		VaultRoleID:     "role",
 		VaultSecretID: "secret",
 		PrometheusURL: "not-a-url",
