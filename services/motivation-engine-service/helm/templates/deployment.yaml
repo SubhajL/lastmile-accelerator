@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: motivation-engine-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: motivation-engine-service }
+  template:
+    metadata:
+      labels: { app: motivation-engine-service }
+    spec:
+      securityContext:
+        runAsNonRoot: true
+      containers:
+        - name: motivation-engine-service
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          env:
+          {{- range $name, $val := .Values.env }}
+            - name: {{ $name }}
+              value: {{ $val | quote }}
+          {{- end }}
+          {{- if .Values.externalSecrets.enabled }}
+          envFrom:
+            - secretRef:
+                name: {{ .Values.externalSecrets.targetName }}
+          {{- end }}
+          ports:
+            - containerPort: 7601
+          readinessProbe:
+            httpGet: { path: /healthz, port: 7601 }
+            initialDelaySeconds: 2
+          livenessProbe:
+            httpGet: { path: /healthz, port: 7601 }
+            initialDelaySeconds: 10
+          resources:
+            requests:
+              cpu: "{{ .Values.resources.requests.cpu }}"
+              memory: "{{ .Values.resources.requests.memory }}"
+            limits:
+              cpu: "{{ .Values.resources.limits.cpu }}"
+              memory: "{{ .Values.resources.limits.memory }}"

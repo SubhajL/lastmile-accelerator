@@ -1,0 +1,26 @@
+image:
+  repository: ghcr.io/{{ORG}}/{{REPO}}-motivation-engine-service
+  tag: dev
+service:
+  port: 7601
+env:
+  ENV: dev
+  SERVICE_PORT: '7601'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.lma-dev.svc.cluster.local:4317
+  NUDGE_HEURISTICS_JSON: ''
+  WS_CLUSTER_ID: ''
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+hpa:
+  enabled: false
+externalSecrets:
+  enabled: true
+  storeRefName: vault-dev
+  targetName: motivation-engine-service-secrets
+  remotePath: secret/data/lma/motivation-engine-service/dev
+  keys: []

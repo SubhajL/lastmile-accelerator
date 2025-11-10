@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mvp-validator-service
+spec:
+  type: ClusterIP
+  selector: { app: mvp-validator-service }
+  ports:
+    - name: http
+      port: 7402
+      targetPort: 7402

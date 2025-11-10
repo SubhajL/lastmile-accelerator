@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: positioning-engine-service
+spec:
+  type: ClusterIP
+  selector: { app: positioning-engine-service }
+  ports:
+    - name: http
+      port: 7501
+      targetPort: 7501
