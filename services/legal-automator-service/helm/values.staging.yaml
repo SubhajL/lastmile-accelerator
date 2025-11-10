@@ -1,0 +1,28 @@
+image:
+  repository: ghcr.io/{{ORG}}/{{REPO}}-legal-automator-service
+  tag: replace-with-ci-tag
+service:
+  port: 7503
+env:
+  ENV: staging
+  SERVICE_PORT: '7503'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.lma-staging.svc.cluster.local:4317
+  JURISDICTIONS_JSON: ''
+  DSAR_INBOX_EMAIL: ''
+resources:
+  requests:
+    cpu: 200m
+    memory: 256Mi
+  limits:
+    cpu: '1'
+    memory: 1Gi
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+externalSecrets:
+  enabled: true
+  storeRefName: vault-staging
+  targetName: legal-automator-service-secrets
+  remotePath: secret/data/lma/legal-automator-service/staging
+  keys: []

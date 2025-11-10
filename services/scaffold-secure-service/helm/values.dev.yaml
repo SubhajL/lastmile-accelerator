@@ -1,0 +1,24 @@
+image:
+  repository: ghcr.io/{{ORG}}/{{REPO}}-scaffold-secure-service
+  tag: dev
+service:
+  port: 7103
+env:
+  ENV: dev
+  SERVICE_PORT: '7103'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.lma-dev.svc.cluster.local:4317
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+hpa:
+  enabled: false
+externalSecrets:
+  enabled: true
+  storeRefName: vault-dev
+  targetName: scaffold-secure-service-secrets
+  remotePath: secret/data/lma/scaffold-secure-service/dev
+  keys: []

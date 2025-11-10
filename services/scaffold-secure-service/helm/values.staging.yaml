@@ -1,0 +1,26 @@
+image:
+  repository: ghcr.io/{{ORG}}/{{REPO}}-scaffold-secure-service
+  tag: replace-with-ci-tag
+service:
+  port: 7103
+env:
+  ENV: staging
+  SERVICE_PORT: '7103'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.lma-staging.svc.cluster.local:4317
+resources:
+  requests:
+    cpu: 200m
+    memory: 256Mi
+  limits:
+    cpu: '1'
+    memory: 1Gi
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+externalSecrets:
+  enabled: true
+  storeRefName: vault-staging
+  targetName: scaffold-secure-service-secrets
+  remotePath: secret/data/lma/scaffold-secure-service/staging
+  keys: []
