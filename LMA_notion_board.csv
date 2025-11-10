@@ -1,0 +1,31 @@
+ID,Name,Sprint,Weeks,Wave,Lane,Priority,Color,Modes,Dependencies,Exit Criteria,Owner,Status,Start (Sprint),End (Sprint)
+G,projects-service,1,1–2,Wave 0 — Foundations,Foundation,P0,#E53935,All,,Tenants/projects/envs CRUD works; FixPolicy stored; RLS enabled,TBD,Not Started,1,1
+S,observability-service,1,1–2,Wave 0 — Foundations,Foundation,P0,#E53935,All,,OTel collector up; error inbox groups by fingerprint within 60s,TBD,Not Started,1,1
+AB,notification-service,1,1–2,Wave 0 — Foundations,Foundation,P0,#E53935,All,,Email/Slack notifications send with retry/backoff,TBD,Not Started,1,1
+M,dep-governance-service,1,1–2,Wave 0 — Foundations,Quality,P0,#E53935,All,,SBOM/CVE/license scan emits findings for a snapshot,TBD,Not Started,1,1
+L,db-guardian-service,1,1–2,Wave 0 — Foundations,Quality,P0,#E53935,All,,Migration guard rejects destructive ops; index advice produced,TBD,Not Started,1,1
+P,test-lab-service,1,1–2,Wave 0 — Foundations,Quality,P0,#E53935,All,,Ephemeral preview + cross-browser smoke artifacts available,TBD,Not Started,1,1
+K,secrets-env-service,1,1–2,Wave 0 — Foundations,Foundation,P0,#E53935,All,,Env parity diff + client-secret leak lint endpoint returns results,TBD,Not Started,1,1
+C,scm-app-service (Mode A),2,3–4,Wave 1 — Mode A E2E,Ingestion,P0,#E53935,A,G,Receives PR/push webhooks; shallow clone; S3 snapshot; emit snapshot.created,TBD,Not Started,2,2
+F,snapshot-orchestrator,2,3–4,Wave 1 — Mode A E2E,Ingestion,P0,#E53935,A/B/C,C,Creates Snapshot row; publishes snapshot.ready; dedup & TTL cleanup,TBD,Not Started,2,2
+N,fix-engine-service,2,3–4,Wave 1 — Mode A E2E,Quality,P0,#E53935,All,"M, L, P, F",Builds Fix List; Tier-1 auto patches; change budget enforced; dry-run diffs,TBD,Not Started,2,2
+O,publisher-service,2,3–4,Wave 1 — Mode A E2E,Ship-Right,P0,#E53935,All,"G, N, P, S","/preflight, /publish-safely, /undo; failed canary auto-rollback within 2m",TBD,Not Started,2,2
+FEA,Frontend: Mode A Dashboard,2,3–4,Wave 1 — Mode A E2E,Frontend,P0,#E53935,A,"C, F, N, O, S, AB",Connect repo; show checks & Fix List; Apply Tier-1; Publish/Undo visible,TBD,Not Started,2,2
+E,agent-ingest-service (Mode B),3,5–6,Wave 2 — Privacy & ZIP,Ingestion,P1,#FB8C00,B,"F, G",Accepts signed results from customer CI; stores; emits snapshot.created (B),TBD,Not Started,3,3
+FEB,Frontend: Mode B Privacy,3,5–6,Wave 2 — Privacy & ZIP,Frontend,P1,#FB8C00,B,"E, F, N, S, AB",Wizard to add agent; verify report signature; render Fix List; download patches,TBD,Not Started,3,3
+D,zip-ingest-service (Mode C),3,5–6,Wave 2 — Privacy & ZIP,Ingestion,P1,#FB8C00,C,F,Signed URL → AV scan → unzip → S3; emits snapshot.created; blocks EICAR sample,TBD,Not Started,3,3
+FEC,Frontend: Mode C ZIP,3,5–6,Wave 2 — Privacy & ZIP,Frontend,P1,#FB8C00,C,"D, F, N, S, AB",Drag-drop ZIP; show AV result; Fix List; download patched ZIP,TBD,Not Started,3,3
+A,api-gateway,4,7–8,Wave 3 — Edge/Auth + GTM,Edge,P1,#FB8C00,All,"R, B",Routes 80/443; JWT verify; RLS wired; basic WAF; OTel spans,TBD,Not Started,4,4
+B,auth-service,4,7–8,Wave 3 — Edge/Auth + GTM,Edge,P1,#FB8C00,All,,Realm seeded; JWKS live; login flow p95 < 300ms; audit export on,TBD,Not Started,4,4
+R,rate-limit-service,4,7–8,Wave 3 — Edge/Auth + GTM,Edge,P1,#FB8C00,All,,gRPC RLS serving decisions; per-route policies loaded; burst multiplier,TBD,Not Started,4,4
+Q,authz-matrix-service,4,7–8,Wave 3 — Edge/Auth + GTM,Quality,P1,#FB8C00,All,G,RBAC matrix → middleware/tests; IDOR scan on top routes returns clean,TBD,Not Started,4,4
+Y,legal-automator-service,4,7–8,Wave 3 — Edge/Auth + GTM,GTM/Compliance,P1,#FB8C00,All,,Privacy/ToS/cookie generated; consent logs persisted,TBD,Not Started,4,4
+AA,billing-service,4,7–8,Wave 3 — Edge/Auth + GTM,GTM,P1,#FB8C00,All,,Plans live; first test payment success; webhooks handled,TBD,Not Started,4,4
+W,positioning-engine-service,4,7–8,Wave 3 — Edge/Auth + GTM,GTM,P1,#FB8C00,All,,Outcome-first copy for 1 vertical; headline/subhead pairs generated,TBD,Not Started,4,4
+X,launch-engine-service,4,7–8,Wave 3 — Edge/Auth + GTM,GTM,P1,#FB8C00,All,,Channel calendar + UTM checker; one launch brief produced,TBD,Not Started,4,4
+AC,webhook-relay-service,4,7–8,Wave 3 — Edge/Auth + GTM,Platform,P1,#FB8C00,All,,Signed webhooks with retry/backoff; DLQ visible,TBD,Not Started,4,4
+T,perf-coach-service,4,7–8,Wave 3 — Edge/Auth + GTM,Quality,P1,#FB8C00,All,G,EXPLAIN analyzer returns recs; N+1 detector demo on sample app,TBD,Not Started,4,4
+I,ai-debugger-service,5,9–10,Wave 4 — Depth & Delight,Insights,P2,#3949AB,All,S,"Given a failing trace, minimal repro artifact downloadable in FE",TBD,Not Started,5,5
+J,scaffold-secure-service,5,9–10,Wave 4 — Depth & Delight,Platform,P2,#3949AB,All,,Next/Prisma secure template tarball available in registry,TBD,Not Started,5,5
+U,finops-service,5,9–10,Wave 4 — Depth & Delight,Insights,P2,#3949AB,All,,Cost ingest + anomaly alert stub; basic 30/60/90 forecast,TBD,Not Started,5,5
+Z,motivation-engine-service,5,9–10,Wave 4 — Depth & Delight,Growth,P2,#3949AB,All,,Nudges fired on drift; ship streaks visible in dashboard,TBD,Not Started,5,5
