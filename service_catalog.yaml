@@ -1,0 +1,32 @@
+services:
+  - { name: publisher-service, dir: publisher-service, lang: go, rest: 7201, grpc: 50071 }
+  - { name: fix-engine-service, dir: fix-engine-service, lang: node, rest: 7151, grpc: 50067 }
+  - { name: scm-app-service, dir: scm-app-service, lang: go, rest: 7051, grpc: 50041 }
+  - { name: zip-ingest-service, dir: zip-ingest-service, lang: node, rest: 7052, grpc: 50042 }
+  - { name: agent-ingest-service, dir: agent-ingest-service, lang: go, rest: 7053, grpc: 50043 }
+  - { name: snapshot-orchestrator-service, dir: snapshot-orchestrator-service, lang: go, rest: 7054, grpc: 50044 }
+  - { name: projects-service, dir: projects-service, lang: node, rest: 7002, grpc: 50052 }
+  - { name: spec-memory-service, dir: spec-memory-service, lang: go, rest: 7101, grpc: 50061 }
+  - { name: ai-debugger-service, dir: ai-debugger-service, lang: python, rest: 7102, grpc: 50062 }
+  - { name: scaffold-secure-service, dir: scaffold-secure-service, lang: node, rest: 7103, grpc: null }
+  - { name: secrets-env-service, dir: secrets-env-service, lang: go, rest: 7104, grpc: 50064 }
+  - { name: db-guardian-service, dir: db-guardian-service, lang: go, rest: 7105, grpc: 50065 }
+  - { name: dep-governance-service, dir: dep-governance-service, lang: rust, rest: 7106, grpc: 50066 }
+  - { name: test-lab-service, dir: test-lab-service, lang: node, rest: 7202, grpc: 50072 }
+  - { name: authz-matrix-service, dir: authz-matrix-service, lang: node, rest: 7203, grpc: 50073 }
+  - { name: rate-limit-service, dir: rate-limit-service, lang: go, rest: 7204, grpc: 50074 }
+  - { name: observability-service, dir: observability-service, lang: go, rest: 7301, grpc: 50081 }
+  - { name: perf-coach-service, dir: perf-coach-service, lang: go, rest: 7302, grpc: 50082 }
+  - { name: finops-service, dir: finops-service, lang: python, rest: 7401, grpc: 50091 }
+  - { name: mvp-validator-service, dir: mvp-validator-service, lang: node, rest: 7402, grpc: 50092 }
+  - { name: positioning-engine-service, dir: positioning-engine-service, lang: python, rest: 7501, grpc: 50101 }
+  - { name: launch-engine-service, dir: launch-engine-service, lang: node, rest: 7502, grpc: 50102 }
+  - { name: legal-automator-service, dir: legal-automator-service, lang: node, rest: 7503, grpc: 50103 }
+  - { name: motivation-engine-service, dir: motivation-engine-service, lang: node, rest: 7601, grpc: 50111 }
+  - { name: billing-service, dir: billing-service, lang: go, rest: 7901, grpc: 50121 }
+  - { name: notification-service, dir: notification-service, lang: node, rest: 7902, grpc: 50122 }
+  - { name: webhook-relay-service, dir: webhook-relay-service, lang: go, rest: 7903, grpc: 50123 }
+frontends:
+  - { name: Mode A Dashboard, dir: mode-a-dashboard }
+  - { name: Mode B Privacy Portal, dir: mode-b-privacy-portal }
+  - { name: Mode C ZIP Uploader, dir: mode-c-zip-uploader }

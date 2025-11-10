@@ -1,0 +1,23 @@
+# Node
+node_modules/
+.pnpm-store/
+.next/
+dist/
+coverage/
+*.log
+
+# Go
+bin/
+vendor/
+*.exe
+*.test
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# macOS & IDEs
+.DS_Store
+.idea/
+.vscode/
