@@ -1,0 +1,29 @@
+image:
+  repository: ghcr.io/{{ORG}}/{{REPO}}-zip-ingest-service
+  tag: replace-with-ci-tag
+service:
+  port: 7052
+env:
+  ENV: prod
+  SERVICE_PORT: '7052'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.lma-prod.svc.cluster.local:4317
+  MAX_UPLOAD_MB: ''
+  CLAMAV_URL: ''
+  SNAPSHOT_BUCKET: ''
+resources:
+  requests:
+    cpu: 300m
+    memory: 512Mi
+  limits:
+    cpu: '2'
+    memory: 2Gi
+hpa:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+externalSecrets:
+  enabled: true
+  storeRefName: vault-prod
+  targetName: zip-ingest-service-secrets
+  remotePath: secret/data/lma/zip-ingest-service/prod
+  keys: []

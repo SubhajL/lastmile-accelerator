@@ -1,0 +1,11 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: snapshot-orchestrator-service-deny-all
+spec:
+  podSelector:
+    matchLabels:
+      app: snapshot-orchestrator-service
+  policyTypes: ["Ingress","Egress"]
+  ingress: [{}]
+  egress: [{}]
