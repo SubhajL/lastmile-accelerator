@@ -1,0 +1,29 @@
+image:
+  repository: ghcr.io/{{ORG}}/{{REPO}}-test-lab-service
+  tag: replace-with-ci-tag
+service:
+  port: 7202
+env:
+  ENV: staging
+  SERVICE_PORT: '7202'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.lma-staging.svc.cluster.local:4317
+  PLAYWRIGHT_WORKERS: ''
+  GRID_URL: ''
+  PREVIEW_TTL_MIN: ''
+resources:
+  requests:
+    cpu: 200m
+    memory: 256Mi
+  limits:
+    cpu: '1'
+    memory: 1Gi
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+externalSecrets:
+  enabled: true
+  storeRefName: vault-staging
+  targetName: test-lab-service-secrets
+  remotePath: secret/data/lma/test-lab-service/staging
+  keys: []

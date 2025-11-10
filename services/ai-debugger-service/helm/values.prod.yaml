@@ -1,0 +1,29 @@
+image:
+  repository: ghcr.io/{{ORG}}/{{REPO}}-ai-debugger-service
+  tag: replace-with-ci-tag
+service:
+  port: 7102
+env:
+  ENV: prod
+  SERVICE_PORT: '7102'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.lma-prod.svc.cluster.local:4317
+  REDIS_URL: ''
+  S3_BUCKET_REPROS: ''
+resources:
+  requests:
+    cpu: 300m
+    memory: 512Mi
+  limits:
+    cpu: '2'
+    memory: 2Gi
+hpa:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+externalSecrets:
+  enabled: true
+  storeRefName: vault-prod
+  targetName: ai-debugger-service-secrets
+  remotePath: secret/data/lma/ai-debugger-service/prod
+  keys:
+  - LLM_API_KEY
