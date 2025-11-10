@@ -1,0 +1,29 @@
+image:
+  repository: ghcr.io/{{ORG}}/{{REPO}}-snapshot-orchestrator-service
+  tag: replace-with-ci-tag
+service:
+  port: 7054
+env:
+  ENV: staging
+  SERVICE_PORT: '7054'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.lma-staging.svc.cluster.local:4317
+  SNAPSHOT_TTL_HOURS: ''
+  PIPELINE_TOPIC: ''
+  S3_SNAPSHOT_PREFIX: ''
+resources:
+  requests:
+    cpu: 200m
+    memory: 256Mi
+  limits:
+    cpu: '1'
+    memory: 1Gi
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+externalSecrets:
+  enabled: true
+  storeRefName: vault-staging
+  targetName: snapshot-orchestrator-service-secrets
+  remotePath: secret/data/lma/snapshot-orchestrator-service/staging
+  keys: []

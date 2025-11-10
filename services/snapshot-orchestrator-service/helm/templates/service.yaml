@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: snapshot-orchestrator-service
+spec:
+  type: ClusterIP
+  selector: { app: snapshot-orchestrator-service }
+  ports:
+    - name: http
+      port: 7054
+      targetPort: 7054

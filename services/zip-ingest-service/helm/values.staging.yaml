@@ -1,0 +1,29 @@
+image:
+  repository: ghcr.io/{{ORG}}/{{REPO}}-zip-ingest-service
+  tag: replace-with-ci-tag
+service:
+  port: 7052
+env:
+  ENV: staging
+  SERVICE_PORT: '7052'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.lma-staging.svc.cluster.local:4317
+  MAX_UPLOAD_MB: ''
+  CLAMAV_URL: ''
+  SNAPSHOT_BUCKET: ''
+resources:
+  requests:
+    cpu: 200m
+    memory: 256Mi
+  limits:
+    cpu: '1'
+    memory: 1Gi
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+externalSecrets:
+  enabled: true
+  storeRefName: vault-staging
+  targetName: zip-ingest-service-secrets
+  remotePath: secret/data/lma/zip-ingest-service/staging
+  keys: []

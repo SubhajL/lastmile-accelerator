@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: zip-ingest-service
+spec:
+  type: ClusterIP
+  selector: { app: zip-ingest-service }
+  ports:
+    - name: http
+      port: 7052
+      targetPort: 7052

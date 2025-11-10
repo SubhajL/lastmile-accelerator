@@ -1,0 +1,27 @@
+image:
+  repository: ghcr.io/{{ORG}}/{{REPO}}-snapshot-orchestrator-service
+  tag: dev
+service:
+  port: 7054
+env:
+  ENV: dev
+  SERVICE_PORT: '7054'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.lma-dev.svc.cluster.local:4317
+  SNAPSHOT_TTL_HOURS: ''
+  PIPELINE_TOPIC: ''
+  S3_SNAPSHOT_PREFIX: ''
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+hpa:
+  enabled: false
+externalSecrets:
+  enabled: true
+  storeRefName: vault-dev
+  targetName: snapshot-orchestrator-service-secrets
+  remotePath: secret/data/lma/snapshot-orchestrator-service/dev
+  keys: []
