@@ -1,0 +1,7 @@
+/Users/subhajlimanond/dev/lastmile-accelerator/services/dep-governance-service/target/release/deps/opentelemetry_semantic_conventions-9802aaba0f599a73.d: /Users/subhajlimanond/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/opentelemetry-semantic-conventions-0.13.0/src/lib.rs /Users/subhajlimanond/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/opentelemetry-semantic-conventions-0.13.0/src/resource.rs /Users/subhajlimanond/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/opentelemetry-semantic-conventions-0.13.0/src/trace.rs
+
+/Users/subhajlimanond/dev/lastmile-accelerator/services/dep-governance-service/target/release/deps/libopentelemetry_semantic_conventions-9802aaba0f599a73.rmeta: /Users/subhajlimanond/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/opentelemetry-semantic-conventions-0.13.0/src/lib.rs /Users/subhajlimanond/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/opentelemetry-semantic-conventions-0.13.0/src/resource.rs /Users/subhajlimanond/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/opentelemetry-semantic-conventions-0.13.0/src/trace.rs
+
+/Users/subhajlimanond/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/opentelemetry-semantic-conventions-0.13.0/src/lib.rs:
+/Users/subhajlimanond/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/opentelemetry-semantic-conventions-0.13.0/src/resource.rs:
+/Users/subhajlimanond/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/opentelemetry-semantic-conventions-0.13.0/src/trace.rs:

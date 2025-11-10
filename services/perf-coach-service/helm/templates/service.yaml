@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: perf-coach-service
+spec:
+  type: ClusterIP
+  selector: { app: perf-coach-service }
+  ports:
+    - name: http
+      port: 7302
+      targetPort: 7302
