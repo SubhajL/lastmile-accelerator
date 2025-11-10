@@ -1,0 +1,26 @@
+image:
+  repository: ghcr.io/{{ORG}}/{{REPO}}-positioning-engine-service
+  tag: dev
+service:
+  port: 7501
+env:
+  ENV: dev
+  SERVICE_PORT: '7501'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.lma-dev.svc.cluster.local:4317
+  VERTICAL_CORPORA_S3: ''
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+hpa:
+  enabled: false
+externalSecrets:
+  enabled: true
+  storeRefName: vault-dev
+  targetName: positioning-engine-service-secrets
+  remotePath: secret/data/lma/positioning-engine-service/dev
+  keys:
+  - EMBEDDING_API_KEY

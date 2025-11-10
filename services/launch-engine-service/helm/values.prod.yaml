@@ -1,0 +1,29 @@
+image:
+  repository: ghcr.io/{{ORG}}/{{REPO}}-launch-engine-service
+  tag: replace-with-ci-tag
+service:
+  port: 7502
+env:
+  ENV: prod
+  SERVICE_PORT: '7502'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.lma-prod.svc.cluster.local:4317
+resources:
+  requests:
+    cpu: 300m
+    memory: 512Mi
+  limits:
+    cpu: '2'
+    memory: 2Gi
+hpa:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+externalSecrets:
+  enabled: true
+  storeRefName: vault-prod
+  targetName: launch-engine-service-secrets
+  remotePath: secret/data/lma/launch-engine-service/prod
+  keys:
+  - TWITTER_API_KEY
+  - REDDIT_CLIENT_ID
+  - PH_TOKEN

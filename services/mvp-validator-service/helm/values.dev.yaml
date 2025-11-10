@@ -1,0 +1,26 @@
+image:
+  repository: ghcr.io/{{ORG}}/{{REPO}}-mvp-validator-service
+  tag: dev
+service:
+  port: 7402
+env:
+  ENV: dev
+  SERVICE_PORT: '7402'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.lma-dev.svc.cluster.local:4317
+  DEFAULT_ACTIVATION_TARGET: ''
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+hpa:
+  enabled: false
+externalSecrets:
+  enabled: true
+  storeRefName: vault-dev
+  targetName: mvp-validator-service-secrets
+  remotePath: secret/data/lma/mvp-validator-service/dev
+  keys:
+  - FEATURE_FLAG_SDK_KEY

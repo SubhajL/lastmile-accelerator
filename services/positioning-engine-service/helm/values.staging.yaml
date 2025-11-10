@@ -1,0 +1,28 @@
+image:
+  repository: ghcr.io/{{ORG}}/{{REPO}}-positioning-engine-service
+  tag: replace-with-ci-tag
+service:
+  port: 7501
+env:
+  ENV: staging
+  SERVICE_PORT: '7501'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.lma-staging.svc.cluster.local:4317
+  VERTICAL_CORPORA_S3: ''
+resources:
+  requests:
+    cpu: 200m
+    memory: 256Mi
+  limits:
+    cpu: '1'
+    memory: 1Gi
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+externalSecrets:
+  enabled: true
+  storeRefName: vault-staging
+  targetName: positioning-engine-service-secrets
+  remotePath: secret/data/lma/positioning-engine-service/staging
+  keys:
+  - EMBEDDING_API_KEY

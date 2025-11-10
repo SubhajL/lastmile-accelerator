@@ -1,0 +1,4 @@
+apiVersion: v2
+name: motivation-engine-service
+version: 0.1.0
+type: application

@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: motivation-engine-service
+spec:
+  type: ClusterIP
+  selector: { app: motivation-engine-service }
+  ports:
+    - name: http
+      port: 7601
+      targetPort: 7601
