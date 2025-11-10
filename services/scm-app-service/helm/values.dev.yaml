@@ -1,0 +1,29 @@
+image:
+  repository: ghcr.io/{{ORG}}/{{REPO}}-scm-app-service
+  tag: dev
+service:
+  port: 7051
+env:
+  ENV: dev
+  SERVICE_PORT: '7051'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.lma-dev.svc.cluster.local:4317
+  SCM_ALLOWED_HOSTS: ''
+  SNAPSHOT_BUCKET: ''
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+hpa:
+  enabled: false
+externalSecrets:
+  enabled: true
+  storeRefName: vault-dev
+  targetName: scm-app-service-secrets
+  remotePath: secret/data/lma/scm-app-service/dev
+  keys:
+  - GITHUB_APP_ID
+  - GITHUB_APP_PRIVATE_KEY
+  - GITHUB_WEBHOOK_SECRET

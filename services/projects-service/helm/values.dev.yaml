@@ -1,0 +1,27 @@
+image:
+  repository: ghcr.io/{{ORG}}/{{REPO}}-projects-service
+  tag: dev
+service:
+  port: 7002
+env:
+  ENV: dev
+  SERVICE_PORT: '7002'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.lma-dev.svc.cluster.local:4317
+  JWT_PUBLIC_KEY: ''
+  S3_BUCKET_PROJECTS: ''
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+hpa:
+  enabled: false
+externalSecrets:
+  enabled: true
+  storeRefName: vault-dev
+  targetName: projects-service-secrets
+  remotePath: secret/data/lma/projects-service/dev
+  keys:
+  - DATABASE_URL

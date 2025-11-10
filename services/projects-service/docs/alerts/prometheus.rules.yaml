@@ -1,0 +1,23 @@
+groups:
+  - name: projects-service.rules
+    interval: 1m
+    rules:
+      - alert: HighErrorRate
+        expr: sum(rate(request_errors_total[5m])) / sum(rate(request_total[5m])) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+          service: projects-service
+        annotations:
+          summary: "High 5xx error rate (>5%)"
+          description: "Error rate is above 5% for 10 minutes."
+
+      - alert: HighLatencyAverage
+        expr: (increase(request_duration_ms_sum[5m]) / increase(request_duration_ms_count[5m])) > 500
+        for: 10m
+        labels:
+          severity: warning
+          service: projects-service
+        annotations:
+          summary: "High p95 latency (>500ms)"
+          description: "95th percentile latency above 500ms for 10 minutes."

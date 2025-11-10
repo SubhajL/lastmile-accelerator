@@ -1,0 +1,31 @@
+image:
+  repository: ghcr.io/{{ORG}}/{{REPO}}-scm-app-service
+  tag: replace-with-ci-tag
+service:
+  port: 7051
+env:
+  ENV: staging
+  SERVICE_PORT: '7051'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.lma-staging.svc.cluster.local:4317
+  SCM_ALLOWED_HOSTS: ''
+  SNAPSHOT_BUCKET: ''
+resources:
+  requests:
+    cpu: 200m
+    memory: 256Mi
+  limits:
+    cpu: '1'
+    memory: 1Gi
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+externalSecrets:
+  enabled: true
+  storeRefName: vault-staging
+  targetName: scm-app-service-secrets
+  remotePath: secret/data/lma/scm-app-service/staging
+  keys:
+  - GITHUB_APP_ID
+  - GITHUB_APP_PRIVATE_KEY
+  - GITHUB_WEBHOOK_SECRET

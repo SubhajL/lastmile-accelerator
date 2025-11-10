@@ -1,0 +1,15 @@
+{
+  "title": "Projects Service - Throughput",
+  "panels": [
+    {
+      "type": "graph",
+      "title": "Requests per Second",
+      "targets": [
+        {
+          "expr": "sum(rate(request_total[5m]))",
+          "legendFormat": "rps"
+        }
+      ]
+    }
+  ]
+}
