@@ -1,0 +1,26 @@
+image:
+  repository: ghcr.io/{{ORG}}/{{REPO}}-legal-automator-service
+  tag: dev
+service:
+  port: 7503
+env:
+  ENV: dev
+  SERVICE_PORT: '7503'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.lma-dev.svc.cluster.local:4317
+  JURISDICTIONS_JSON: ''
+  DSAR_INBOX_EMAIL: ''
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+hpa:
+  enabled: false
+externalSecrets:
+  enabled: true
+  storeRefName: vault-dev
+  targetName: legal-automator-service-secrets
+  remotePath: secret/data/lma/legal-automator-service/dev
+  keys: []

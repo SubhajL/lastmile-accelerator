@@ -1,0 +1,26 @@
+image:
+  repository: ghcr.io/{{ORG}}/{{REPO}}-scaffold-secure-service
+  tag: replace-with-ci-tag
+service:
+  port: 7103
+env:
+  ENV: prod
+  SERVICE_PORT: '7103'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.lma-prod.svc.cluster.local:4317
+resources:
+  requests:
+    cpu: 300m
+    memory: 512Mi
+  limits:
+    cpu: '2'
+    memory: 2Gi
+hpa:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+externalSecrets:
+  enabled: true
+  storeRefName: vault-prod
+  targetName: scaffold-secure-service-secrets
+  remotePath: secret/data/lma/scaffold-secure-service/prod
+  keys: []

@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: legal-automator-service
+spec:
+  type: ClusterIP
+  selector: { app: legal-automator-service }
+  ports:
+    - name: http
+      port: 7503
+      targetPort: 7503

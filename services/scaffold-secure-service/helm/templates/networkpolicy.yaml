@@ -1,0 +1,11 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: scaffold-secure-service-deny-all
+spec:
+  podSelector:
+    matchLabels:
+      app: scaffold-secure-service
+  policyTypes: ["Ingress","Egress"]
+  ingress: [{}]
+  egress: [{}]
