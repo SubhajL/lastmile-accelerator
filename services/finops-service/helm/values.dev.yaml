@@ -1,0 +1,27 @@
+image:
+  repository: ghcr.io/{{ORG}}/{{REPO}}-finops-service
+  tag: dev
+service:
+  port: 7401
+env:
+  ENV: dev
+  SERVICE_PORT: '7401'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.lma-dev.svc.cluster.local:4317
+  CLOUD_COST_EXPORT_S3: ''
+  FORECAST_HORIZON_DAYS: ''
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+hpa:
+  enabled: false
+externalSecrets:
+  enabled: true
+  storeRefName: vault-dev
+  targetName: finops-service-secrets
+  remotePath: secret/data/lma/finops-service/dev
+  keys:
+  - STRIPE_API_KEY

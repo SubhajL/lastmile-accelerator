@@ -1,0 +1,26 @@
+image:
+  repository: ghcr.io/{{ORG}}/{{REPO}}-billing-service
+  tag: dev
+service:
+  port: 7901
+env:
+  ENV: dev
+  SERVICE_PORT: '7901'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.lma-dev.svc.cluster.local:4317
+  BILLING_TAX_REGION: ''
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+hpa:
+  enabled: false
+externalSecrets:
+  enabled: true
+  storeRefName: vault-dev
+  targetName: billing-service-secrets
+  remotePath: secret/data/lma/billing-service/dev
+  keys:
+  - STRIPE_WEBHOOK_SECRET
