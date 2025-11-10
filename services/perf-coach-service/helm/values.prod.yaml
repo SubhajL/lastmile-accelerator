@@ -1,0 +1,29 @@
+image:
+  repository: ghcr.io/{{ORG}}/{{REPO}}-perf-coach-service
+  tag: replace-with-ci-tag
+service:
+  port: 7302
+env:
+  ENV: prod
+  SERVICE_PORT: '7302'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.lma-prod.svc.cluster.local:4317
+  CDN_PROVIDER: ''
+  REDIS_URL: ''
+resources:
+  requests:
+    cpu: 300m
+    memory: 512Mi
+  limits:
+    cpu: '2'
+    memory: 2Gi
+hpa:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+externalSecrets:
+  enabled: true
+  storeRefName: vault-prod
+  targetName: perf-coach-service-secrets
+  remotePath: secret/data/lma/perf-coach-service/prod
+  keys:
+  - PG_READONLY_DSN

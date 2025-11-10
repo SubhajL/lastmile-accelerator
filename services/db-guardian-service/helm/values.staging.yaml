@@ -1,0 +1,28 @@
+image:
+  repository: ghcr.io/{{ORG}}/{{REPO}}-db-guardian-service
+  tag: replace-with-ci-tag
+service:
+  port: 7105
+env:
+  ENV: staging
+  SERVICE_PORT: '7105'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.lma-staging.svc.cluster.local:4317
+  BACKUP_S3_BUCKET: ''
+resources:
+  requests:
+    cpu: 200m
+    memory: 256Mi
+  limits:
+    cpu: '1'
+    memory: 1Gi
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+externalSecrets:
+  enabled: true
+  storeRefName: vault-staging
+  targetName: db-guardian-service-secrets
+  remotePath: secret/data/lma/db-guardian-service/staging
+  keys:
+  - PG_SUPER_DSN
