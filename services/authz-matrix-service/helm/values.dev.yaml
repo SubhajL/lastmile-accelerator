@@ -1,0 +1,26 @@
+image:
+  repository: ghcr.io/{{ORG}}/{{REPO}}-authz-matrix-service
+  tag: dev
+service:
+  port: 7203
+env:
+  ENV: dev
+  SERVICE_PORT: '7203'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.lma-dev.svc.cluster.local:4317
+  SCHEMA_REPO_URL: ''
+  IDOR_RULESETS_S3: ''
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+hpa:
+  enabled: false
+externalSecrets:
+  enabled: true
+  storeRefName: vault-dev
+  targetName: authz-matrix-service-secrets
+  remotePath: secret/data/lma/authz-matrix-service/dev
+  keys: []

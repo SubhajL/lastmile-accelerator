@@ -1,0 +1,28 @@
+image:
+  repository: ghcr.io/{{ORG}}/{{REPO}}-authz-matrix-service
+  tag: replace-with-ci-tag
+service:
+  port: 7203
+env:
+  ENV: staging
+  SERVICE_PORT: '7203'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.lma-staging.svc.cluster.local:4317
+  SCHEMA_REPO_URL: ''
+  IDOR_RULESETS_S3: ''
+resources:
+  requests:
+    cpu: 200m
+    memory: 256Mi
+  limits:
+    cpu: '1'
+    memory: 1Gi
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+externalSecrets:
+  enabled: true
+  storeRefName: vault-staging
+  targetName: authz-matrix-service-secrets
+  remotePath: secret/data/lma/authz-matrix-service/staging
+  keys: []

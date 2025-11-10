@@ -1,0 +1,28 @@
+image:
+  repository: ghcr.io/{{ORG}}/{{REPO}}-authz-matrix-service
+  tag: replace-with-ci-tag
+service:
+  port: 7203
+env:
+  ENV: prod
+  SERVICE_PORT: '7203'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.lma-prod.svc.cluster.local:4317
+  SCHEMA_REPO_URL: ''
+  IDOR_RULESETS_S3: ''
+resources:
+  requests:
+    cpu: 300m
+    memory: 512Mi
+  limits:
+    cpu: '2'
+    memory: 2Gi
+hpa:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+externalSecrets:
+  enabled: true
+  storeRefName: vault-prod
+  targetName: authz-matrix-service-secrets
+  remotePath: secret/data/lma/authz-matrix-service/prod
+  keys: []

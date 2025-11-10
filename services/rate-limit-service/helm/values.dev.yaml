@@ -1,0 +1,27 @@
+image:
+  repository: ghcr.io/{{ORG}}/{{REPO}}-rate-limit-service
+  tag: dev
+service:
+  port: 7204
+env:
+  ENV: dev
+  SERVICE_PORT: '7204'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.lma-dev.svc.cluster.local:4317
+  REDIS_URL: ''
+  DEFAULT_RPM: ''
+  BURST_MULTIPLIER: ''
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+hpa:
+  enabled: false
+externalSecrets:
+  enabled: true
+  storeRefName: vault-dev
+  targetName: rate-limit-service-secrets
+  remotePath: secret/data/lma/rate-limit-service/dev
+  keys: []
