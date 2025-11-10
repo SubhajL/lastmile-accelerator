@@ -45,10 +45,10 @@ ${GREEN}After starting:${NC}
   Use Ctrl+C to stop, or run: ./dev.sh stop
 
 ${GREEN}Infrastructure URLs:${NC}
-  Grafana:     hxxp://localhost:3000 (admin/admin)
-  Prometheus:  hxxp://localhost:9090
-  Gitea:       hxxp://localhost:4001
-  MailHog:     hxxp://localhost:8025
+  Grafana:     http://localhost:3000 (admin/admin)
+  Prometheus:  http://localhost:9090
+  Gitea:       http://localhost:4001
+  MailHog:     http://localhost:8025
   MinIO:       http://localhost:9001 (minioadmin/minioadmin)
   Vault:       http://localhost:8200 (token: lma-root)
 
