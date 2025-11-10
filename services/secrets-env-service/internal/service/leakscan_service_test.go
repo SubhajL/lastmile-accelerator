@@ -16,7 +16,7 @@ func (f *fakeStorage) ListFiles(ctx context.Context, projectID, snapshotID strin
 
 func TestLeakScanService_ScanSnapshot_FindsAWSAndJWT(t *testing.T) {
 	repo := repository.NewLeakScanRepository()
-    storage := &fakeStorage{files: []fileBlob{{Path:"/src/app.js", Content: []byte("const k='AKI" + "A1234567890ABCDE" + "F'; const t='eyJ" + "hbGciOi" + ".abc.def';")}}}
+	storage := &fakeStorage{files: []fileBlob{{Path:"/src/app.js", Content: []byte("const k='AKIA1234567890ABCDEF'; const t='eyJhbGciOi.abc.def';")}}}
 	svc := NewLeakScanService(repo, storage, nil)
 
 	findings, err := svc.ScanSnapshot(context.Background(), "p", "snap1")
@@ -27,14 +27,14 @@ func TestLeakScanService_ScanSnapshot_FindsAWSAndJWT(t *testing.T) {
 func Test_scanFile_DetectsCommonPatterns(t *testing.T) {
 	repo := repository.NewLeakScanRepository()
 	svc := NewLeakScanService(repo, nil, nil)
-    content := []byte(
-        "github=gh" + "p_abcdefghijklmnopqrstuvwxyzABCDE12345\n" +
-        "stripe_live=sk_" + "live_abcdefghijklmnopqrstuvwxyzabcd\n" +
-        "stripe_test=sk_" + "test_abcdefghijklmnopqrstuvwxyzabcd\n" +
-        "slack=xox" + "b-1234567890-abcdef\n" +
-        "google=AI" + "zaSyA-abcdefghijklmnopqrstuvwxyz_12345\n" +
-        "-----BEGIN RSA PRIVATE KEY-----\n",
-    )
+	content := []byte(
+		"github=ghp_abcdefghijklmnopqrstuvwxyzABCDE12345\n" +
+		"stripe_live=sk_live_abcdefghijklmnopqrstuvwxyzabcd\n" +
+		"stripe_test=sk_test_abcdefghijklmnopqrstuvwxyzabcd\n" +
+		"slack=xoxb-1234567890-abcdef\n" +
+		"google=AIzaSyA-abcdefghijklmnopqrstuvwxyz_12345\n" +
+		"-----BEGIN RSA PRIVATE KEY-----\n",
+	)
 	finds, _ := svc.scanFile("/src/app.js", content)
 	// Expect at least 6 findings (github, stripe live, stripe test, slack, google, private key)
 	if len(finds) < 6 { t.Fatalf("expected >=6 findings, got %d", len(finds)) }
@@ -44,16 +44,16 @@ func Test_scanFile_PatternSeverities(t *testing.T) {
 	repo := repository.NewLeakScanRepository()
 	svc := NewLeakScanService(repo, nil, nil)
 	// Lines crafted to hit patterns with expected severities
-    content := []byte(
-        "aws=AKI" + "A1234567890ABCDE" + "F\n" +
-        "jwt=eyJ" + "hbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." + "eyJhIjoiYiJ9." + "dGVzdGlnbm9yZWRz\n" +
-        "stripe_live=sk_" + "live_abcdefghijklmnopqrstuvwxyzabcd\n" +
-        "stripe_test=sk_" + "test_abcdefghijklmnopqrstuvwxyzabcd\n" +
-        "github=gh" + "p_abcdefghijklmnopqrstuvwxyzABCDE12345\n" +
-        "slack=xox" + "p-1234567890-abcdef\n" +
-        "google=AI" + "zaSyA-abcdefghijklmnopqrstuvwxyz_12345\n" +
-        "-----BEGIN EC PRIVATE KEY-----\n",
-    )
+	content := []byte(
+		"aws=AKIA1234567890ABCDEF\n" +
+		"jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhIjoiYiJ9.dGVzdGlnbm9yZWRz\n" +
+		"stripe_live=sk_live_abcdefghijklmnopqrstuvwxyzabcd\n" +
+		"stripe_test=sk_test_abcdefghijklmnopqrstuvwxyzabcd\n" +
+		"github=ghp_abcdefghijklmnopqrstuvwxyzABCDE12345\n" +
+		"slack=xoxp-1234567890-abcdef\n" +
+		"google=AIzaSyA-abcdefghijklmnopqrstuvwxyz_12345\n" +
+		"-----BEGIN EC PRIVATE KEY-----\n",
+	)
 	finds, _ := svc.scanFile("/src/app.js", content)
 got := map[string]string{}
 stripeSev := map[string]int{}
