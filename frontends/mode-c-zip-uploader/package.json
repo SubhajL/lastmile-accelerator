@@ -6,8 +6,12 @@
     "build": "next build",
     "start": "next start",
     "test": "echo \"(stub)\"",
+<<<<<<< HEAD
     "typecheck": "tsc -p .",
     "lint": "eslint . --ext .ts,.tsx --max-warnings=0"
+=======
+    "typecheck": "tsc -p ."
+>>>>>>> 1681ece (feat: add frontend applications)
   },
   "dependencies": {
     "next": "14.2.6",
@@ -21,4 +25,8 @@
     "@types/react-dom": "18.2.24",
     "@playwright/test": "1.47.1"
   }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 1681ece (feat: add frontend applications)
