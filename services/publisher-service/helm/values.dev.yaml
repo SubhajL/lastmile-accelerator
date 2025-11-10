@@ -1,0 +1,29 @@
+image:
+  repository: ghcr.io/{{ORG}}/{{REPO}}-publisher-service
+  tag: dev
+service:
+  port: 7201
+env:
+  ENV: dev
+  SERVICE_PORT: '7201'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.lma-dev.svc.cluster.local:4317
+  ROLLBACK_STRATEGY: ''
+  CANARY_HEALTH_URL: ''
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+hpa:
+  enabled: false
+externalSecrets:
+  enabled: true
+  storeRefName: vault-dev
+  targetName: publisher-service-secrets
+  remotePath: secret/data/lma/publisher-service/dev
+  keys:
+  - STRIPE_API_KEY
+  - GITHUB_APP_PRIVATE_KEY
+  - KUBE_CONFIG

@@ -1,0 +1,26 @@
+image:
+  repository: ghcr.io/{{ORG}}/{{REPO}}-webhook-relay-service
+  tag: dev
+service:
+  port: 7903
+env:
+  ENV: dev
+  SERVICE_PORT: '7903'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.lma-dev.svc.cluster.local:4317
+  DLQ_STREAM: ''
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+hpa:
+  enabled: false
+externalSecrets:
+  enabled: true
+  storeRefName: vault-dev
+  targetName: webhook-relay-service-secrets
+  remotePath: secret/data/lma/webhook-relay-service/dev
+  keys:
+  - WEBHOOK_SIGNING_SECRET
