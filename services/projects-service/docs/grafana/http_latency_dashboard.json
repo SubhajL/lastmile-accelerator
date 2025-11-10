@@ -1,0 +1,15 @@
+{
+  "title": "Projects Service - HTTP Latency",
+  "panels": [
+    {
+      "type": "graph",
+      "title": "Average Request Duration (ms)",
+      "targets": [
+        {
+          "expr": "increase(request_duration_ms_sum[5m]) / increase(request_duration_ms_count[5m])",
+          "legendFormat": "avg latency"
+        }
+      ]
+    }
+  ]
+}

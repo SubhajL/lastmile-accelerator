@@ -1,0 +1,27 @@
+image:
+  repository: ghcr.io/{{ORG}}/{{REPO}}-agent-ingest-service
+  tag: dev
+service:
+  port: 7053
+env:
+  ENV: dev
+  SERVICE_PORT: '7053'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.lma-dev.svc.cluster.local:4317
+  AGENT_PUBLIC_KEY_JWKS: ''
+  REPORT_MAX_MB: ''
+  RESULTS_BUCKET: ''
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+hpa:
+  enabled: false
+externalSecrets:
+  enabled: true
+  storeRefName: vault-dev
+  targetName: agent-ingest-service-secrets
+  remotePath: secret/data/lma/agent-ingest-service/dev
+  keys: []

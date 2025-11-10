@@ -1,0 +1,15 @@
+{
+  "title": "Projects Service - Error Rate",
+  "panels": [
+    {
+      "type": "graph",
+      "title": "5xx Error Rate (%)",
+      "targets": [
+        {
+          "expr": "100 * sum(rate(request_errors_total[5m])) / sum(rate(request_total[5m]))",
+          "legendFormat": "error rate %"
+        }
+      ]
+    }
+  ]
+}

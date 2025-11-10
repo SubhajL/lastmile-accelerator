@@ -1,0 +1,12 @@
+image:
+  repository: ghcr.io/ORG/REPO-agent-ingest-service
+  tag: latest
+service:
+  port: 7053
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi

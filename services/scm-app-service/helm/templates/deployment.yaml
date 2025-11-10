@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scm-app-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: scm-app-service }
+  template:
+    metadata:
+      labels: { app: scm-app-service }
+    spec:
+      securityContext:
+        runAsNonRoot: true
+      containers:
+        - name: scm-app-service
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          env:
+          {{- range $name, $val := .Values.env }}
+            - name: {{ $name }}
+              value: {{ $val | quote }}
+          {{- end }}
+          {{- if .Values.externalSecrets.enabled }}
+          envFrom:
+            - secretRef:
+                name: {{ .Values.externalSecrets.targetName }}
+          {{- end }}
+          ports:
+            - containerPort: 7051
+          readinessProbe:
+            httpGet: { path: /healthz, port: 7051 }
+            initialDelaySeconds: 2
+          livenessProbe:
+            httpGet: { path: /healthz, port: 7051 }
+            initialDelaySeconds: 10
+          resources:
+            requests:
+              cpu: "{{ .Values.resources.requests.cpu }}"
+              memory: "{{ .Values.resources.requests.memory }}"
+            limits:
+              cpu: "{{ .Values.resources.limits.cpu }}"
+              memory: "{{ .Values.resources.limits.memory }}"
