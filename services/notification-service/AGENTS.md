@@ -15,12 +15,12 @@
 ## Setup & Run
 
 ```bash
-# From repo root
-bun install
-bunx turbo run build --filter=notification-service
-bunx turbo run typecheck --filter=notification-service
-bunx turbo run test --filter=notification-service
-make run   # or: bun run -C services/notification-service start
+# from repo root
+pnpm i
+pnpm --filter notification-service build
+pnpm --filter notification-service typecheck
+pnpm --filter notification-service test
+make run   # or: pnpm --filter notification-service start
 ```
 
 ## Patterns & Conventions
@@ -53,10 +53,10 @@ grep -R -n 'export ' src | head
 ## Common Gotchas
 
 - Integration tests expect Redis/Postgres/NATS; set env vars or run unit tests only.
-- Keep `tsc --noEmit` green (`bunx turbo run typecheck --filter=notification-service`).
+- Keep `tsc --noEmit` green (`pnpm --filter notification-service typecheck`).
 
 ## Pre-PR Checks
 
 ```bash
-bunx turbo run typecheck test build --filter=notification-service
+pnpm --filter notification-service typecheck && pnpm --filter notification-service test && pnpm --filter notification-service build
 ```
