@@ -1,0 +1,12 @@
+image:
+  repository: ghcr.io/ORG/REPO-secrets-env-service
+  tag: latest
+service:
+  port: 7104
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi

@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: secrets-env-service
+spec:
+  type: ClusterIP
+  selector: { app: secrets-env-service }
+  ports:
+    - name: http
+      port: 7104
+      targetPort: 7104

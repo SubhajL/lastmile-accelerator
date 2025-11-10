@@ -1,0 +1,37 @@
+# authz-matrix-service — CONTEXT
+
+## One-liner
+See PRD. This service runs on REST `:7203` and gRPC `50073` to deliver its function.
+
+## Purpose & Scope
+- Implements authz matrix service responsibilities per PRD.
+- Provides health endpoint `/healthz`.
+
+## APIs & Ports
+- REST: `:7203`
+- gRPC: `50073` (if applicable)
+
+## Dependencies
+- Auth (OIDC/JWT), NATS, Postgres/Redis/S3 as needed.
+
+## Env Vars
+- ENV (dev|staging|prod)
+- SERVICE_NAME=authz-matrix-service
+- SERVICE_PORT=7203
+- OTEL_EXPORTER_OTLP_ENDPOINT
+- VAULT_ADDR / VAULT_ROLE_ID / VAULT_SECRET_ID
+
+## SLOs/NFRs
+- API p95 ≤ 150ms, Availability 99.9%
+
+## Security
+- mTLS in mesh + JWT scopes; no client secrets stored.
+
+## Observability
+- `/healthz` + `/metrics`; OTel spans tagged with `service.name=authz-matrix-service`
+
+## Testing
+- Unit tests for handler; integration stubs in CI.
+
+## Ownership
+- Team: @team-authz • Slack: #lma-authz-matrix-service • PagerDuty: lma-authz-matrix-service

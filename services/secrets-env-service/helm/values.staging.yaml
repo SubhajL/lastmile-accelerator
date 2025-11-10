@@ -1,0 +1,29 @@
+image:
+  repository: ghcr.io/{{ORG}}/{{REPO}}-secrets-env-service
+  tag: replace-with-ci-tag
+service:
+  port: 7104
+env:
+  ENV: staging
+  SERVICE_PORT: '7104'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.lma-staging.svc.cluster.local:4317
+  VAULT_ADDR: ''
+resources:
+  requests:
+    cpu: 200m
+    memory: 256Mi
+  limits:
+    cpu: '1'
+    memory: 1Gi
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+externalSecrets:
+  enabled: true
+  storeRefName: vault-staging
+  targetName: secrets-env-service-secrets
+  remotePath: secret/data/lma/secrets-env-service/staging
+  keys:
+  - VAULT_ROLE_ID
+  - VAULT_SECRET_ID
