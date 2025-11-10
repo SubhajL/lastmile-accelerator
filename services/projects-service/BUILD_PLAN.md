@@ -50,8 +50,8 @@ OpenTelemetry (Observability)
 ### Success: Service starts and responds to health check
 ```bash
 SERVICE_PORT=7002 pnpm dev
-curl hxxp://localhost:7002/healthz  # {"status": "ok", ...}
-curl hxxp://localhost:7002/metrics  # Prometheus format
+curl http://localhost:7002/healthz  # {"status": "ok", ...}
+curl http://localhost:7002/metrics  # Prometheus format
 ```
 
 ---
@@ -120,7 +120,7 @@ ingestion_modes → project_id, mode (A|B|C), is_default
 ```bash
 pnpm test                          # All 30+ tests pass
 npm run build                      # TypeScript compiles
-curl -H "Authorization: Bearer $JWT" hxxp://localhost:7002/v1/projects
+curl -H "Authorization: Bearer $JWT" http://localhost:7002/v1/projects
 # Returns only projects for authenticated user's tenant
 ```
 
@@ -242,8 +242,8 @@ Follow this order to have working code at each step:
 ### Phase 1: ✅ Foundation Complete
 - [ ] `pnpm install` succeeds
 - [ ] `pnpm dev` starts service on port 7002
-- [ ] `curl hxxp://localhost:7002/healthz` returns 200 with `{"status": "ok"}`
-- [ ] `curl hxxp://localhost:7002/metrics` returns Prometheus format
+- [ ] `curl http://localhost:7002/healthz` returns 200 with `{"status": "ok"}`
+- [ ] `curl http://localhost:7002/metrics` returns Prometheus format
 - [ ] `pnpm test` passes all 9 Phase 1 tests
 - [ ] `npm run build` compiles without errors
 
@@ -270,8 +270,8 @@ Follow this order to have working code at each step:
 ## Questions to Ask Yourself
 
 - **Do we have access to test PostgreSQL?** (dev/.env.local has DATABASE_URL=postgres://lma:lma@localhost:55432/lma)
-- **Is NATS running?** (dev/.env.local has NATS_URL=nxxs://localhost:4222)
-- **Do we have Keycloak for OIDC?** (dev/.env.local has JWT_JWKS_URL=hxxp://localhost:8080/...)
+- **Is NATS running?** (dev/.env.local has NATS_URL=nats://localhost:4222)
+- **Do we have Keycloak for OIDC?** (dev/.env.local has JWT_JWKS_URL=http://localhost:8080/...)
 - **How do we seed test data?** (fixtures + withDbTransaction wrapper in setup.ts)
 - **Where do we run migrations?** (migrate.ts runs at service startup, or manually via pnpm migrate)
 
