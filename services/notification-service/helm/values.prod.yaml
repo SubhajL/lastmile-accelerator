@@ -1,0 +1,30 @@
+image:
+  repository: ghcr.io/{{ORG}}/{{REPO}}-notification-service
+  tag: replace-with-ci-tag
+service:
+  port: 7902
+env:
+  ENV: prod
+  SERVICE_PORT: '7902'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.lma-prod.svc.cluster.local:4317
+resources:
+  requests:
+    cpu: 300m
+    memory: 512Mi
+  limits:
+    cpu: '2'
+    memory: 2Gi
+hpa:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+externalSecrets:
+  enabled: true
+  storeRefName: vault-prod
+  targetName: notification-service-secrets
+  remotePath: secret/data/lma/notification-service/prod
+  keys:
+  - RESEND_API_KEY
+  - TWILIO_ACCOUNT_SID
+  - TWILIO_AUTH_TOKEN
+  - SLACK_WEBHOOK_URL

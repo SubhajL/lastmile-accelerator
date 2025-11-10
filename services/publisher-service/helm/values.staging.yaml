@@ -1,0 +1,31 @@
+image:
+  repository: ghcr.io/{{ORG}}/{{REPO}}-publisher-service
+  tag: replace-with-ci-tag
+service:
+  port: 7201
+env:
+  ENV: staging
+  SERVICE_PORT: '7201'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.lma-staging.svc.cluster.local:4317
+  ROLLBACK_STRATEGY: ''
+  CANARY_HEALTH_URL: ''
+resources:
+  requests:
+    cpu: 200m
+    memory: 256Mi
+  limits:
+    cpu: '1'
+    memory: 1Gi
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+externalSecrets:
+  enabled: true
+  storeRefName: vault-staging
+  targetName: publisher-service-secrets
+  remotePath: secret/data/lma/publisher-service/staging
+  keys:
+  - STRIPE_API_KEY
+  - GITHUB_APP_PRIVATE_KEY
+  - KUBE_CONFIG

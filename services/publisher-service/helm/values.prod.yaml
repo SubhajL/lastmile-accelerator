@@ -1,0 +1,31 @@
+image:
+  repository: ghcr.io/{{ORG}}/{{REPO}}-publisher-service
+  tag: replace-with-ci-tag
+service:
+  port: 7201
+env:
+  ENV: prod
+  SERVICE_PORT: '7201'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.lma-prod.svc.cluster.local:4317
+  ROLLBACK_STRATEGY: ''
+  CANARY_HEALTH_URL: ''
+resources:
+  requests:
+    cpu: 300m
+    memory: 512Mi
+  limits:
+    cpu: '2'
+    memory: 2Gi
+hpa:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+externalSecrets:
+  enabled: true
+  storeRefName: vault-prod
+  targetName: publisher-service-secrets
+  remotePath: secret/data/lma/publisher-service/prod
+  keys:
+  - STRIPE_API_KEY
+  - GITHUB_APP_PRIVATE_KEY
+  - KUBE_CONFIG
