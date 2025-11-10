@@ -24,8 +24,8 @@ func TestNewVaultClient_InvalidConfig_ReturnsError(t *testing.T) {
 
 func TestNewVaultClient_MissingRoleID_ReturnsError(t *testing.T) {
 	// Arrange
-    config := &VaultConfig{
-        Address:  "h"+"ttp://localhost:8200",
+	config := &VaultConfig{
+		Address:  "http://localhost:8200",
 		RoleID:   "",
 		SecretID: "test-secret",
 	}
