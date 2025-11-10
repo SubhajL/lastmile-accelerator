@@ -1,0 +1,88 @@
+openapi: 3.0.3
+info:
+  title: publisher-service API
+  version: 1.0.0
+paths:
+  /v1/preflight:
+    post:
+      summary: Run preflight checks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreflightReq'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreflightRes'
+  /v1/publish-safely:
+    post:
+      summary: Publish with canary and undo support
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublishReq'
+      responses:
+        '200':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublishRes'
+  /v1/undo:
+    post:
+      summary: Undo a specific publish
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UndoReq'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UndoRes'
+components:
+  schemas:
+    PreflightReq:
+      type: object
+      required: [projectId, snapshotId]
+      properties:
+        projectId: { type: string }
+        snapshotId: { type: string }
+    PreflightRes:
+      type: object
+      properties:
+        ok: { type: boolean }
+        reportUrl: { type: string }
+    PublishReq:
+      type: object
+      required: [projectId, snapshotId, env]
+      properties:
+        projectId: { type: string }
+        snapshotId: { type: string }
+        env: { type: string, enum: [dev, staging, prod] }
+    PublishRes:
+      type: object
+      properties:
+        publishId: { type: string }
+        status: { type: string, enum: [started, failed, healthy] }
+    UndoReq:
+      type: object
+      required: [publishId]
+      properties:
+        publishId: { type: string }
+    UndoRes:
+      type: object
+      properties:
+        ok: { type: boolean }
+        message: { type: string }
