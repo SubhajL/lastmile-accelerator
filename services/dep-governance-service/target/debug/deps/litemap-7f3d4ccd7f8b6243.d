@@ -1,0 +1,10 @@
+/Users/subhajlimanond/dev/lastmile-accelerator/services/dep-governance-service/target/debug/deps/litemap-7f3d4ccd7f8b6243.d: /Users/subhajlimanond/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/litemap-0.8.1/src/lib.rs /Users/subhajlimanond/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/litemap-0.8.1/src/map.rs /Users/subhajlimanond/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/litemap-0.8.1/src/store/mod.rs /Users/subhajlimanond/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/litemap-0.8.1/src/store/slice_impl.rs
+
+/Users/subhajlimanond/dev/lastmile-accelerator/services/dep-governance-service/target/debug/deps/liblitemap-7f3d4ccd7f8b6243.rlib: /Users/subhajlimanond/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/litemap-0.8.1/src/lib.rs /Users/subhajlimanond/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/litemap-0.8.1/src/map.rs /Users/subhajlimanond/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/litemap-0.8.1/src/store/mod.rs /Users/subhajlimanond/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/litemap-0.8.1/src/store/slice_impl.rs
+
+/Users/subhajlimanond/dev/lastmile-accelerator/services/dep-governance-service/target/debug/deps/liblitemap-7f3d4ccd7f8b6243.rmeta: /Users/subhajlimanond/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/litemap-0.8.1/src/lib.rs /Users/subhajlimanond/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/litemap-0.8.1/src/map.rs /Users/subhajlimanond/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/litemap-0.8.1/src/store/mod.rs /Users/subhajlimanond/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/litemap-0.8.1/src/store/slice_impl.rs
+
+/Users/subhajlimanond/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/litemap-0.8.1/src/lib.rs:
+/Users/subhajlimanond/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/litemap-0.8.1/src/map.rs:
+/Users/subhajlimanond/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/litemap-0.8.1/src/store/mod.rs:
+/Users/subhajlimanond/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/litemap-0.8.1/src/store/slice_impl.rs:

@@ -1,0 +1,26 @@
+image:
+  repository: ghcr.io/{{ORG}}/{{REPO}}-db-guardian-service
+  tag: dev
+service:
+  port: 7105
+env:
+  ENV: dev
+  SERVICE_PORT: '7105'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.lma-dev.svc.cluster.local:4317
+  BACKUP_S3_BUCKET: ''
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+hpa:
+  enabled: false
+externalSecrets:
+  enabled: true
+  storeRefName: vault-dev
+  targetName: db-guardian-service-secrets
+  remotePath: secret/data/lma/db-guardian-service/dev
+  keys:
+  - PG_SUPER_DSN

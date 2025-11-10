@@ -1,0 +1,29 @@
+image:
+  repository: ghcr.io/{{ORG}}/{{REPO}}-perf-coach-service
+  tag: replace-with-ci-tag
+service:
+  port: 7302
+env:
+  ENV: staging
+  SERVICE_PORT: '7302'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.lma-staging.svc.cluster.local:4317
+  CDN_PROVIDER: ''
+  REDIS_URL: ''
+resources:
+  requests:
+    cpu: 200m
+    memory: 256Mi
+  limits:
+    cpu: '1'
+    memory: 1Gi
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+externalSecrets:
+  enabled: true
+  storeRefName: vault-staging
+  targetName: perf-coach-service-secrets
+  remotePath: secret/data/lma/perf-coach-service/staging
+  keys:
+  - PG_READONLY_DSN
