@@ -1,0 +1,9 @@
+route:
+  receiver: 'dev-mailhog'
+
+receivers:
+  - name: 'dev-mailhog'
+    email_configs:
+      - to: 'alerts@example.com'
+        from: 'alertmanager@local.test'
+        smarthost: 'mailhog:1025'
