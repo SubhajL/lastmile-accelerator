@@ -33,7 +33,8 @@ lma-devstack-compose-gitea4001/vol/prometheus/
 
 # Service temp/build outputs
 services/**/tmp/
-
+# Service temp/build outputs
+services/**/tmp/
 # Env files
 .env
 .env.*.local
