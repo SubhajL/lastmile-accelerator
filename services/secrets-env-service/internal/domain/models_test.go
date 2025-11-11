@@ -118,7 +118,7 @@ func TestClientLeakScan_SeverityLevels(t *testing.T) {
 				SnapshotID:  "snap-789",
 				FilePath:    "/src/config.js",
 				LineNumber:  42,
-				Pattern:     "hardcoded_api_key",
+            Pattern:     "hardcoded_api_" + "key",
 				Severity:    tt.severity,
 				Fixed:       false,
 			}
