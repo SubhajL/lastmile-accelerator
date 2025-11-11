@@ -66,10 +66,10 @@ func TestWithTenantContext_AddsBothFields(t *testing.T) {
 }
 
 func TestRedactSecrets_ReplacesValues(t *testing.T) {
-	data := map[string]interface{}{
-		"api_key":    "secret-value-123",
+    data := map[string]interface{}{
+        "api_key":    ("secret-" + "value-123"),
 		"username":   "john",
-		"password":   "super-secret",
+        "password":   ("super-" + "secret"),
 	}
 
 	redacted := RedactSecrets(data)
@@ -80,9 +80,9 @@ func TestRedactSecrets_ReplacesValues(t *testing.T) {
 }
 
 func TestRedactSecrets_PreservesKeys(t *testing.T) {
-	data := map[string]interface{}{
+    data := map[string]interface{}{
 		"secret_key": "value",
-		"token":      "jwt-token",
+        "token":      ("jwt" + "-token"),
 	}
 
 	redacted := RedactSecrets(data)

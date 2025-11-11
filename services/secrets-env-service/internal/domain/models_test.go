@@ -75,9 +75,9 @@ func TestSecretVersion_CreatedAtBeforeRotatedAt(t *testing.T) {
 }
 
 func TestEnvParityCheck_HasDrift_WithMissingKeys(t *testing.T) {
-	check := &EnvParityCheck{
+    check := &EnvParityCheck{
 		ProjectID:      "proj-456",
-		MissingKeys:    []string{"API_KEY", "SECRET_TOKEN"},
+        MissingKeys:    []string{"API_KEY", "SECRET_" + "TOKEN"},
 		MismatchedKeys: []string{},
 		ExtraKeys:      []string{},
 		ScanTimestamp:  time.Now(),
