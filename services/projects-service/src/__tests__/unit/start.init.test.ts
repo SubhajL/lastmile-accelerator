@@ -72,7 +72,9 @@ describe('start() initialization wiring', () => {
 
     expect(dbSpy).toHaveBeenCalledWith({ connectionString: 'pg' + 'sql://user:pass@localhost:5432/appdb' });
     expect(natsSpy).toHaveBeenCalledWith('n' + 'ats://' + 'localhost:4222', expect.any(Object));
-    expect(otelSpy).toHaveBeenCalledWith('projects-service', { exporterUrl: 'h' + 'ttp://' + 'collector:4318' });
-    expect(otelSpy).toHaveBeenCalledWith('projects-service', { exporterUrl: 'http://collector:4318' });
+    expect(otelSpy).toHaveBeenCalledWith('projects-service', {
+      exporterUrl: 'h' + 'ttp://' + 'collector:4318',
+      metricsUrl: undefined,
+    });
   });
 });

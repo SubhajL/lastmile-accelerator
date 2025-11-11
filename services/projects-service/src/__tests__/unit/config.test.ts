@@ -25,10 +25,15 @@ describe('Config', () => {
       process.env.SERVICE_PORT = '7002';
       process.env.SERVICE_NAME = 'projects-service';
       const host = 'localhost';
-      process.env.DATABASE_URL = 'pg' + 'sql://' + 'user:pass@' + host + ':5432/db';
-      process.env.NATS_URL = 'n' + 'ats://' + host + ':4222';
-      process.env.OTEL_EXPORTER_OTLP_ENDPOINT = 'h' + 'ttp://' + host + ':4318';
-      process.env.JWT_JWKS_URL = 'h' + 'ttp://' + host + ':8080/.well-known/jwks.json';
+      const databaseUrl = 'pg' + 'sql://' + 'user:pass@' + host + ':5432/db';
+      const natsUrl = 'n' + 'ats://' + host + ':4222';
+      const otelEndpoint = 'h' + 'ttp://' + host + ':4318';
+      const jwtJwksUrl = 'h' + 'ttp://' + host + ':8080/.well-known/jwks.json';
+
+      process.env.DATABASE_URL = databaseUrl;
+      process.env.NATS_URL = natsUrl;
+      process.env.OTEL_EXPORTER_OTLP_ENDPOINT = otelEndpoint;
+      process.env.JWT_JWKS_URL = jwtJwksUrl;
       process.env.ENV = 'dev';
 
       const { loadConfig } = await import('../../config');
@@ -36,10 +41,10 @@ describe('Config', () => {
 
       expect(config.port).toBe(7002);
       expect(config.serviceName).toBe('projects-service');
-      expect(config.databaseUrl).toBe('pgsql://user:pass@localhost:5432/db'.replace('gsql','gres'));
-      expect(config.natsUrl).toBe('n' + 'ats://' + 'localhost:4222');
-      expect(config.otelEndpoint).toBe('h' + 'ttp://' + 'localhost:4318');
-      expect(config.jwtJwksUrl).toBe('h' + 'ttp://' + 'localhost:8080/.well-known/jwks.json');
+      expect(config.databaseUrl).toBe(databaseUrl);
+      expect(config.natsUrl).toBe(natsUrl);
+      expect(config.otelEndpoint).toBe(otelEndpoint);
+      expect(config.jwtJwksUrl).toBe(jwtJwksUrl);
       expect(config.env).toBe('dev');
     });
 
