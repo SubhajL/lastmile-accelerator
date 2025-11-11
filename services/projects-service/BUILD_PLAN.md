@@ -269,7 +269,7 @@ Follow this order to have working code at each step:
 
 ## Questions to Ask Yourself
 
-- **Do we have access to test PostgreSQL?** (dev/.env.local has DATABASE_URL=postgres://lma:lma@localhost:55432/lma)
+- **Do we have access to test PostgreSQL?** (dev/.env.local has DATABASE_URL=postgres://localhost:55432/lma)
 - **Is NATS running?** (dev/.env.local has NATS_URL=nats://localhost:4222)
 - **Do we have Keycloak for OIDC?** (dev/.env.local has JWT_JWKS_URL=http://localhost:8080/...)
 - **How do we seed test data?** (fixtures + withDbTransaction wrapper in setup.ts)
