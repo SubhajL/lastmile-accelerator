@@ -6,7 +6,8 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node --enable-source-maps dist/index.js",
-    "test": "echo \"(stub)\""
+    "test": "echo \"(stub)\"",
+    "lint": "eslint . --ext .ts,.tsx --max-warnings=0"
   },
   "dependencies": {
     "fastify": "4.27.0"
