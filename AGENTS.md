@@ -1,17 +1,26 @@
 ## Project Snapshot
 
-- Monorepo using pnpm workspaces + Turborepo to run build/test/lint/typecheck across frontends, services, and packages.
+- Monorepo using Turborepo across frontends, services, and packages.
+- Node toolchain: Bun preferred for services/packages; pnpm for Next.js frontends.
 - Tech stack: Node/TypeScript, Go, Rust, Python; Helm/Kubernetes per service.
 - Nearest-wins: each service has its own AGENTS.md with specifics; this root stays light and links to them.
+
+## Toolchain Policy
+
+- Node services and packages: Bun + Turbo
+  - Install deps: `bun install`
+  - Run tasks via Turbo: `bunx turbo run <task> [--filter=<pkg>]`
+- Frontends (Next.js apps): pnpm
+  - Each app uses its own `pnpm-lock.yaml` and Dockerfile with pnpm
+  - Install/build inside the app folder: `pnpm i && pnpm build`
+- Go/Rust/Python services: use per-service Makefiles and language-native tools.
 
 ## Root Setup Commands
 
 ```bash
-pnpm i
-pnpm -w build       # turbo run build
-pnpm -w typecheck   # turbo run typecheck
-pnpm -w lint        # turbo run lint (if configured per package)
-pnpm -w test        # turbo run test (Node services); Go/Rust/Python use per-service Makefile
+bun install
+bunx turbo run typecheck lint test build
+# For a single package: bunx turbo run build --filter=<package>
 ```
 
 ## Universal Conventions
@@ -318,5 +327,6 @@ grep -R -n 'kind: Deployment' services/*/helm/templates
 
 ## Definition of Done
 
-- Root green: `pnpm -w typecheck && pnpm -w lint && pnpm -w test && pnpm -w build`.
-- Per-service green: run the service’s Pre-PR checks listed in its AGENTS.md (typically `make test && make build`).
+- Root green: `bunx turbo run typecheck lint test build` (Node services/packages) plus per-language checks.
+- Frontends green: per-app `pnpm i && pnpm build` succeeds and app CI passes.
+- Non-Node services: run the service’s Pre-PR checks listed in its AGENTS.md (typically `make test && make build`).

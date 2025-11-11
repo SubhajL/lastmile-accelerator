@@ -15,10 +15,11 @@
 ## Setup & Run
 
 ```bash
-pnpm i
-pnpm --filter projects-service build
-pnpm --filter projects-service typecheck || true
-pnpm --filter projects-service test
+# From repo root
+bun install
+bunx turbo run build --filter=projects-service
+bunx turbo run typecheck --filter=projects-service || true
+bunx turbo run test --filter=projects-service
 make run
 ```
 
@@ -47,10 +48,10 @@ grep -R -n '__tests__/(integration|unit)' src
 
 ## Common Gotchas
 
-- Integration tests require Postgres and NATS; ensure env and migrations are applied (`pnpm --filter projects-service migrate`).
+- Integration tests require Postgres and NATS; ensure env and migrations are applied (`bunx turbo run migrate --filter=projects-service`).
 
 ## Pre-PR Checks
 
 ```bash
-pnpm --filter projects-service test && pnpm --filter projects-service build
+bunx turbo run typecheck test build --filter=projects-service
 ```

@@ -15,8 +15,9 @@
 ## Setup & Run
 
 ```bash
-pnpm i
-pnpm --filter zip-ingest-service build
+# From repo root
+bun install
+bunx turbo run build --filter=zip-ingest-service
 make run
 ```
 

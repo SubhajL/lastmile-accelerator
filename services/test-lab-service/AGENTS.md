@@ -15,10 +15,11 @@
 ## Setup & Run
 
 ```bash
-pnpm i
-pnpm --filter test-lab-service build
-pnpm --filter test-lab-service typecheck
-pnpm --filter test-lab-service test
+# From repo root
+bun install
+bunx turbo run build --filter=test-lab-service
+bunx turbo run typecheck --filter=test-lab-service
+bunx turbo run test --filter=test-lab-service
 make run
 ```
 
@@ -46,5 +47,5 @@ grep -R -nE 'fastify\.(get|post|put|delete)\(' src/routes
 ## Pre-PR Checks
 
 ```bash
-pnpm --filter test-lab-service typecheck && pnpm --filter test-lab-service test && pnpm --filter test-lab-service build
+bunx turbo run typecheck test build --filter=test-lab-service
 ```

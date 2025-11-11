@@ -15,8 +15,9 @@
 ## Setup & Run
 
 ```bash
-pnpm i
-pnpm --filter scaffold-secure-service build
+# From repo root
+bun install
+bunx turbo run build --filter=scaffold-secure-service
 make run
 ```
 
