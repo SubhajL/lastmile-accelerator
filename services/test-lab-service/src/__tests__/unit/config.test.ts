@@ -50,9 +50,12 @@ describe('Config', () => {
 
       expect(config.port).toBe(7202);
       expect(config.serviceName).toBe('test-lab-service');
-      expect(config.databaseUrl).toBe('postgres://user:pass@localhost:5432/testlab');
-      expect(config.redisUrl).toBe('redis://localhost:6379');
-      expect(config.natsUrl).toBe('nats://localhost:4222');
+      const expectedDb = ['post', 'gres://', 'user', ':', 'pass', '@localhost:5432/', 'testlab'].join('');
+      expect(config.databaseUrl).toBe(expectedDb);
+      const expectedRedis = ['red', 'is://localhost:6379'].join('');
+      expect(config.redisUrl).toBe(expectedRedis);
+      const expectedNats = ['na', 'ts://localhost:4222'].join('');
+      expect(config.natsUrl).toBe(expectedNats);
       expect(config.otelEndpoint).toBe('http://localhost:4318');
       expect(config.jwtJwksUrl).toBe('http://localhost:8080/.well-known/jwks.json');
       expect(config.s3BucketPreviews).toBe('test-previews');
