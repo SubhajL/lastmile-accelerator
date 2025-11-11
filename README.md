@@ -124,3 +124,13 @@ All summary and implementation reports should be placed in:
 - ❌ Configuration directories
 
 **Rationale:** Keeps the root directory clean and all documentation centralized in the `/documentation` folder for easier maintenance and navigation.
+
+## Frontend Tooling
+
+Frontend apps use pnpm + Next.js. See per-app guidance:
+
+- frontends/mode-a-dashboard/AGENTS.md
+- frontends/mode-b-privacy-portal/AGENTS.md
+- frontends/mode-c-zip-uploader/AGENTS.md
+
+Note: The monorepo prefers Bun+Turbo for Node services, but frontends standardize on pnpm for build/dev workflows.
