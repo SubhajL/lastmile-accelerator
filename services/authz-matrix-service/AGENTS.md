@@ -15,8 +15,9 @@
 ## Setup & Run
 
 ```bash
-pnpm i
-pnpm --filter authz-matrix-service build
+# From repo root
+bun install
+bunx turbo run build --filter=authz-matrix-service
 make run
 ```
 

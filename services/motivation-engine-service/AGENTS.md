@@ -15,8 +15,9 @@
 ## Setup & Run
 
 ```bash
-pnpm i
-pnpm --filter motivation-engine-service build
+# From repo root
+bun install
+bunx turbo run build --filter=motivation-engine-service
 make run
 ```
 

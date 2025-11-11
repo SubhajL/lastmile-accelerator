@@ -15,8 +15,9 @@
 ## Setup & Run
 
 ```bash
-pnpm i
-pnpm --filter legal-automator-service build
+# From repo root
+bun install
+bunx turbo run build --filter=legal-automator-service
 make run
 ```
 

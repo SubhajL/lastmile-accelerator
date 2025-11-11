@@ -15,8 +15,9 @@
 ## Setup & Run
 
 ```bash
-pnpm i
-pnpm --filter fix-engine-service build
+# From repo root
+bun install
+bunx turbo run build --filter=fix-engine-service
 make run
 ```
 
