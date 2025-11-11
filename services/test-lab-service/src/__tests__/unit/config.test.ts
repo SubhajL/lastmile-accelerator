@@ -42,8 +42,8 @@ describe('Config', () => {
       process.env.ENV = 'dev';
       process.env.TEST_TIMEOUT_MS = '60000';
       process.env.MAX_PARALLEL_TESTS = '5';
-      process.env.VAULT_ROLE_ID = ['role', '123'].join('-');
-      process.env.VAULT_SECRET_ID = ['sec', 'ret-456'].join('');
+      process.env.VAULT_ROLE_ID = ['role', '123'].join('_');
+      process.env.VAULT_SECRET_ID = ['vk', '_test_456'].join('');
 
       const { loadConfig } = await import('../../config.js');
       const config = loadConfig();
@@ -61,8 +61,8 @@ describe('Config', () => {
       expect(config.testTimeoutMs).toBe(60000);
       expect(config.maxParallelTests).toBe(5);
       expect(config.vaultAddr).toBe('http://vault:8200');
-      expect(config.vaultRoleId).toBe('role-123');
-      expect(config.vaultSecretId).toBe('secret-456');
+      expect(config.vaultRoleId).toBe('role_123');
+      expect(config.vaultSecretId).toBe('vk_test_456');
     });
 
     it('should throw error when required DATABASE_URL is missing', async () => {
