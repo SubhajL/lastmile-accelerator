@@ -31,6 +31,9 @@ lma-devstack-compose-gitea4001/vol/prometheus/
 # Rust build output
 **/target/
 
+# Service temp/build outputs
+services/**/tmp/
+
 # Env files
 .env
 .env.*.local
