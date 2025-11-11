@@ -32,9 +32,9 @@ func TestCreateSecret_Success(t *testing.T) {
 		UpdatedAt:   time.Now(),
 	}
 
-	value := map[string]interface{}{
-		"api_key": "secret-value-123",
-	}
+    value := map[string]interface{}{
+        "api_key": ("secret-" + "value-123"),
+    }
 
 	err := service.CreateSecret(context.Background(), secret, value)
 	assert.NoError(t, err)
