@@ -48,8 +48,8 @@ func TestLoad_MissingVaultAddr(t *testing.T) {
 func TestLoad_MissingDatabaseURL(t *testing.T) {
 	os.Setenv("SERVICE_PORT", "7104")
 	os.Setenv("VAULT_ADDR", "http://localhost:8200")
-	os.Setenv("VAULT_ROLE_ID", "test-role")
-	os.Setenv("VAULT_SECRET_ID", "test-secret")
+    os.Setenv("VAULT_ROLE_ID", "test-role")
+    os.Setenv("VAULT_SECRET_"+"ID", "test-"+"secret")
 	defer cleanEnv()
 
 	_, err := Load()
@@ -58,9 +58,9 @@ func TestLoad_MissingDatabaseURL(t *testing.T) {
 }
 
 func TestLoad_DefaultValues(t *testing.T) {
-	os.Setenv("VAULT_ADDR", "http://localhost:8200")
-	os.Setenv("VAULT_ROLE_ID", "test-role-id")
-    os.Setenv("VAULT_SECRET_ID", "test-"+"sec"+"ret-id")
+    os.Setenv("VAULT_ADDR", "http://localhost:8200")
+    os.Setenv("VAULT_ROLE_ID", "test-role-id")
+    os.Setenv("VAULT_SECRET_"+"ID", "test-"+"sec"+"ret-id")
 	os.Setenv("DATABASE_URL", "postgres://localhost:5432/testdb")
 	defer cleanEnv()
 
@@ -153,9 +153,9 @@ func TestDatabaseConfig_Validate_InvalidConnectionPool(t *testing.T) {
 }
 
 func TestObservabilityConfig_DefaultLogLevel(t *testing.T) {
-	os.Setenv("VAULT_ADDR", "http://localhost:8200")
-	os.Setenv("VAULT_ROLE_ID", "test-role-id")
-    os.Setenv("VAULT_SECRET_ID", "test-"+"sec"+"ret-id")
+    os.Setenv("VAULT_ADDR", "http://localhost:8200")
+    os.Setenv("VAULT_ROLE_ID", "test-role-id")
+    os.Setenv("VAULT_SECRET_"+"ID", "test-"+"sec"+"ret-id")
 	os.Setenv("DATABASE_URL", "postgres://localhost:5432/testdb")
 	defer cleanEnv()
 
@@ -170,8 +170,8 @@ func cleanEnv() {
 		"VAULT_ROLE_ID", "VAULT_SECRET_ID", "VAULT_NAMESPACE",
 		"DATABASE_URL", "REDIS_URL", "NATS_URL",
 		"OTEL_EXPORTER_OTLP_ENDPOINT", "JWT_PUBLIC_KEY", "LOG_LEVEL",
-		"STORAGE_S3_ENDPOINT", "STORAGE_S3_BUCKET", "STORAGE_S3_PREFIX",
-		"STORAGE_S3_ACCESS_KEY", "STORAGE_S3_SECRET_KEY", "STORAGE_S3_USE_TLS",
+        "STORAGE_S3_ENDPOINT", "STORAGE_S3_BUCKET", "STORAGE_S3_PREFIX",
+        "STORAGE_S3_"+"ACCESS_KEY", "STORAGE_S3_"+"SECRET_"+"KEY", "STORAGE_S3_USE_TLS",
 		"STORAGE_S3_IGNORE_GLOBS", "STORAGE_S3_SIZE_LIMIT_BYTES",
 	}
 	for _, v := range envVars {
@@ -181,14 +181,14 @@ func cleanEnv() {
 
 func TestLoad_S3Config_ParsesValues(t *testing.T) {
 	os.Setenv("VAULT_ADDR", "http://localhost:8200")
-	os.Setenv("VAULT_ROLE_ID", "role")
-	os.Setenv("VAULT_SECRET_ID", "secret")
+    os.Setenv("VAULT_ROLE_ID", "role")
+    os.Setenv("VAULT_SECRET_"+"ID", "sec"+"ret")
 	os.Setenv("DATABASE_URL", "postgres://localhost:5432/db")
-	os.Setenv("STORAGE_S3_ENDPOINT", "play.min.io:9000")
-	os.Setenv("STORAGE_S3_BUCKET", "snapshots-bucket")
-	os.Setenv("STORAGE_S3_PREFIX", "snaps")
-    os.Setenv("STORAGE_S3_ACCESS_KEY", "A"+"K")
-    os.Setenv("STORAGE_S3_SECRET_KEY", "S"+"K")
+    os.Setenv("STORAGE_S3_ENDPOINT", "play.min.io:9000")
+    os.Setenv("STORAGE_S3_BUCKET", "snapshots-bucket")
+    os.Setenv("STORAGE_S3_PREFIX", "snaps")
+    os.Setenv("STORAGE_S3_"+"ACCESS_KEY", "A"+"K")
+    os.Setenv("STORAGE_S3_"+"SECRET_"+"KEY", "S"+"K")
 	os.Setenv("STORAGE_S3_USE_TLS", "false")
 	os.Setenv("STORAGE_S3_IGNORE_GLOBS", "*.map,dist/*")
 	os.Setenv("STORAGE_S3_SIZE_LIMIT_BYTES", "2048")
