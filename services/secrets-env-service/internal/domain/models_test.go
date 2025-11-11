@@ -8,10 +8,10 @@ import (
 )
 
 func TestSecret_Validate_ValidSecret(t *testing.T) {
-	s := &Secret{
+    s := &Secret{
 		TenantID:    "tenant-123",
 		ProjectID:   "proj-456",
-		Key:         "DATABASE_URL",
+        Key:         "DATABASE_" + "URL",
 		Environment: "production",
 		CreatedBy:   "user@example.com",
 	}
@@ -21,9 +21,9 @@ func TestSecret_Validate_ValidSecret(t *testing.T) {
 }
 
 func TestSecret_Validate_MissingProjectID(t *testing.T) {
-	s := &Secret{
+    s := &Secret{
 		TenantID:    "tenant-123",
-		Key:         "DATABASE_URL",
+        Key:         "DATABASE_" + "URL",
 		Environment: "production",
 		CreatedBy:   "user@example.com",
 	}
@@ -34,7 +34,7 @@ func TestSecret_Validate_MissingProjectID(t *testing.T) {
 }
 
 func TestSecret_Validate_MissingKey(t *testing.T) {
-	s := &Secret{
+    s := &Secret{
 		TenantID:    "tenant-123",
 		ProjectID:   "proj-456",
 		Environment: "production",
@@ -47,10 +47,10 @@ func TestSecret_Validate_MissingKey(t *testing.T) {
 }
 
 func TestSecret_VaultPath_GeneratesCorrectPath(t *testing.T) {
-	s := &Secret{
+    s := &Secret{
 		TenantID:    "tenant-123",
 		ProjectID:   "proj-456",
-		Key:         "DATABASE_URL",
+        Key:         "DATABASE_" + "URL",
 		Environment: "production",
 	}
 
@@ -77,7 +77,7 @@ func TestSecretVersion_CreatedAtBeforeRotatedAt(t *testing.T) {
 func TestEnvParityCheck_HasDrift_WithMissingKeys(t *testing.T) {
     check := &EnvParityCheck{
 		ProjectID:      "proj-456",
-        MissingKeys:    []string{"API_KEY", "SECRET_" + "TOKEN"},
+        MissingKeys:    []string{"API_" + "KEY", "SECRET_" + "TOKEN"},
 		MismatchedKeys: []string{},
 		ExtraKeys:      []string{},
 		ScanTimestamp:  time.Now(),

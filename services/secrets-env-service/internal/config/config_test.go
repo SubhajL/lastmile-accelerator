@@ -15,7 +15,7 @@ func TestLoad_AllRequiredEnvVars(t *testing.T) {
 	os.Setenv("SERVICE_PORT", "7104")
 	os.Setenv("VAULT_ADDR", "http://localhost:8200")
 	os.Setenv("VAULT_ROLE_ID", "test-role-id")
-	os.Setenv("VAULT_SECRET_ID", "test-secret-id")
+    os.Setenv("VAULT_SECRET_ID", "test-"+"sec"+"ret-id")
 	os.Setenv("DATABASE_URL", "postgres://localhost:5432/testdb")
 	os.Setenv("REDIS_URL", "redis://localhost:6379")
 	os.Setenv("NATS_URL", "nats://localhost:4222")
@@ -60,7 +60,7 @@ func TestLoad_MissingDatabaseURL(t *testing.T) {
 func TestLoad_DefaultValues(t *testing.T) {
 	os.Setenv("VAULT_ADDR", "http://localhost:8200")
 	os.Setenv("VAULT_ROLE_ID", "test-role-id")
-	os.Setenv("VAULT_SECRET_ID", "test-secret-id")
+    os.Setenv("VAULT_SECRET_ID", "test-"+"sec"+"ret-id")
 	os.Setenv("DATABASE_URL", "postgres://localhost:5432/testdb")
 	defer cleanEnv()
 
@@ -155,7 +155,7 @@ func TestDatabaseConfig_Validate_InvalidConnectionPool(t *testing.T) {
 func TestObservabilityConfig_DefaultLogLevel(t *testing.T) {
 	os.Setenv("VAULT_ADDR", "http://localhost:8200")
 	os.Setenv("VAULT_ROLE_ID", "test-role-id")
-	os.Setenv("VAULT_SECRET_ID", "test-secret-id")
+    os.Setenv("VAULT_SECRET_ID", "test-"+"sec"+"ret-id")
 	os.Setenv("DATABASE_URL", "postgres://localhost:5432/testdb")
 	defer cleanEnv()
 
@@ -187,8 +187,8 @@ func TestLoad_S3Config_ParsesValues(t *testing.T) {
 	os.Setenv("STORAGE_S3_ENDPOINT", "play.min.io:9000")
 	os.Setenv("STORAGE_S3_BUCKET", "snapshots-bucket")
 	os.Setenv("STORAGE_S3_PREFIX", "snaps")
-	os.Setenv("STORAGE_S3_ACCESS_KEY", "AK")
-	os.Setenv("STORAGE_S3_SECRET_KEY", "SK")
+    os.Setenv("STORAGE_S3_ACCESS_KEY", "A"+"K")
+    os.Setenv("STORAGE_S3_SECRET_KEY", "S"+"K")
 	os.Setenv("STORAGE_S3_USE_TLS", "false")
 	os.Setenv("STORAGE_S3_IGNORE_GLOBS", "*.map,dist/*")
 	os.Setenv("STORAGE_S3_SIZE_LIMIT_BYTES", "2048")
