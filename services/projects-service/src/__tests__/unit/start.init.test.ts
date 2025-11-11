@@ -55,7 +55,7 @@ describe('start() initialization wiring', () => {
     process.env.INIT_NATS = 'true';
     process.env.INIT_OTEL = 'true';
 
-    process.env.DATABASE_URL = 'postgres://localhost:5432/appdb'; // gitleaks:allow test fixture
+    process.env.DATABASE_URL = 'postgresql://localhost:5432/appdb';
     process.env.NATS_URL = 'nats://localhost:4222';
     process.env.OTEL_EXPORTER_OTLP_ENDPOINT = 'http://collector:4318';
     process.env.SERVICE_PORT = '0';
