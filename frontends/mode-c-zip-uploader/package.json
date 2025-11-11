@@ -6,7 +6,8 @@
     "build": "next build",
     "start": "next start",
     "test": "echo \"(stub)\"",
-    "typecheck": "tsc -p ."
+    "typecheck": "tsc -p .",
+    "lint": "eslint . --ext .ts,.tsx --max-warnings=0"
   },
   "dependencies": {
     "next": "14.2.6",
