@@ -24,3 +24,17 @@ __pycache__/
 
 # Devstack volumes (runtime data)
 lma-devstack-compose-gitea4001/vol/minio/
+lma-devstack-compose-gitea4001/vol/postgres/
+
+# Rust build output
+**/target/
+
+# Env files
+.env
+.env.*.local
+
+# Archives
+*.zip
+
+# Package manager lockfiles (non-standard for Bun)
+pnpm-lock.yaml
