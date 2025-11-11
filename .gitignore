@@ -33,10 +33,6 @@ lma-devstack-compose-gitea4001/vol/prometheus/
 
 # Service temp/build outputs
 services/**/tmp/
-<<<<<<< HEAD
-=======
-
->>>>>>> 455f714 (chore: ignore service tmp/ artifacts and stop tracking)
 # Env files
 .env
 .env.*.local
@@ -46,13 +42,8 @@ services/**/tmp/
 
 # Package manager lockfiles (non-standard for Bun)
 pnpm-lock.yaml
-
 # Local dev environment (contains example endpoints/secrets)
-<<<<<<< HEAD
 dev/.env.local
-=======
-dev/
->>>>>>> d7563df0 (chore(repo): ignore dev/ and devstack volumes; untrack committed artifacts (#33))
 
 # Devstack volumes and generated state (may contain keys/dbs)
 lma-devstack-compose-gitea4001/vol/**
