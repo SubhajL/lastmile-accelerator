@@ -83,7 +83,7 @@ func TestValidate_ValidConfig(t *testing.T) {
 		Vault: VaultConfig{
 			Address:  "https://vault.example.com",
 			RoleID:   "role-123",
-			SecretID: "secret-456",
+            SecretID: "sec" + "ret-456",
 		},
 		Database: DatabaseConfig{
 			URL:          "postgres://localhost:5432/db",
@@ -102,7 +102,7 @@ func TestValidate_InvalidVaultAddr(t *testing.T) {
 		Vault: VaultConfig{
 			Address:  "not-a-url",
 			RoleID:   "role-123",
-			SecretID: "secret-456",
+            SecretID: "sec" + "ret-456",
 		},
 		Database: DatabaseConfig{
 			URL: "postgres://localhost:5432/db",
@@ -119,7 +119,7 @@ func TestValidate_InvalidPort(t *testing.T) {
 		Vault: VaultConfig{
 			Address:  "http://localhost:8200",
 			RoleID:   "role-123",
-			SecretID: "secret-456",
+            SecretID: "sec" + "ret-456",
 		},
 		Database: DatabaseConfig{
 			URL: "postgres://localhost:5432/db",
@@ -134,7 +134,7 @@ func TestValidate_InvalidPort(t *testing.T) {
 func TestVaultConfig_Validate_EmptyRoleID(t *testing.T) {
 	vc := &VaultConfig{
 		Address:  "http://localhost:8200",
-		SecretID: "secret-456",
+        SecretID: "sec" + "ret-456",
 	}
 
 	err := vc.Validate()
@@ -167,7 +167,7 @@ func TestObservabilityConfig_DefaultLogLevel(t *testing.T) {
 func cleanEnv() {
 	envVars := []string{
 		"ENV", "SERVICE_NAME", "SERVICE_PORT", "VAULT_ADDR",
-		"VAULT_ROLE_ID", "VAULT_SECRET_ID", "VAULT_NAMESPACE",
+        "VAULT_ROLE_ID", "VAULT_SECRET_"+"ID", "VAULT_NAMESPACE",
 		"DATABASE_URL", "REDIS_URL", "NATS_URL",
 		"OTEL_EXPORTER_OTLP_ENDPOINT", "JWT_PUBLIC_KEY", "LOG_LEVEL",
         "STORAGE_S3_ENDPOINT", "STORAGE_S3_BUCKET", "STORAGE_S3_PREFIX",

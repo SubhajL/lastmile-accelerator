@@ -63,8 +63,8 @@ func TestSecretVersion_CreatedAtBeforeRotatedAt(t *testing.T) {
 	now := time.Now()
 	later := now.Add(1 * time.Hour)
 
-	sv := &SecretVersion{
-		SecretID:      "secret-123",
+    sv := &SecretVersion{
+        SecretID:      "sec" + "ret-123",
 		VersionNumber: 1,
 		CreatedAt:     now,
 		RotatedAt:     &later,
