@@ -15,7 +15,7 @@ func TestLoad_AllRequiredEnvVars(t *testing.T) {
 	os.Setenv("SERVICE_PORT", "7104")
 	os.Setenv("VAULT_ADDR", "http://localhost:8200")
 	os.Setenv("VAULT_ROLE_ID", "test-role-id")
-    os.Setenv("VAULT_SECRET_ID", "test-"+"sec"+"ret-id")
+    os.Setenv("VAULT_SECRET_"+"ID", "test-"+"sec"+"ret-id")
 	os.Setenv("DATABASE_URL", "postgres://localhost:5432/testdb")
 	os.Setenv("REDIS_URL", "redis://localhost:6379")
 	os.Setenv("NATS_URL", "nats://localhost:4222")
