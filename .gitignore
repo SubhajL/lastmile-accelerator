@@ -33,8 +33,12 @@ lma-devstack-compose-gitea4001/vol/prometheus/
 
 # Service temp/build outputs
 services/**/tmp/
+<<<<<<< HEAD
 # Service temp/build outputs
 services/**/tmp/
+=======
+
+>>>>>>> 6b88e0a (chore: ignore service tmp/ artifacts and stop tracking)
 # Env files
 .env
 .env.*.local
