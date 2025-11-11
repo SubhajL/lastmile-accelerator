@@ -11,6 +11,7 @@
     "test:coverage": "vitest run --coverage",
     "ci:test": "vitest run",
     "ci:coverage": "vitest run --coverage",
+    "lint": "eslint . --ext .ts,.tsx --max-warnings=0",
     "kill:watchers": "bash ./scripts/kill-watchers.sh",
     "migrate": "tsx src/db/migrations/migrate.ts",
     "seed": "tsx src/db/seed.ts"

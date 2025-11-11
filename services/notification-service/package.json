@@ -8,7 +8,7 @@
     "start": "node --enable-source-maps dist/index.js",
     "test": "vitest",
     "test:coverage": "vitest --coverage",
-    "lint": "echo 'lint placeholder'",
+    "lint": "eslint . --ext .ts,.tsx --max-warnings=0",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

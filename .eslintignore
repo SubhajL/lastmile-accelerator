@@ -1,0 +1,7 @@
+dist/
+.next/
+node_modules/
+**/target/
+lma-devstack-compose-gitea4001/
+coverage/
+
