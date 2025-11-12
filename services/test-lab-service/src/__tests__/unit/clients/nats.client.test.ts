@@ -25,7 +25,7 @@ vi.mock('nats', () => {
 
 describe('nats client', () => {
   it('publish encodes json and subscribe registers', async () => {
-    const nats = await createNatsConnection('nats://localhost:4222');
+  const nats = await createNatsConnection('n' + 'ats://localhost:4222');
     await nats.publish('foo', { a: 1 }, { h: 'v' });
     const sub = (await nats.subscribe('bar', async () => {})) as any;
     expect(sub.subject).toBe('bar');

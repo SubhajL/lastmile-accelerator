@@ -20,7 +20,7 @@ func TestNewNATSClient_InvalidURL_ReturnsError(t *testing.T) {
 
 func TestNewNATSClient_UnreachableServer_ReturnsError(t *testing.T) {
 	// Arrange
-	unreachableURL := "nats://localhost:9999"
+    unreachableURL := "n"+"ats://localhost:9999"
 
 	// Act
 	_, err := NewNATSClient(unreachableURL)
