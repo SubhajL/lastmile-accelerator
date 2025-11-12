@@ -1,6 +1,6 @@
 > Global Rules (must‑read)
 > - Follow the root guidelines: ../../AGENTS.md#ai-assisted-programming-guidelines-by-sabrina-ramonov
-> - Also see: ../../WARP.md
+> - Also see: ../../CONTEXT.md
 > - Use shortcuts: QNEW, QPLAN, QCODE, QCHECK/QCHECKF/QCHECKT, QUX, QGIT (see root AGENTS.md)
 
 ## Docs Links
