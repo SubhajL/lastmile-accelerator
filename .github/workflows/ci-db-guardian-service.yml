@@ -1,29 +1,37 @@
 name: ci-db-guardian-service
 on:
-  push: { branches: [ main ], paths: [ 'services/db-guardian-service/**', 'packages/contracts/**' ] }
   pull_request:
+    paths:
+      - 'services/db-guardian-service/**'
+  push:
+    branches: [ main ]
+    paths:
+      - 'services/db-guardian-service/**'
 jobs:
-  call:
+  pr-tests:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+      - name: Unit tests (go)
+        working-directory: services/db-guardian-service
+        run: go test ./... -cover
+
+  push-build:
+    if: github.event_name == 'push'
     uses: ./.github/workflows/_service-ci.yml
     with:
       lang: go
       context: services/db-guardian-service
       dockerfile: services/db-guardian-service/Dockerfile
       image_suffix: db-guardian-service
-    secrets: inherit
-    if: github.event_name == 'push'
-
-  pr-ci:
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-22.04
+      publish: true
     permissions:
       contents: read
-    defaults:
-      run:
-        working-directory: services/db-guardian-service
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with: { go-version: '1.24' }
-      - name: Unit tests (go)
-        run: go test ./... -cover
+      packages: write
+      id-token: write
