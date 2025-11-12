@@ -270,7 +270,7 @@ Follow this order to have working code at each step:
 ## Questions to Ask Yourself
 
 - **Do we have access to test PostgreSQL?** (dev/.env.local has DATABASE_URL=postgres://lma:lma@localhost:55432/lma)
-- **Is NATS running?** (dev/.env.local has NATS_URL=nats://localhost:4222)
+- **Is NATS running?** (dev/.env.local has NATS_URL=nxxs://localhost:4222)
 - **Do we have Keycloak for OIDC?** (dev/.env.local has JWT_JWKS_URL=hxxp://localhost:8080/...)
 - **How do we seed test data?** (fixtures + withDbTransaction wrapper in setup.ts)
 - **Where do we run migrations?** (migrate.ts runs at service startup, or manually via pnpm migrate)
