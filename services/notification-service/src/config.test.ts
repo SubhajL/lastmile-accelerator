@@ -124,7 +124,7 @@ describe('config', () => {
 
     it('should parse Postgres config from individual variables', () => {
       setValidEnv();
-      process.env.PG_HOST = 'db.example.local';
+      process.env.PG_HOST = 'db.example.com';
       process.env.PG_PORT = '5433';
       process.env.PG_DATABASE = 'mydb';
       process.env.PG_USER = 'dbuser';
@@ -141,7 +141,7 @@ describe('config', () => {
 
     it('should parse Vault config for AppRole auth', () => {
       setValidEnv();
-      process.env.VAULT_ADDR = 'h' + 'ttps://' + 'vault.example.local';
+      process.env.VAULT_ADDR = 'h' + 'ttps://' + 'vault.example.com';
       process.env.VAULT_ROLE_ID = 'my-role-id';
       process.env.VAULT_SECRET_ID = 'my-secret-id';
 
