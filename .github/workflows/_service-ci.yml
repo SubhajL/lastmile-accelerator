@@ -102,12 +102,12 @@ jobs:
         id: vars
         run: echo "tag=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
 
-      - name: Build & push image
+      - name: Build & (conditionally) push image
         uses: docker/build-push-action@v6
         with:
           context: ${{ inputs.context }}
           file: ${{ inputs.dockerfile }}
-          push: true
+          push: ${{ github.event_name == 'push' }}
           tags: |
             ghcr.io/${{ github.repository }}-${{ inputs.image_suffix }}:${{ steps.vars.outputs.tag }}
             ghcr.io/${{ github.repository }}-${{ inputs.image_suffix }}:latest
