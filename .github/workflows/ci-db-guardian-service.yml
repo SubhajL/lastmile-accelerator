@@ -1,12 +1,11 @@
 name: ci-db-guardian-service
 on:
-  pull_request:
-    paths:
-      - 'services/db-guardian-service/**'
   push:
     branches: [ main ]
     paths:
       - 'services/db-guardian-service/**'
+      - 'packages/contracts/**'
+  pull_request:
 jobs:
   push-lint:
     if: github.event_name == 'push'
