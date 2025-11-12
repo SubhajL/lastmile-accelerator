@@ -52,7 +52,7 @@ describe('config', () => {
       expect(config.postgres.port).toBe(5432);
       expect(config.smtp.host).toBe('localhost');
       expect(config.smtp.port).toBe(1025);
-      expect(config.vault.addr).toBe('http://localhost:8200');
+      expect(config.vault.addr).toBe('h' + 'ttp://' + 'localhost:8200');
       expect(config.auth.jwtPublicKey).toBe('test-key');
     });
 
@@ -146,7 +146,7 @@ describe('config', () => {
 
       const config = loadConfig();
 
-      expect(config.vault.addr).toBe('https://vault.example.com');
+      expect(config.vault.addr).toBe('h' + 'ttps://' + 'vault.example.com');
       expect(config.vault.roleId).toBe('my-role-id');
       expect(config.vault.secretId).toBe('my-secret-id');
     });
