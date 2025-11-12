@@ -46,3 +46,13 @@ services/**/tmp/
 
 # Package manager lockfiles (non-standard for Bun)
 pnpm-lock.yaml
+
+# Documentation scaffolding and placeholders (ignore generated templates)
+documentation/README.md
+documentation/architecture/.gitkeep
+documentation/features/completed/.gitkeep
+documentation/fixes/.gitkeep
+documentation/features/active/feature-name-progress.md
+documentation/features/active/feature-name-spec.md
+documentation/features/planned/.gitkeep
+documentation/features/planned/feature-name-spec.md

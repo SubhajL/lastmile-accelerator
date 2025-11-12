@@ -1,6 +1,7 @@
 import { createDefaultChannelRegistry } from '../channels/registry.js';
 import { createDispatcher, type ChannelRegistry as DispatcherChannelRegistry } from '../notifications/dispatcher.js';
 import { createEventRouter } from '../consumers/router.js';
+import { Subjects } from '../events/subjects.js';
 import { createSnapshotConsumer } from '../consumers/snapshot-consumer.js';
 import { createFixesConsumer } from '../consumers/fixes-consumer.js';
 import { createPublishConsumer } from '../consumers/publish-consumer.js';
@@ -71,13 +72,18 @@ export function createRuntime(opts: RuntimeOptions) {
 
   const router = createEventRouter({
     handlers: {
-      'snapshot.ready': snapshotConsumer.handle,
-      'fixes.created': fixesConsumer.handleCreated,
-      'fixes.applied': fixesConsumer.handleApplied,
-      'publish.event': publishConsumer.handle,
-      'checks.failed': checksConsumer.handle,
-      'slo.budget_exhausted': sloConsumer.handle,
-      'errors.critical': errorsConsumer.handle
+      // event envelope type keys — centralized constants
+      [Subjects.snapshot.ready]: snapshotConsumer.handle,
+      [Subjects.fixes.created]: fixesConsumer.handleCreated,
+      [Subjects.fixes.applied]: fixesConsumer.handleApplied,
+      // publish events route to a single consumer; the event subtype is in payload.status
+      [Subjects.publish.started]: publishConsumer.handle,
+      [Subjects.publish.healthy]: publishConsumer.handle,
+      [Subjects.publish.rolledback]: publishConsumer.handle,
+      [Subjects.publish.failed]: publishConsumer.handle,
+      [Subjects.checks.failed]: checksConsumer.handle,
+      [Subjects.slo.budget_exhausted]: sloConsumer.handle,
+      [Subjects.errors.critical]: errorsConsumer.handle
     }
   });
 

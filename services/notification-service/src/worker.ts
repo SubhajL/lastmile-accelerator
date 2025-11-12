@@ -18,6 +18,7 @@ import { createWebhookChannel } from './channels/webhook/http.js';
 import { createSlackChannel } from './channels/slack/slack.js';
 import { createNatsSubscribe } from './events/nats-subscribe.js';
 import { createNotificationQueue } from './notifications/queue.js';
+import { SubscriptionSubjects } from './events/subjects.js';
 import { createRedisClient } from './redis/client.js';
 import { createTemplateStore } from './templates/store.js';
 import { createTemplateLoader } from './templates/loader.js';
@@ -121,7 +122,7 @@ export async function bootstrap() {
     dispatcherFactory: undefined,
     metrics,
     now: () => Date.now(),
-    subjects: ['snapshot.*', 'fixes.*', 'publish.*', 'checks.*', 'slo.*', 'errors.*'],
+    subjects: [...SubscriptionSubjects],
     batchSize: cfg.queue.batchSize,
     email: {
       from: cfg.smtp.from,
