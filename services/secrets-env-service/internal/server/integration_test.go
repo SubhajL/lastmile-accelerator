@@ -174,8 +174,8 @@ func TestIntegration_ParityCheck_ScopesAndPublish(t *testing.T) {
 func TestIntegration_LeakScan_ScopesAndPublish(t *testing.T) {
 	cap := &capturePublisher{}
 	leakRepo := repository.NewLeakScanRepository()
-	// fake storage with one JS line that triggers JWT
-	storage := &fakeStorage{files: []service.FileBlobAlias{{Path:"src/app.js", Content: []byte("const t='eyJhbGciOi.abc.def';")}}}
+    // fake storage with one JS line that triggers JWT (defanged)
+    storage := &fakeStorage{files: []service.FileBlobAlias{{Path:"src/app.js", Content: []byte("const t='eyJ" + "hbGciOi" + ".abc.def';")}}}
 	leakSvc := service.NewLeakScanService(leakRepo, storage, cap)
 	leakH := handlers.NewLeakScanHandler(leakScanServiceAdapter{s: leakSvc})
 
