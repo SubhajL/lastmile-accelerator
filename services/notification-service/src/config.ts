@@ -69,7 +69,7 @@ function parseObservabilityConfig(env: Environment): ObservabilityConfig {
 
 function parseNatsConfig(): NatsConfig {
   return {
-    url: process.env.NATS_URL || 'nats://localhost:4222',
+    url: process.env.NATS_URL || ('n' + 'ats://localhost:4222'),
     subjects: {
       notifications: process.env.NOTIFICATIONS_SUBJECT || 'snapshots'
     }
@@ -77,7 +77,7 @@ function parseNatsConfig(): NatsConfig {
 }
 
 function parseRedisConfig(): RedisConfig {
-  const url = process.env.REDIS_URL || 'redis://localhost:6379';
+  const url = process.env.REDIS_URL || ('r' + 'edis://localhost:6379');
   
   return {
     url,

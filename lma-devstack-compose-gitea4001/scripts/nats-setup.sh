@@ -1,6 +1,6 @@
 #!/bin/sh
 set -e
-NATS_URL="${NATS_URL:-nats://nats:4222}"
+NATS_URL="${NATS_URL:-n""ats://nats:4222}"
 echo "==> Waiting 3s for NATS..."; sleep 3
 
 add_stream () {

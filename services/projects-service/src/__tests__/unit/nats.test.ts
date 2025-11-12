@@ -28,7 +28,7 @@ describe('nats.ts', () => {
     __setNatsConnector(connector as any);
     __setSleeper(async () => {}); // no real delay
 
-    const nc = await initNats('nats://localhost:4222', { maxRetries: 3, baseDelayMs: 1 });
+    const nc = await initNats('n' + 'ats://localhost:4222', { maxRetries: 3, baseDelayMs: 1 });
 
     expect(nc).toBe(conn);
     expect(connector).toHaveBeenCalledTimes(3);

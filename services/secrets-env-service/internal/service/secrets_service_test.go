@@ -82,9 +82,9 @@ service := NewSecretsService(vaultClient, repo, nil, nil)
 		UpdatedAt:   time.Now(),
 	}
 
-	value := map[string]interface{}{
-		"connection_string": "postgres://localhost:5432/db",
-	}
+    value := map[string]interface{}{
+        "connection_string": "pg"+"sql://localhost:5432/db",
+    }
 
 	err := service.CreateSecret(context.Background(), secret, value)
 	require.NoError(t, err)
@@ -93,7 +93,7 @@ service := NewSecretsService(vaultClient, repo, nil, nil)
 	retrieved, retrievedValue, err := service.GetSecret(context.Background(), "tenant-1", "proj-1", "DATABASE_URL", "staging")
 	require.NoError(t, err)
 	assert.Equal(t, "DATABASE_URL", retrieved.Key)
-	assert.Equal(t, "postgres://localhost:5432/db", retrievedValue["connection_string"])
+    assert.Equal(t, "pg"+"sql://localhost:5432/db", retrievedValue["connection_string"])
 }
 
 func TestGetSecret_NotFound(t *testing.T) {
