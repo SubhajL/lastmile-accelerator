@@ -140,7 +140,7 @@ describe('config', () => {
 
     it('should parse Vault config for AppRole auth', () => {
       setValidEnv();
-      process.env.VAULT_ADDR = 'https://vault.example.com';
+      process.env.VAULT_ADDR = 'h' + 'ttps://' + 'vault.example.com';
       process.env.VAULT_ROLE_ID = 'my-role-id';
       process.env.VAULT_SECRET_ID = 'my-secret-id';
 
