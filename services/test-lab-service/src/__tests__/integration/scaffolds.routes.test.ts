@@ -6,6 +6,8 @@ import { applyTestEnv } from '../fixtures/env.js';
 // Minimal env
 applyTestEnv();
 process.env.JWT_JWKS_URL = TEST_JWT_SECRET;
+process.env.JWT_ISSUER = 'https://auth.example.com/';
+process.env.JWT_AUDIENCE = 'test-lab-service';
 
 describe('scaffolds routes', () => {
   let app: Awaited<ReturnType<typeof createApp>>;

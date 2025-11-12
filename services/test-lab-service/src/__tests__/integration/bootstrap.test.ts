@@ -8,6 +8,8 @@ import { applyTestEnv } from '../fixtures/env.js';
 // Set minimal env for config loading with safe placeholders
 applyTestEnv();
 process.env.JWT_JWKS_URL = TEST_JWT_SECRET; // use shared secret in tests
+process.env.JWT_ISSUER = 'https://auth.example.com/';
+process.env.JWT_AUDIENCE = 'test-lab-service';
 
 describe('Server bootstrap', () => {
   let app: Awaited<ReturnType<typeof createApp>>;
