@@ -50,3 +50,7 @@ pnpm-lock.yaml
 
 # Turbo cache (local runtime artifacts)
 .turbo/
+
+# Documentation scaffolding/templates (placeholders only)
+documentation/features/active/feature-name-*.md
+documentation/features/planned/feature-name-spec.md
