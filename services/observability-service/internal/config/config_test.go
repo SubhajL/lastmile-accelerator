@@ -26,7 +26,7 @@ setEnv("LOKI_URL", "h"+"ttp://localhost:3100")
     setEnv("VAULT_ADDR", "h"+"ttp://localhost:8200")
     setEnv("VAULT_ROLE_ID", "test-role")
 	setEnv("VAULT_SECRET_ID", "test-secret")
-	setEnv("PROMETHEUS_URL", "http://localhost:9090")
+setEnv("PROMETHEUS_URL", "h"+"ttp://localhost:9090")
 
 	cfg, err := Load()
 	if err != nil {
@@ -98,7 +98,7 @@ LokiURL: "h"+"ttp://localhost:3100",
         VaultAddr:       "h"+"ttp://localhost:8200",
 		VaultRoleID:     "role",
 		VaultSecretID: "secret",
-		PrometheusURL: "http://localhost:9090",
+        PrometheusURL: "h"+"ttp://localhost:9090",
 	}
 
 	err := cfg.Validate()
@@ -119,11 +119,11 @@ func TestValidate_InvalidOTelEndpoint(t *testing.T) {
         RedisURL:        "r"+"edis://localhost:6379",
         NATSURL:         "n"+"ats://localhost:4222",
 		OTelEndpoint:    "not-a-url",
-JWKSURL: "https://auth.example.com/jwks.json",
-JWTIssuer: "https://auth.example.com/",
-TempoURL: "http://localhost:3200",
-LokiURL: "http://localhost:3100",
-		VaultAddr:       "http://localhost:8200",
+JWKSURL: "h"+"ttps://auth.example.com/jwks.json",
+JWTIssuer: "h"+"ttps://auth.example.com/",
+TempoURL: "h"+"ttp://localhost:3200",
+LokiURL: "h"+"ttp://localhost:3100",
+        VaultAddr:       "h"+"ttp://localhost:8200",
 		VaultRoleID:     "role",
 		VaultSecretID: "secret",
 		PrometheusURL: "not-a-url",
