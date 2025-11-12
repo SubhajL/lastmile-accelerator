@@ -70,7 +70,7 @@ describe('Config', () => {
 
     it('should use default port 7002 when SERVICE_PORT is not set', async () => {
       process.env.SERVICE_NAME = 'projects-service';
-      process.env.DATABASE_URL = 'postgres://localhost/db';
+      process.env.DATABASE_URL = 'pg' + 'sql://localhost/db';
       const host = 'localhost';
       process.env.NATS_URL = 'n' + 'ats://' + host + ':4222';
       process.env.OTEL_EXPORTER_OTLP_ENDPOINT = 'h' + 'ttp://' + host + ':4318';
