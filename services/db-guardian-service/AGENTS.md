@@ -42,3 +42,8 @@ grep -R -nE 'migration_guard|index_advisor' internal/analyzer
 ```bash
 make test && make build
 ```
+
+## Toolchain Policy
+
+- Go 1.24, modules, Makefile targets for test/build.
+- Follow service Makefile and AGENTS.md for integration tests.
