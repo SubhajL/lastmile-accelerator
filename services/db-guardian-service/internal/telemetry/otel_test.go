@@ -14,7 +14,7 @@ func TestInitTracer_ValidConfig_ReturnsShutdownFunc(t *testing.T) {
 	cfg := &config.Config{
 		ServiceName:  "test-service",
 		Environment:  "test",
-        OTLPEndpoint: "h"+"ttp://localhost:4318",
+		OTLPEndpoint: "http://localhost:4318",
 	}
 	ctx := context.Background()
 

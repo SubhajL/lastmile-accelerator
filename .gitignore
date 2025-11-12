@@ -43,13 +43,3 @@ services/**/tmp/
 
 # Package manager lockfiles (non-standard for Bun)
 pnpm-lock.yaml
-
-# Local dev environment (contains example endpoints/secrets)
-dev/.env.local
-
-# Devstack volumes and generated state (may contain keys/dbs)
-lma-devstack-compose-gitea4001/vol/**
-
-# Devstack sensitive scripts/config generated artifacts
-lma-devstack-compose-gitea4001/scripts/vault-setup.sh
-lma-devstack-compose-gitea4001/vol/gitea/gitea/conf/app.ini

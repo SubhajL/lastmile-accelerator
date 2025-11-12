@@ -11,7 +11,7 @@ import (
 
 func TestNewClient_ValidConfig(t *testing.T) {
 	cfg := &config.VaultConfig{
-    Address:   "h"+"ttp://localhost:8200",
+		Address:   "http://localhost:8200",
 		RoleID:    "test-role",
 		SecretID:  "test-secret",
 		MountPath: "secret",

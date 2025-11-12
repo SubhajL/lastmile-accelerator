@@ -9,7 +9,11 @@ describe('telemetry', () => {
     mockConfig = {
       serviceName: 'notification-service',
       serviceVersion: '1.0.0',
+<<<<<<< HEAD
       otlpEndpoint: 'h' + 'ttp://localhost:4318',
+=======
+      otlpEndpoint: 'http://localhost:4318',
+>>>>>>> origin/main
       environment: 'dev'
     };
   });
@@ -30,7 +34,11 @@ describe('telemetry', () => {
     it('should configure OTLP exporter with endpoint from config', () => {
       const config: ObservabilityConfig = {
         ...mockConfig,
+<<<<<<< HEAD
         otlpEndpoint: 'h' + 'ttp://custom-endpoint:4318'
+=======
+        otlpEndpoint: 'http://custom-endpoint:4318'
+>>>>>>> origin/main
       };
 
       const sdk = initTelemetry(config);

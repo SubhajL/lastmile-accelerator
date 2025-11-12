@@ -81,13 +81,13 @@ Edit code in any service - changes reload automatically!
 
 | Service | URL | Credentials |
 |---------|-----|-------------|
-| **Grafana** | hxxp://localhost:3000 | admin / admin |
-| **Prometheus** | hxxp://localhost:9090 | - |
-| **Gitea** | hxxp://localhost:4001 | Create account on first visit |
-| **MailHog** | hxxp://localhost:8025 | - |
-| **MinIO Console** | hxxp://localhost:9001 | minioadmin / minioadmin |
-| **Vault** | hxxp://localhost:8200 | Token: `dev-root-token` |
-| **Keycloak** | hxxp://localhost:8080 | admin / admin |
+| **Grafana** | http://localhost:3000 | admin / admin |
+| **Prometheus** | http://localhost:9090 | - |
+| **Gitea** | http://localhost:4001 | Create account on first visit |
+| **MailHog** | http://localhost:8025 | - |
+| **MinIO Console** | http://localhost:9001 | minioadmin / minioadmin |
+| **Vault** | http://localhost:8200 | Token: `lma-root` |
+| **Keycloak** | http://localhost:8080 | admin / admin |
 
 ## 🐛 Debugging
 
@@ -109,8 +109,8 @@ SERVICE_PORT=7002 SERVICE_NAME=projects-service pnpm dev
 ### Check Service Health
 
 ```bash
-curl hxxp://localhost:7002/healthz  # projects-service
-curl hxxp://localhost:7301/healthz  # observability-service
+curl http://localhost:7002/healthz  # projects-service
+curl http://localhost:7301/healthz  # observability-service
 ```
 
 ### View Infrastructure Logs
@@ -125,11 +125,11 @@ docker compose logs -f postgres
 ## 🔐 Environment Variables
 
 All configured in `.env.local`:
-- Database → `DATABASE_URL=pg` `sql://lma:lma@localhost:55432/lma`
-- Redis → `REDIS_URL=r` `edis://localhost:4050`
-- MinIO → `S3_ENDPOINT=hxxp://localhost:9000`
-- Vault → `VAULT_ADDR=hxxp://localhost:8200`
-- OIDC → `OIDC_ISSUER_URL=hxxp://localhost:8080/realms/lma`
+- Database → `DATABASE_URL=postgres://lma:lma@localhost:55432/lma`
+- Redis → `REDIS_URL=redis://localhost:4050`
+- MinIO → `S3_ENDPOINT=http://localhost:9000`
+- Vault → `VAULT_ADDR=http://localhost:8200`
+- OIDC → `OIDC_ISSUER_URL=http://localhost:8080/realms/lma`
 
 See `.env.local` for complete list.
 
@@ -211,24 +211,24 @@ kill -9 <PID>
 
 ### Test Email Sending
 1. Send email from notification-service
-2. View in MailHog: hxxp://localhost:8025
+2. View in MailHog: http://localhost:8025
 3. No real email accounts needed!
 
 ### Test Git Operations
-1. Use Gitea: hxxp://localhost:4001
+1. Use Gitea: http://localhost:4001
 2. Create repos, push code
 3. Test webhooks locally
 4. No GitHub rate limits!
 
 ### View Metrics
-1. Services send to OpenTelemetry: hxxp://localhost:4318
-2. Prometheus scrapes: hxxp://localhost:9090
-3. Visualize in Grafana: hxxp://localhost:3000
+1. Services send to OpenTelemetry: http://localhost:4318
+2. Prometheus scrapes: http://localhost:9090
+3. Visualize in Grafana: http://localhost:3000
 
 ### Database Access
 ```bash
 # CLI
-psql pgsql://lma:lma@localhost:55432/lma
+psql postgres://lma:lma@localhost:55432/lma
 
 # GUI (use any Postgres client)
 Host: localhost

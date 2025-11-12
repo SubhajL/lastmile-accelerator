@@ -5,12 +5,21 @@ vi.mock('./config.js', () => ({
   loadConfig: vi.fn().mockReturnValue({
     env: 'dev',
     service: { name: 'notification-service', port: 7902, env: 'dev' },
+<<<<<<< HEAD
     observability: { serviceName: 'notification-service', serviceVersion: '1.0.0', otlpEndpoint: 'h' + 'ttp://localhost:4318', environment: 'dev' },
     nats: { url: 'n' + 'ats://localhost:4222', subjects: { notifications: 'snapshots' } },
     redis: { url: 'r' + 'edis://localhost:6379', maxRetriesPerRequest: 3 },
     postgres: { host: 'localhost', port: 5432, database: 'lma', user: 'postgres', password: 'postgres', maxConnections: 10 },
     smtp: { host: 'localhost', port: 1025, user: 'user', password: 'pass', from: 'noreply@example.com', secure: false },
     vault: { addr: 'h' + 'ttp://localhost:8200', roleId: 'role', secretId: 'secret' },
+=======
+    observability: { serviceName: 'notification-service', serviceVersion: '1.0.0', otlpEndpoint: 'http://localhost:4318', environment: 'dev' },
+    nats: { url: 'nats://localhost:4222', subjects: { notifications: 'snapshots' } },
+    redis: { url: 'redis://localhost:6379', maxRetriesPerRequest: 3 },
+    postgres: { host: 'localhost', port: 5432, database: 'lma', user: 'postgres', password: 'postgres', maxConnections: 10 },
+    smtp: { host: 'localhost', port: 1025, user: 'user', password: 'pass', from: 'noreply@example.com', secure: false },
+    vault: { addr: 'http://localhost:8200', roleId: 'role', secretId: 'secret' },
+>>>>>>> origin/main
     auth: {},
     channels: {},
     templates: { dir: 'src/templates' },

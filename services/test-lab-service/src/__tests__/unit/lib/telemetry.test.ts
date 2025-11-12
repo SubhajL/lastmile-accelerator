@@ -13,7 +13,7 @@ describe('Telemetry', () => {
     mockConfig = {
       serviceName: 'test-lab-service',
       serviceVersion: '1.0.0',
-      otlpEndpoint: 'h' + 'ttp://localhost:4318',
+      otlpEndpoint: 'http://localhost:4318',
       environment: 'dev',
     };
   });

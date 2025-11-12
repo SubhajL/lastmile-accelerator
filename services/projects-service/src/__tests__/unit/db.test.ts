@@ -37,7 +37,7 @@ describe('db.ts', () => {
   });
 
   it('initDb should create a singleton Pool with connectionString', async () => {
-    const conn = 'pg' + 'sql://user:pass@localhost:5432/appdb';
+    const conn = 'postgres://user:pass@localhost:5432/appdb';
     const pool = await initDb({ connectionString: conn, max: 5 });
 
     expect(pool).toBeDefined();
@@ -50,7 +50,7 @@ describe('db.ts', () => {
   });
 
   it('query should delegate to pool.query and return rows', async () => {
-    await initDb({ connectionString: 'pg' + 'sql://u:p@localhost:5432/db' });
+    await initDb({ connectionString: 'postgres://u:p@localhost:5432/db' });
     const res = await query('select 1 as ok');
 
     expect(res.rowCount).toBe(1);
@@ -60,7 +60,7 @@ describe('db.ts', () => {
   });
 
   it('transaction should BEGIN, run callback, and COMMIT on success', async () => {
-    await initDb({ connectionString: 'pg' + 'sql://u:p@localhost:5432/db' });
+    await initDb({ connectionString: 'postgres://u:p@localhost:5432/db' });
 
     const result = await transaction(async (client: any) => {
       // perform arbitrary query inside transaction
@@ -79,7 +79,7 @@ describe('db.ts', () => {
   });
 
   it('transaction should ROLLBACK and rethrow on error', async () => {
-    await initDb({ connectionString: 'pg' + 'sql://u:p@localhost:5432/db' });
+    await initDb({ connectionString: 'postgres://u:p@localhost:5432/db' });
 
     await expect(
       transaction(async () => {
@@ -95,7 +95,7 @@ describe('db.ts', () => {
   });
 
   it('closeDb should end the pool and reset singleton', async () => {
-    await initDb({ connectionString: 'pg' + 'sql://u:p@localhost:5432/db' });
+    await initDb({ connectionString: 'postgres://u:p@localhost:5432/db' });
     const pool = getDb() as any;
 
     await closeDb();
