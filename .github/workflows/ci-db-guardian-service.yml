@@ -1,17 +1,21 @@
 name: ci-db-guardian-service
 on:
-  push: { branches: [ main ], paths: [ 'services/db-guardian-service/**', 'packages/contracts/**' ] }
-  pull_request:
+  push: { branches: [ main ], paths: [ 'services/db-guardian-service/**' ] }
+  pull_request: { paths: [ 'services/db-guardian-service/**' ] }
 jobs:
   call:
+    if: github.event_name == 'push'
     uses: ./.github/workflows/_service-ci.yml
     with:
       lang: go
       context: services/db-guardian-service
       dockerfile: services/db-guardian-service/Dockerfile
       image_suffix: db-guardian-service
-    secrets: inherit
-    if: github.event_name == 'push'
+      publish: true
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
 
   pr-ci:
     if: github.event_name == 'pull_request'
