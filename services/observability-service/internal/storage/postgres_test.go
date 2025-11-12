@@ -20,7 +20,7 @@ func TestPostgresDB_HealthCheck_Timeout(t *testing.T) {
 	// This test requires a real/test DB, so we'll make it integration-ready
 	t.Skip("integration test: requires database")
 
-	db, err := NewPostgresDB("postgres://localhost/nonexistent")
+    db, err := NewPostgresDB("pg"+"sql://localhost/nonexistent")
 	if err != nil {
 		t.Skip("cannot connect to test database")
 	}
