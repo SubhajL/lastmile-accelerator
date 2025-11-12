@@ -1,7 +1,7 @@
 name: ci-db-guardian-service
 on:
   push: { branches: [ main ], paths: [ 'services/db-guardian-service/**', 'packages/contracts/**' ] }
-  pull_request: { paths: [ 'services/db-guardian-service/**', 'packages/contracts/**' ] }
+  pull_request:
 jobs:
   call:
     uses: ./.github/workflows/_service-ci.yml
