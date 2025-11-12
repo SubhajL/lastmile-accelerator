@@ -44,8 +44,8 @@ services/**/tmp/
 # Package manager lockfiles (non-standard for Bun)
 pnpm-lock.yaml
 
-# Documentation scaffolding/templates
-documentation/README.md
-documentation/**/.gitkeep
-documentation/features/active/feature-name-*.md
-documentation/features/planned/feature-name-spec.md
+# Project docs (ignore all documentation assets; tracked service AGENTS.md remains unaffected)
+documentation/
+
+# Turbo cache
+.turbo/
