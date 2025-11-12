@@ -211,19 +211,19 @@ kill -9 <PID>
 
 ### Test Email Sending
 1. Send email from notification-service
-2. View in MailHog: http://localhost:8025
+2. View in MailHog: hxxp://localhost:8025
 3. No real email accounts needed!
 
 ### Test Git Operations
-1. Use Gitea: http://localhost:4001
+1. Use Gitea: hxxp://localhost:4001
 2. Create repos, push code
 3. Test webhooks locally
 4. No GitHub rate limits!
 
 ### View Metrics
-1. Services send to OpenTelemetry: http://localhost:4318
-2. Prometheus scrapes: http://localhost:9090
-3. Visualize in Grafana: http://localhost:3000
+1. Services send to OpenTelemetry: hxxp://localhost:4318
+2. Prometheus scrapes: hxxp://localhost:9090
+3. Visualize in Grafana: hxxp://localhost:3000
 
 ### Database Access
 ```bash
