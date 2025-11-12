@@ -102,7 +102,7 @@ jobs:
         id: vars
         run: echo "tag=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
 
-      - name: Build & push image
+      - name: Build & (conditionally) push image
         uses: docker/build-push-action@v6
         with:
           context: ${{ inputs.context }}
