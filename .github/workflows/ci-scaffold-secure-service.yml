@@ -1,7 +1,6 @@
 name: ci-scaffold-secure-service
 on:
-  push: { branches: [ main ], paths: [ 'services/scaffold-secure-service/**', 'packages/contracts/**' ] }
-  pull_request: { paths: [ 'services/scaffold-secure-service/**', 'packages/contracts/**' ] }
+  push: { branches: [ main ], paths: [ 'services/scaffold-secure-service/**' ] }
 jobs:
   call:
     uses: ./.github/workflows/_service-ci.yml

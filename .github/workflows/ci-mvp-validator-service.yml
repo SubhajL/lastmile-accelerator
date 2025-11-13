@@ -1,7 +1,6 @@
 name: ci-mvp-validator-service
 on:
-  push: { branches: [ main ], paths: [ 'services/mvp-validator-service/**', 'packages/contracts/**' ] }
-  pull_request: { paths: [ 'services/mvp-validator-service/**', 'packages/contracts/**' ] }
+  push: { branches: [ main ], paths: [ 'services/mvp-validator-service/**' ] }
 jobs:
   call:
     uses: ./.github/workflows/_service-ci.yml

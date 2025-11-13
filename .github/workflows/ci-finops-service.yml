@@ -1,7 +1,6 @@
 name: ci-finops-service
 on:
-  push: { branches: [ main ], paths: [ 'services/finops-service/**', 'packages/contracts/**' ] }
-  pull_request: { paths: [ 'services/finops-service/**', 'packages/contracts/**' ] }
+  push: { branches: [ main ], paths: [ 'services/finops-service/**' ] }
 jobs:
   call:
     uses: ./.github/workflows/_service-ci.yml

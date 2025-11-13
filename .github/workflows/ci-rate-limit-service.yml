@@ -1,7 +1,6 @@
 name: ci-rate-limit-service
 on:
-  push: { branches: [ main ], paths: [ 'services/rate-limit-service/**', 'packages/contracts/**' ] }
-  pull_request: { paths: [ 'services/rate-limit-service/**', 'packages/contracts/**' ] }
+  push: { branches: [ main ], paths: [ 'services/rate-limit-service/**' ] }
 jobs:
   call:
     uses: ./.github/workflows/_service-ci.yml
