@@ -43,3 +43,6 @@ services/**/tmp/
 
 # Package manager lockfiles (non-standard for Bun)
 pnpm-lock.yaml
+
+# Project documentation (keep out of VCS for now)
+documentation/**

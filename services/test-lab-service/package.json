@@ -14,6 +14,7 @@
     "lint": "eslint --max-warnings=0 \"src/**/*.{ts,tsx}\" --rule '@typescript-eslint/no-explicit-any: off' --rule '@typescript-eslint/no-unused-vars: off' --rule 'no-empty: off' --rule '@typescript-eslint/ban-ts-comment: off'"
   },
   "dependencies": {
+    "jose": "^5.2.4",
     "fastify": "4.27.0",
     "@fastify/helmet": "^11.1.1",
     "@fastify/cors": "^8.4.2",

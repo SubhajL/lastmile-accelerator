@@ -1,12 +1,16 @@
 > Global Rules (must‑read)
 > - Follow the root guidelines: ../../AGENTS.md#ai-assisted-programming-guidelines-by-sabrina-ramonov
-> - Also see: ../../WARP.md
+> - Also see: ../../CONTEXT.md
 > - Use shortcuts: QNEW, QPLAN, QCODE, QCHECK/QCHECKF/QCHECKT, QUX, QGIT (see root AGENTS.md)
 
 ## Docs Links
 - Active Spec: ../../documentation/features/active/test-lab-service-spec.md
 - Progress:    ../../documentation/features/active/test-lab-service-progress.md
-- Planned:     ../../documentation/features/planned/test-lab-service-spec.md
+- Planned:     ../../documentation/features/planned/test-lab-service-post-mvp-spec.md
+
+### Sprint Task Checklists
+- See Progress tracker (Owner/Sprint breakdown): ../../documentation/features/active/test-lab-service-progress.md#owner--sprint-breakdown
+- Graphite staged‑diff plan: ../../documentation/features/active/test-lab-service-progress.md#graphite-stack-plan-staged-diffs
 
 ## Package Identity
 
