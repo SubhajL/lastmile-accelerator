@@ -621,7 +621,6 @@ dependencies = [
  "rsa",
  "serde",
  "serde_json",
- "sha2",
  "sqlx",
  "testcontainers",
  "thiserror 1.0.69",

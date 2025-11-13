@@ -1,6 +1,9 @@
-use axum::http::HeaderMap;
-use axum::response::IntoResponse;
-use axum::{extract::Request, middleware::Next, response::Response};
+use axum::{
+    extract::Request,
+    http::{header::WWW_AUTHENTICATE, HeaderMap},
+    middleware::Next,
+    response::{IntoResponse, Response},
+};
 use serde::{Deserialize, Serialize};
 
 use crate::error::AppError;
@@ -92,7 +95,19 @@ pub async fn jwt_auth_middleware(request: Request, next: Next) -> Response {
             attach_claims_extension(&mut req, claims);
             next.run(req).await
         }
-        Err(e) => e.into_response(),
+        Err(e) => {
+            let mut resp = e.into_response();
+            if resp.status().as_u16() == 401 {
+                let v: axum::http::HeaderValue = format!(
+                    "Bearer error=\"invalid_token\", error_description=\"{}\"",
+                    "Unauthorized"
+                )
+                .parse()
+                .unwrap_or_else(|_| axum::http::HeaderValue::from_static("Bearer"));
+                let _ = resp.headers_mut().insert(WWW_AUTHENTICATE, v);
+            }
+            resp
+        }
     }
 }
 
@@ -112,21 +127,7 @@ pub fn attach_claims_extension(req: &mut Request, claims: Claims) {
     req.extensions_mut().insert::<Claims>(claims);
 }
 
-pub fn parse_and_build_placeholder_claims(token: &str) -> Claims {
-    // Non-validating placeholder; derive deterministic sub from token
-    use sha2::{Digest, Sha256};
-    let mut hasher = Sha256::new();
-    hasher.update(token.as_bytes());
-    let hash = format!("{:x}", hasher.finalize());
-    Claims {
-        sub: hash,
-        tenant_id: "unknown".into(),
-        user_id: "unknown".into(),
-        scopes: vec![],
-        exp: 0,
-        iss: "unknown".into(),
-    }
-}
+// placeholder helper removed; all requests require real JWT verification
 
 #[derive(Debug, Deserialize)]
 #[allow(dead_code)]
@@ -163,6 +164,8 @@ async fn verify_and_extract_claims(token: &str, ctx: &AuthContext) -> Result<Cla
         .ok_or_else(|| AppError::Auth("Unknown key id".into()))?;
 
     let mut validation = Validation::new(Algorithm::RS256);
+    validation.leeway = 60;
+    validation.validate_nbf = true;
     if let Some(ref iss) = ctx.config.issuer {
         validation.set_issuer(std::slice::from_ref(iss));
     }
