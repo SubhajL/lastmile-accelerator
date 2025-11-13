@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 	"sync"
 	"time"
@@ -45,15 +46,24 @@ func (e *SLOEvaluator) Run(ctx context.Context, interval time.Duration, workers 
 
 // runOnce evaluates all active SLOs sequentially.
 func (e *SLOEvaluator) runOnce(ctx context.Context) error {
+	start := time.Now()
+	log.Println("scheduler: tick start")
 	slos, err := e.repo.ListAll(ctx)
 	if err != nil {
+		// record duration even on error
+		getRecorder().ObserveDuration(time.Since(start))
+		getRecorder().SetLastRun(time.Now())
 		return err
 	}
 	ids := make([]string, 0, len(slos))
 	for _, s := range slos {
 		ids = append(ids, s.ID)
 	}
-	return e.runBatch(ctx, ids, 1)
+	err = e.runBatch(ctx, ids, 1)
+	getRecorder().ObserveDuration(time.Since(start))
+	getRecorder().SetLastRun(time.Now())
+	log.Printf("scheduler: tick end duration=%s", time.Since(start))
+	return err
 }
 
 // runBatch evaluates the provided SLO IDs using up to `workers` goroutines.
@@ -95,6 +105,12 @@ func (e *SLOEvaluator) runBatch(ctx context.Context, sloIDs []string, workers in
 	}
 	close(jobs)
 	wg.Wait()
+
+	// record metrics
+	errCount := len(errs)
+	if n := len(sloIDs); n > 0 { getRecorder().IncEvaluated(n) }
+	if errCount > 0 { getRecorder().IncErrors(errCount) }
+	log.Printf("scheduler: evaluated=%d errors=%d", len(sloIDs), errCount)
 	if len(errs) > 0 {
 		return errors.New(strings.Join(errs, "; "))
 	}
