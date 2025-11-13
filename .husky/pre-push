@@ -1,0 +1,17 @@
+#!/usr/bin/env sh
+
+set -e
+
+echo "Running lint-staged on staged files..."
+bunx lint-staged
+
+# Detect default remote branch (origin)
+DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
+if [ -z "$DEFAULT_BRANCH" ]; then
+  DEFAULT_BRANCH="main"
+fi
+
+echo "Running typecheck+lint on packages changed since origin/$DEFAULT_BRANCH..."
+bunx turbo run typecheck lint --filter="...[origin/$DEFAULT_BRANCH]"
+
+echo "Pre-push checks passed."

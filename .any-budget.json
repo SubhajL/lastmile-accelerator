@@ -1,0 +1,3 @@
+{
+  "services/notification-service": { "srcDir": "services/notification-service/src", "maxAnyCount": 50 }
+}
