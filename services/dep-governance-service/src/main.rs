@@ -6,6 +6,8 @@ use dep_governance_service::{
     handlers::{self, healthz, metrics, readyz},
     middleware::{init_telemetry, jwt_auth_middleware, shutdown_telemetry, trace_layer, AuthContext, AuthConfig},
 };
+use dep_governance_service::middleware::auth::{CachingJwksProvider, JwksProvider, NoopJwksProvider};
+use std::sync::Arc;
 use std::net::SocketAddr;
 use tokio::signal;
 
@@ -44,11 +46,18 @@ async fn main() -> anyhow::Result<()> {
     };
 
     // Build router
-    let auth_ctx = AuthContext::scaffold(AuthConfig {
-        jwks_url: config.jwt_public_key_url.clone(),
-        issuer: config.jwt_issuer.clone(),
-        audience: config.jwt_audience.clone(),
-    });
+    let provider: Arc<dyn JwksProvider> = match &config.jwt_public_key_url {
+        Some(url) => Arc::new(CachingJwksProvider::new(url.clone(), std::time::Duration::from_secs(300))),
+        None => Arc::new(NoopJwksProvider),
+    };
+    let auth_ctx = AuthContext::new(
+        AuthConfig {
+            jwks_url: config.jwt_public_key_url.clone(),
+            issuer: config.jwt_issuer.clone(),
+            audience: config.jwt_audience.clone(),
+        },
+        provider,
+    );
 
     let app = build_router(pool, nats, auth_ctx);
 

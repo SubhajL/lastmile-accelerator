@@ -36,6 +36,8 @@ tracing-opentelemetry = "0.22"
 
 # JWT & auth
 jsonwebtoken = "9.2"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+rand = "0.8"
 
 # Config
 config = "0.13"
@@ -50,8 +52,10 @@ uuid = { version = "1.6", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 bytes = "1.5"
 sha2 = "0.10"
+futures = "0.3"
 
 [dev-dependencies]
 axum-test = "14.0"
 testcontainers = "0.15"
 wiremock = "0.6"
+base64 = "0.21"
