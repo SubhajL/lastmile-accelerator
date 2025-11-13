@@ -1,7 +1,6 @@
 name: ci-projects-service
 on:
-  push: { branches: [ main ], paths: [ 'services/projects-service/**', 'packages/contracts/**' ] }
-  pull_request: { paths: [ 'services/projects-service/**', 'packages/contracts/**' ] }
+  push: { branches: [ main ], paths: [ 'services/projects-service/**' ] }
 jobs:
   call:
     uses: ./.github/workflows/_service-ci.yml
