@@ -1,7 +1,6 @@
 name: ci-authz-matrix-service
 on:
-  push: { branches: [ main ], paths: [ 'services/authz-matrix-service/**', 'packages/contracts/**' ] }
-  pull_request: { paths: [ 'services/authz-matrix-service/**', 'packages/contracts/**' ] }
+  push: { branches: [ main ], paths: [ 'services/authz-matrix-service/**' ] }
 jobs:
   call:
     uses: ./.github/workflows/_service-ci.yml

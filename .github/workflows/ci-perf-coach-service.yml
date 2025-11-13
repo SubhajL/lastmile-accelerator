@@ -1,7 +1,6 @@
 name: ci-perf-coach-service
 on:
-  push: { branches: [ main ], paths: [ 'services/perf-coach-service/**', 'packages/contracts/**' ] }
-  pull_request: { paths: [ 'services/perf-coach-service/**', 'packages/contracts/**' ] }
+  push: { branches: [ main ], paths: [ 'services/perf-coach-service/**' ] }
 jobs:
   call:
     uses: ./.github/workflows/_service-ci.yml

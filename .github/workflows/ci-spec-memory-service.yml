@@ -1,7 +1,6 @@
 name: ci-spec-memory-service
 on:
-  push: { branches: [ main ], paths: [ 'services/spec-memory-service/**', 'packages/contracts/**' ] }
-  pull_request: { paths: [ 'services/spec-memory-service/**', 'packages/contracts/**' ] }
+  push: { branches: [ main ], paths: [ 'services/spec-memory-service/**' ] }
 jobs:
   call:
     uses: ./.github/workflows/_service-ci.yml

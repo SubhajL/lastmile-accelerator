@@ -1,7 +1,6 @@
 name: ci-publisher-service
 on:
-  push: { branches: [ main ], paths: [ 'services/publisher-service/**', 'packages/contracts/**' ] }
-  pull_request: { paths: [ 'services/publisher-service/**', 'packages/contracts/**' ] }
+  push: { branches: [ main ], paths: [ 'services/publisher-service/**' ] }
 jobs:
   call:
     uses: ./.github/workflows/_service-ci.yml

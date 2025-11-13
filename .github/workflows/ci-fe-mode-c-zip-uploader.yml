@@ -1,7 +1,6 @@
 name: ci-fe-mode-c-zip-uploader
 on:
-  push: { branches: [ main ], paths: [ 'frontends/mode-c-zip-uploader/**', 'packages/contracts/**' ] }
-  pull_request: { paths: [ 'frontends/mode-c-zip-uploader/**', 'packages/contracts/**' ] }
+  push: { branches: [ main ], paths: [ 'frontends/mode-c-zip-uploader/**' ] }
 jobs:
   call:
     uses: ./.github/workflows/_frontend-ci.yml

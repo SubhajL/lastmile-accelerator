@@ -1,7 +1,6 @@
 name: ci-fe-mode-b-privacy-portal
 on:
-  push: { branches: [ main ], paths: [ 'frontends/mode-b-privacy-portal/**', 'packages/contracts/**' ] }
-  pull_request: { paths: [ 'frontends/mode-b-privacy-portal/**', 'packages/contracts/**' ] }
+  push: { branches: [ main ], paths: [ 'frontends/mode-b-privacy-portal/**' ] }
 jobs:
   call:
     uses: ./.github/workflows/_frontend-ci.yml

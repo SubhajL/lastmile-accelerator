@@ -1,7 +1,6 @@
 name: ci-snapshot-orchestrator-service
 on:
-  push: { branches: [ main ], paths: [ 'services/snapshot-orchestrator-service/**', 'packages/contracts/**' ] }
-  pull_request: { paths: [ 'services/snapshot-orchestrator-service/**', 'packages/contracts/**' ] }
+  push: { branches: [ main ], paths: [ 'services/snapshot-orchestrator-service/**' ] }
 jobs:
   call:
     uses: ./.github/workflows/_service-ci.yml
