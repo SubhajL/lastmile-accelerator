@@ -1,6 +1,6 @@
 import { loadConfig } from './config.js';
 import { createHandlebarsRenderer } from './channels/renderer.js';
-import { createDefaultChannelRegistry, createChannelRegistry } from './channels/registry.js';
+import { createChannelRegistry } from './channels/registry.js';
 import { createRuntime } from './bootstrap/runtime.js';
 import { createRunLoop } from './bootstrap/runloop.js';
 import { createResendChannel } from './channels/resend.js';
