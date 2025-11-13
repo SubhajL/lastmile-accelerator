@@ -1,7 +1,7 @@
 SVC=secrets-env-service
 TAG?=dev
 
-.PHONY: build test image sbom run
+.PHONY: build test image sbom run quality
 build:
 	go build -o bin/app ./cmd/$(SVC)
 test:
@@ -12,3 +12,10 @@ sbom:
 	syft dir:. -o spdx-json=sbom-$(SVC).spdx.json || true
 run:
 	SERVICE_PORT=7104 ./bin/app
+
+# Local per-service quality check (typecheck + lint + tests + build)
+quality:
+	go vet ./...
+	golangci-lint run ./...
+	go test ./...
+	$(MAKE) build
