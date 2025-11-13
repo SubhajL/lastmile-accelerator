@@ -1,8 +1,10 @@
 use axum::{extract::Request, middleware::Next, response::Response};
 use serde::{Deserialize, Serialize};
 use axum::http::HeaderMap;
-use axum::Extension;
+use axum::response::IntoResponse;
 
+use crate::error::AppError;
+use jsonwebtoken::{self, Algorithm, Validation, decode, decode_header};
 // Scaffold auth context/config and helpers. Full JWT verification comes in later stacks.
 
 #[derive(Debug, Clone)]
@@ -63,18 +65,23 @@ pub struct Claims {
 pub async fn jwt_auth_middleware(request: Request, next: Next) -> Response {
     let mut req = request;
 
-    // Extract Extension<AuthContext> if present (added by router layer)
-    let _ctx: Option<Extension<AuthContext>> = req.extensions().get::<AuthContext>().cloned().map(Extension);
+    let ctx = match req.extensions().get::<AuthContext>() {
+        Some(c) => c,
+        None => return AppError::Auth("Auth context not configured".into()).into_response(),
+    };
 
-    if let Some(token) = extract_bearer_token(req.headers()) {
-        let claims = parse_and_build_placeholder_claims(&token);
-        attach_claims_extension(&mut req, claims);
-        tracing::debug!("Auth header present; placeholder claims attached");
-        return next.run(req).await;
+    let token = match extract_bearer_token(req.headers()) {
+        Some(t) => t,
+        None => return AppError::Auth("Missing bearer token".into()).into_response(),
+    };
+
+    match verify_and_extract_claims(&token, ctx).await {
+        Ok(claims) => {
+            attach_claims_extension(&mut req, claims);
+            next.run(req).await
+        }
+        Err(e) => e.into_response(),
     }
-
-    tracing::debug!("No/invalid auth header; proceeding without claims (scaffold)");
-    next.run(req).await
 }
 
 // Helpers
@@ -107,6 +114,54 @@ pub fn parse_and_build_placeholder_claims(token: &str) -> Claims {
         exp: 0,
         iss: "unknown".into(),
     }
+}
+
+#[derive(Debug, Deserialize)]
+#[allow(dead_code)]
+struct RawClaims {
+    #[serde(default)]
+    sub: Option<String>,
+    #[serde(default)]
+    tenant_id: Option<String>,
+    #[serde(default)]
+    user_id: Option<String>,
+    #[serde(default)]
+    scopes: Option<Vec<String>>, 
+    #[serde(default)]
+    exp: Option<usize>,
+    #[serde(default)]
+    iss: Option<String>,
+    #[serde(default)]
+    aud: Option<serde_json::Value>,
+}
+
+async fn verify_and_extract_claims(token: &str, ctx: &AuthContext) -> Result<Claims, AppError> {
+    let header = decode_header(token).map_err(|e| AppError::Auth(format!("Invalid JWT header: {}", e)))?;
+    if header.alg != Algorithm::RS256 {
+        return Err(AppError::Auth("Unsupported JWT alg".into()));
+    }
+    let kid = header.kid.ok_or_else(|| AppError::Auth("JWT missing kid".into()))?;
+    let key = ctx.provider().get_key(&kid).await.ok_or_else(|| AppError::Auth("Unknown key id".into()))?;
+
+    let mut validation = Validation::new(Algorithm::RS256);
+    if let Some(ref iss) = ctx.config.issuer {
+        validation.set_issuer(std::slice::from_ref(iss));
+    }
+    if let Some(ref aud) = ctx.config.audience {
+        validation.set_audience(std::slice::from_ref(aud));
+    }
+
+    let data = decode::<RawClaims>(token, &key, &validation)
+        .map_err(|e| AppError::Auth(format!("JWT validation failed: {}", e)))?;
+    let rc = data.claims;
+    Ok(Claims {
+        sub: rc.sub.unwrap_or_else(|| "unknown".into()),
+        tenant_id: rc.tenant_id.unwrap_or_else(|| "unknown".into()),
+        user_id: rc.user_id.unwrap_or_else(|| "unknown".into()),
+        scopes: rc.scopes.unwrap_or_default(),
+        exp: rc.exp.unwrap_or(0),
+        iss: rc.iss.unwrap_or_else(|| "unknown".into()),
+    })
 }
 
 // --- JWKS caching provider ---
@@ -214,53 +269,22 @@ impl JwksProvider for CachingJwksProvider {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::{body::Body, http::{Request, StatusCode}, middleware, Router};
+    use axum::{body::Body, http::{Request, StatusCode}, middleware, Router, Extension};
     use tower::ServiceExt;
     use wiremock::{MockServer, Mock, ResponseTemplate};
     use wiremock::matchers::{method, path};
     use rand::{RngCore, rngs::StdRng, SeedableRng};
     use base64::engine::general_purpose::URL_SAFE_NO_PAD;
     use base64::Engine;
+    use rsa::{RsaPrivateKey, pkcs1::EncodeRsaPrivateKey, traits::PublicKeyParts};
+    use jsonwebtoken::{Header, Algorithm, EncodingKey, encode};
+    use chrono::Utc;
 
     async fn handler() -> &'static str {
         "ok"
     }
 
-    #[tokio::test]
-    async fn test_jwt_middleware_accepts_bearer_token() {
-        let app = Router::new()
-            .route("/test", axum::routing::get(handler))
-            .layer(Extension(AuthContext::for_tests()))
-            .layer(middleware::from_fn(jwt_auth_middleware));
-
-        let response = app
-            .oneshot(
-                Request::builder()
-                    .uri("/test")
-                    .header("authorization", "Bearer test-token")
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::OK);
-    }
-
-    #[tokio::test]
-    async fn test_jwt_middleware_accepts_no_token_phase1() {
-        let app = Router::new()
-            .route("/test", axum::routing::get(handler))
-            .layer(Extension(AuthContext::for_tests()))
-            .layer(middleware::from_fn(jwt_auth_middleware));
-
-        let response = app
-            .oneshot(Request::builder().uri("/test").body(Body::empty()).unwrap())
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::OK);
-    }
+    // Phase 3 enforces auth; legacy permissive tests removed.
 
     #[test]
     fn extract_bearer_token_parses_bearer_value() {
@@ -361,5 +385,139 @@ mod tests {
         let url = format!("{}/jwks.json", &server.uri());
         let prov = CachingJwksProvider::new(url, std::time::Duration::from_secs(300));
         assert!(prov.get_key("bad").await.is_none());
+    }
+
+    fn make_rsa_jwks_and_pem(kid: &str) -> (String, serde_json::Value) {
+        let mut rng = rand::thread_rng();
+        let priv_key = RsaPrivateKey::new(&mut rng, 2048).expect("gen key");
+        let pub_key = rsa::RsaPublicKey::from(&priv_key);
+        let n_b64 = URL_SAFE_NO_PAD.encode(pub_key.n().to_bytes_be());
+        let e_b64 = URL_SAFE_NO_PAD.encode(pub_key.e().to_bytes_be());
+        let pem = priv_key.to_pkcs1_pem(rsa::pkcs1::LineEnding::LF).unwrap().to_string();
+        let jwks = serde_json::json!({
+            "keys": [{"kty":"RSA","kid":kid,"alg":"RS256","use":"sig","n":n_b64,"e":e_b64}]
+        });
+        (pem, jwks)
+    }
+
+    #[tokio::test]
+    async fn valid_jwt_allows_request() {
+        let server = MockServer::start().await;
+        let kid = "kid-valid";
+        let (pem, jwks) = make_rsa_jwks_and_pem(kid);
+        Mock::given(method("GET"))
+            .and(path("/jwks.json"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&jwks))
+            .mount(&server)
+            .await;
+
+        let iss = "test-iss".to_string();
+        let aud = "test-aud".to_string();
+        let url = format!("{}/jwks.json", server.uri());
+        let prov = CachingJwksProvider::new(url.clone(), std::time::Duration::from_secs(300));
+        // warm cache
+        assert!(prov.get_key(kid).await.is_some());
+        let auth_ctx = AuthContext::new(
+            AuthConfig { jwks_url: Some(url), issuer: Some(iss.clone()), audience: Some(aud.clone()) },
+            std::sync::Arc::new(prov)
+        );
+
+        #[derive(serde::Serialize)]
+        struct TestClaims { sub: String, tenant_id: String, user_id: String, scopes: Vec<String>, exp: usize, iss: String, aud: String }
+        let claims = TestClaims {
+            sub: "user-1".into(), tenant_id: "t-1".into(), user_id: "u-1".into(), scopes: vec![],
+            exp: (Utc::now().timestamp() as usize) + 3600, iss: iss.clone(), aud: aud.clone()
+        };
+        let mut header = Header::new(Algorithm::RS256);
+        header.kid = Some(kid.into());
+        let token = encode(&header, &claims, &EncodingKey::from_rsa_pem(pem.as_bytes()).unwrap()).unwrap();
+
+        // Sanity: token decodes with same validation
+        let mut v = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::RS256);
+        v.set_issuer(std::slice::from_ref(&iss));
+        v.set_audience(std::slice::from_ref(&aud));
+        let n = jwks["keys"][0]["n"].as_str().unwrap();
+        let e = jwks["keys"][0]["e"].as_str().unwrap();
+        let _ = jsonwebtoken::decode::<serde_json::Value>(&token, &jsonwebtoken::DecodingKey::from_rsa_components(n, e).unwrap(), &v).unwrap();
+
+        // Also ensure our verifier path succeeds
+        verify_and_extract_claims(&token, &auth_ctx).await.unwrap();
+
+        let app = Router::new()
+            .route("/v1/protected", axum::routing::get(handler))
+            .layer(middleware::from_fn(jwt_auth_middleware))
+            .layer(Extension(auth_ctx));
+
+        let res = app
+            .oneshot(
+                Request::builder()
+                    .uri("/v1/protected")
+                    .header("authorization", format!("Bearer {}", token))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn missing_token_returns_401() {
+        let auth_ctx = AuthContext::for_tests();
+        let app = Router::new()
+            .route("/v1/protected", axum::routing::get(handler))
+            .layer(middleware::from_fn(jwt_auth_middleware))
+            .layer(Extension(auth_ctx));
+
+        let res = app
+            .oneshot(Request::builder().uri("/v1/protected").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[tokio::test]
+    async fn expired_token_returns_401() {
+        let server = MockServer::start().await;
+        let kid = "kid-exp";
+        let (pem, jwks) = make_rsa_jwks_and_pem(kid);
+        Mock::given(method("GET"))
+            .and(path("/jwks.json"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&jwks))
+            .mount(&server)
+            .await;
+        let iss = "test-iss".to_string();
+        let aud = "test-aud".to_string();
+        let auth_ctx = AuthContext::new(
+            AuthConfig { jwks_url: Some(format!("{}/jwks.json", server.uri())), issuer: Some(iss.clone()), audience: Some(aud.clone()) },
+            std::sync::Arc::new(CachingJwksProvider::new(format!("{}/jwks.json", server.uri()), std::time::Duration::from_secs(1)))
+        );
+
+        #[derive(serde::Serialize)]
+        struct TestClaims { sub: String, tenant_id: String, user_id: String, scopes: Vec<String>, exp: usize, iss: String, aud: String }
+        let claims = TestClaims {
+            sub: "user-1".into(), tenant_id: "t-1".into(), user_id: "u-1".into(), scopes: vec![],
+            exp: (Utc::now().timestamp() as usize) - 10, iss: iss.clone(), aud: aud.clone()
+        };
+        let mut header = Header::new(Algorithm::RS256);
+        header.kid = Some(kid.into());
+        let token = encode(&header, &claims, &EncodingKey::from_rsa_pem(pem.as_bytes()).unwrap()).unwrap();
+
+        let app = Router::new()
+            .route("/v1/protected", axum::routing::get(handler))
+            .layer(Extension(auth_ctx))
+            .layer(middleware::from_fn(jwt_auth_middleware));
+
+        let res = app
+            .oneshot(
+                Request::builder()
+                    .uri("/v1/protected")
+                    .header("authorization", format!("Bearer {}", token))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::UNAUTHORIZED);
     }
 }
