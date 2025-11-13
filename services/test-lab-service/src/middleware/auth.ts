@@ -150,7 +150,7 @@ export const optionalAuth: preHandlerHookHandler = async (
       clockSkewSec: cfg.jwtClockSkewSec,
       jwksUrl: cfg.jwtJwksUrl,
     });
-    (request as any).user = toUserContext(claims);
+    request.user = toUserContext(claims);
   } catch {
     // swallow all errors: proceed unauthenticated
   }

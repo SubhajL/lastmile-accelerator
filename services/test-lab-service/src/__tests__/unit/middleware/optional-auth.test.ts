@@ -80,6 +80,8 @@ describe('optionalAuth preHandler', () => {
     const res = await app.inject({ method: 'GET', url: '/maybe' });
     expect(res.statusCode).toBe(200);
     expect(res.json().uid).toBeNull();
+    const jwks: any = await import('../../../lib/jwks.js');
+    expect(jwks.verifyJwt).not.toHaveBeenCalled();
     await app.close();
   });
 
@@ -88,6 +90,8 @@ describe('optionalAuth preHandler', () => {
     const res = await app.inject({ method: 'GET', url: '/maybe', headers: { authorization: 'Basic abc' } });
     expect(res.statusCode).toBe(200);
     expect(res.json().uid).toBeNull();
+    const jwks: any = await import('../../../lib/jwks.js');
+    expect(jwks.verifyJwt).not.toHaveBeenCalled();
     await app.close();
   });
 
