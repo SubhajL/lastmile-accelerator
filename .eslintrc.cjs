@@ -12,5 +12,14 @@ module.exports = {
     '**/target/**',
     'lma-devstack-compose-gitea4001/**',
   ],
+  overrides: [
+    {
+      files: ['**/*.test.ts', '**/*.spec.ts', '**/*.test.tsx', '**/*.spec.tsx'],
+      rules: {
+        '@typescript-eslint/no-explicit-any': 'off',
+        '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      },
+    },
+  ],
 };
 
