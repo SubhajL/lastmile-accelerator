@@ -56,6 +56,9 @@ type NATSConfig struct {
 // ObservabilityConfig holds observability settings
 type ObservabilityConfig struct {
 	OTELEndpoint string
+    OTELInsecure bool
+    OTELHeaders  map[string]string
+    OTELServiceName string
 	MetricsPort  string
 }
 
@@ -128,6 +131,9 @@ func Load() (*Config, error) {
 		},
 		Observability: ObservabilityConfig{
 			OTELEndpoint: getEnvOrDefault("OTEL_EXPORTER_OTLP_ENDPOINT", ""),
+            OTELInsecure: getEnvAsBool("OTEL_INSECURE", false),
+            OTELHeaders:  getEnvAsKVMap("OTEL_HEADERS"),
+            OTELServiceName: getEnvOrDefault("OTEL_SERVICE_NAME", ""),
 			MetricsPort:  getEnvOrDefault("METRICS_PORT", "9090"),
 		},
 		Auth: AuthConfig{
@@ -319,4 +325,34 @@ func getEnvAsList(key string, def []string) []string {
 		return parts
 	}
 	return def
+}
+
+// getEnvAsKVMap parses comma-separated key=value pairs into a map.
+// - Splits on commas, trims spaces
+// - Splits each pair on the first '=' only; values may contain '='
+// - Skips malformed pairs (no key or no '=')
+// - Last key wins on duplicates
+func getEnvAsKVMap(key string) map[string]string {
+    raw := os.Getenv(key)
+    if raw == "" {
+        return map[string]string{}
+    }
+    out := make(map[string]string)
+    for _, part := range strings.Split(raw, ",") {
+        part = strings.TrimSpace(part)
+        if part == "" {
+            continue
+        }
+        eq := strings.Index(part, "=")
+        if eq <= 0 { // no '=' or empty key
+            continue
+        }
+        k := strings.TrimSpace(part[:eq])
+        v := strings.TrimSpace(part[eq+1:])
+        if k == "" || v == "" {
+            continue
+        }
+        out[k] = v
+    }
+    return out
 }
