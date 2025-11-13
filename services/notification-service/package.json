@@ -10,7 +10,8 @@
     "test:coverage": "vitest --coverage",
     "lint": "eslint . --ext .ts,.tsx --max-warnings=0",
     "typecheck": "tsc --noEmit",
-    "test:typecheck": "tsc -p tsconfig.spec.json --noEmit"
+    "test:typecheck": "tsc -p tsconfig.spec.json --noEmit",
+    "quality:check": "bun run typecheck && bun run lint && bun run test:typecheck"
   },
   "dependencies": {
     "fastify": "4.27.0",
