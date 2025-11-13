@@ -1,0 +1,17 @@
+name: pr-ci
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+jobs:
+  db-guardian-tests:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+      - name: Unit tests (db-guardian-service)
+        working-directory: services/db-guardian-service
+        run: go test ./... -cover
