@@ -86,9 +86,12 @@ fn build_router(pool: sqlx::PgPool, _nats: Option<NatsPublisher>, auth_ctx: Auth
         .route("/readyz", axum::routing::get(readyz))
         .route("/metrics", axum::routing::get(metrics))
         // v1 API
-        .nest("/v1", handlers::api::router(pool.clone()))
-        .layer(Extension(auth_ctx))
-        .layer(middleware::from_fn(jwt_auth_middleware))
+        .nest(
+            "/v1",
+            handlers::api::router(pool.clone())
+                .layer(middleware::from_fn(jwt_auth_middleware))
+                .layer(Extension(auth_ctx)),
+        )
         .layer(trace_layer())
         .with_state(pool)
 }

@@ -59,3 +59,4 @@ axum-test = "14.0"
 testcontainers = "0.15"
 wiremock = "0.6"
 base64 = "0.21"
+rsa = { version = "0.9", features = ["pem"] }
