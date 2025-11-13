@@ -1,7 +1,6 @@
 name: ci-observability-service
 on:
-  push: { branches: [ main ], paths: [ 'services/observability-service/**', 'packages/contracts/**' ] }
-  pull_request: { paths: [ 'services/observability-service/**', 'packages/contracts/**' ] }
+  push: { branches: [ main ], paths: [ 'services/observability-service/**' ] }
 jobs:
   call:
     uses: ./.github/workflows/_service-ci.yml
