@@ -118,9 +118,9 @@ func (v *JWKSVerifier) getKey(kid string) interface{} {
 
 func (v *JWKSVerifier) refresh(ctx context.Context) error {
 	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, v.jwksURL, nil)
-	resp, err := v.client.Do(req)
+    resp, err := v.client.Do(req)
 	if err != nil { return err }
-	defer resp.Body.Close()
+    defer func(){ _ = resp.Body.Close() }()
 	var set jwkSet
 	if err := json.NewDecoder(resp.Body).Decode(&set); err != nil { return err }
 

@@ -43,3 +43,6 @@ services/**/tmp/
 
 # Package manager lockfiles (non-standard for Bun)
 pnpm-lock.yaml
+
+# Turbo cache
+.turbo/

@@ -27,9 +27,9 @@ func (m *MinioS3Client) ListObjects(ctx context.Context, bucket, prefix string) 
 }
 
 func (m *MinioS3Client) GetObject(ctx context.Context, bucket, key string) ([]byte, error) {
-	obj, err := m.c.GetObject(ctx, bucket, key, minio.GetObjectOptions{})
+    obj, err := m.c.GetObject(ctx, bucket, key, minio.GetObjectOptions{})
 	if err != nil { return nil, err }
-	defer obj.Close()
+    defer func(){ _ = obj.Close() }()
 	b, err := io.ReadAll(obj)
 	if err != nil { return nil, err }
 	return b, nil

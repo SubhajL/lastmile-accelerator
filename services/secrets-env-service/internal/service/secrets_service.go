@@ -44,9 +44,9 @@ func (s *SecretsService) CreateSecret(ctx context.Context, secret *domain.Secret
 	}
 
 	// Save metadata to database
-	if err := s.repo.Create(ctx, secret); err != nil {
-		// Attempt rollback (delete from Vault)
-		s.vault.DeleteSecret(ctx, vaultPath)
+    if err := s.repo.Create(ctx, secret); err != nil {
+        // Attempt rollback (delete from Vault)
+        _ = s.vault.DeleteSecret(ctx, vaultPath)
 		return fmt.Errorf("failed to save metadata: %w", err)
 	}
 

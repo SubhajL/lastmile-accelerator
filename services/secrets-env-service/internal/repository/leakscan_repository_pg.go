@@ -31,9 +31,9 @@ func (r *LeakScanRepositoryPG) CreateBatch(ctx context.Context, scans []*domain.
 }
 
 func (r *LeakScanRepositoryPG) GetBySnapshotID(ctx context.Context, snapshotID, severity string) ([]*domain.ClientLeakScan, error) {
-	rows, err := r.db.QueryContext(ctx, `SELECT id, snapshot_id, file_path, line_number, pattern, severity, fixed, created_at FROM client_leak_scans WHERE snapshot_id=$1 AND ($2='' OR severity=$2) ORDER BY created_at ASC`, snapshotID, severity)
+    rows, err := r.db.QueryContext(ctx, `SELECT id, snapshot_id, file_path, line_number, pattern, severity, fixed, created_at FROM client_leak_scans WHERE snapshot_id=$1 AND ($2='' OR severity=$2) ORDER BY created_at ASC`, snapshotID, severity)
 	if err != nil { return nil, err }
-	defer rows.Close()
+    defer func(){ _ = rows.Close() }()
 	var out []*domain.ClientLeakScan
 	for rows.Next() {
 		s := &domain.ClientLeakScan{}

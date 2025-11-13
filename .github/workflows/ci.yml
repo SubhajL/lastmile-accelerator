@@ -27,6 +27,7 @@ jobs:
       - name: Turbo pipeline (typecheck, lint, test, build)
         run: bunx turbo run typecheck lint test build
 
+<<<<<<< HEAD
       - name: Change budget (PRs)
         if: ${{ github.event_name == 'pull_request' }}
         env:
@@ -47,6 +48,8 @@ jobs:
             exit 1
           fi
 
+=======
+>>>>>>> e0c75ef (chore(ci,secrets-env-service): add GitHub Actions CI (bun+turbo) and golangci-lint; minimal src fixes)
       - name: Setup Go
         uses: actions/setup-go@v5
         with:

@@ -37,7 +37,7 @@ func Success(w http.ResponseWriter, statusCode int, data interface{}) {
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
 	}
 
-	json.NewEncoder(w).Encode(response)
+    _ = json.NewEncoder(w).Encode(response)
 }
 
 // SuccessWithRequest writes a successful response with request metadata
@@ -52,7 +52,7 @@ func SuccessWithRequest(w http.ResponseWriter, statusCode int, data interface{},
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
 	}
 
-	json.NewEncoder(w).Encode(response)
+    _ = json.NewEncoder(w).Encode(response)
 }
 
 // Error writes an error JSON response
@@ -66,7 +66,7 @@ func Error(w http.ResponseWriter, statusCode int, message string, err error) {
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
 	}
 
-	json.NewEncoder(w).Encode(response)
+    _ = json.NewEncoder(w).Encode(response)
 }
 
 // ValidationError writes a 400 response with field errors
@@ -81,7 +81,7 @@ func ValidationError(w http.ResponseWriter, fieldErrors map[string]string) {
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
 	}
 
-	json.NewEncoder(w).Encode(response)
+    _ = json.NewEncoder(w).Encode(response)
 }
 
 // extractRequestID gets or generates a request ID
