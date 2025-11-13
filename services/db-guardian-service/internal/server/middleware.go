@@ -21,7 +21,11 @@ func RequireScopesFunc(authn Authenticator, resolve func(*http.Request) []string
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if authn == nil { next.ServeHTTP(w, r); return }
-			required := resolve(r)
+            required := []string{}
+            if resolve != nil { required = resolve(r) }
+            if required == nil { // explicit bypass
+                next.ServeHTTP(w, r); return
+            }
 			h := r.Header.Get("Authorization")
 			if h == "" { http.Error(w, "unauthorized", http.StatusUnauthorized); return }
 			if _, err := authn.Verify(r.Context(), h, required); err != nil {

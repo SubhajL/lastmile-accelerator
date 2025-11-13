@@ -26,6 +26,12 @@ type Config struct {
 	AnalysisMaxLockWarnTableSizeBytes int64
 	AnalysisMinQueryExecutions        int
 	AnalysisBenefitScoreThreshold     int
+
+	// Auth (JWT/JWKS)
+	AuthJWKSURL         string
+	AuthIssuer          string
+	AuthAudience        string
+	AuthClockSkewSeconds int
 }
 
 func Load() (*Config, error) {
@@ -45,6 +51,11 @@ func Load() (*Config, error) {
 		AnalysisMaxLockWarnTableSizeBytes: getEnvInt64("ANALYSIS_MAX_LOCK_WARN_TABLE_SIZE_BYTES", 50*1024*1024),
 		AnalysisMinQueryExecutions:        getEnvInt("ANALYSIS_MIN_QUERY_EXECUTIONS", 100),
 		AnalysisBenefitScoreThreshold:     getEnvInt("ANALYSIS_BENEFIT_SCORE_THRESHOLD", 10),
+		// Auth
+		AuthJWKSURL:          os.Getenv("AUTH_JWKS_URL"),
+		AuthIssuer:           os.Getenv("AUTH_ISSUER"),
+		AuthAudience:         os.Getenv("AUTH_AUDIENCE"),
+		AuthClockSkewSeconds: getEnvInt("AUTH_CLOCK_SKEW_SECONDS", 60),
 	}
 
 	if cfg.ServiceName == "" {
@@ -87,6 +98,21 @@ func (c *Config) Validate() error {
 	}
 	if c.AnalysisMaxLockWarnTableSizeBytes < 0 {
 		return fmt.Errorf("ANALYSIS_MAX_LOCK_WARN_TABLE_SIZE_BYTES must be >= 0")
+	}
+
+	// Auth config coherence: if any provided, require all and validate
+	anyAuth := c.AuthJWKSURL != "" || c.AuthIssuer != "" || c.AuthAudience != ""
+	if anyAuth {
+		if c.AuthJWKSURL == "" || c.AuthIssuer == "" || c.AuthAudience == "" {
+			return fmt.Errorf("auth config incomplete: require AUTH_JWKS_URL, AUTH_ISSUER, AUTH_AUDIENCE together")
+		}
+		u, err := url.Parse(c.AuthJWKSURL)
+		if err != nil || u.Scheme == "" {
+			return fmt.Errorf("invalid AUTH_JWKS_URL: %v", err)
+		}
+		if c.AuthClockSkewSeconds < 0 {
+			return fmt.Errorf("AUTH_CLOCK_SKEW_SECONDS must be >= 0")
+		}
 	}
 
 	return nil

@@ -76,8 +76,10 @@ func New(cfg *config.Config, deps *Dependencies) *Server {
 	registerAPI(mux, cfg, deps)
 	registerAPIv1(mux, cfg, deps)
 
-	// Wrap with OpenTelemetry instrumentation
-	handler := otelhttp.NewHandler(mux, "db-guardian-service")
+    // Global middlewares: auth scopes (if configured) and http metrics
+    base := Chain(mux, RequireScopesFunc(deps.Authenticator, HTTPScopeResolver), Metrics())
+    // Wrap with OpenTelemetry instrumentation
+    handler := otelhttp.NewHandler(base, "db-guardian-service")
 
 	srv := &Server{
 		httpServer: &http.Server{

@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+    "time"
 
 	"example.com/lma/db-guardian-service/internal/analyzer"
 	"example.com/lma/db-guardian-service/internal/cache"
@@ -159,8 +160,14 @@ func run() error {
 		DriftCheck:   driftSvc,
 	}
 
-	// Enable simple auth for gRPC (dev). Replace with real JWT/JWKS in prod.
-	deps.Authenticator = auth.NewSimpleAuthenticator()
+    // Authenticator: use JWT/JWKS when configured; otherwise, simple (dev/local)
+    if cfg.AuthJWKSURL != "" && cfg.AuthIssuer != "" && cfg.AuthAudience != "" {
+        deps.Authenticator = auth.NewJWTAuthenticator(cfg.AuthJWKSURL, cfg.AuthIssuer, cfg.AuthAudience, time.Duration(cfg.AuthClockSkewSeconds)*time.Second)
+        log.Info("JWT/JWKS authentication enabled")
+    } else {
+        deps.Authenticator = auth.NewSimpleAuthenticator()
+        log.Info("Simple authentication enabled (dev)")
+    }
 	srv := server.New(cfg, deps)
 
 	// Start gRPC (if enabled via build tag)
