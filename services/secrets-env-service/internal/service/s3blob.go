@@ -1,12 +1,11 @@
 package service
 
 import (
-	"bufio"
-	"context"
-	"errors"
-	"path"
-	"path/filepath"
-	"strings"
+    "context"
+    "errors"
+    "path"
+    "path/filepath"
+    "strings"
 )
 
 // S3Config holds minimal settings for S3-compatible storage wiring.
@@ -108,9 +107,3 @@ func shouldIgnore(path string, globs []string) bool {
 }
 
 // filterBuffer returns the text lines of a buffer for scanning.
-func filterBuffer(content []byte) []string {
-	s := bufio.NewScanner(strings.NewReader(string(content)))
-	var lines []string
-	for s.Scan() { lines = append(lines, s.Text()) }
-	return lines
-}

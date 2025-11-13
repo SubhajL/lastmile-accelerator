@@ -230,7 +230,7 @@ func (r *SecretsRepository) List(ctx context.Context, projectID, environment str
 		start := 0
 		if cursor != "" {
 			// In test mode, cursor is just an index
-			fmt.Sscanf(cursor, "%d", &start)
+            _, _ = fmt.Sscanf(cursor, "%d", &start)
 		}
 
 		end := start + limit
@@ -259,11 +259,11 @@ func (r *SecretsRepository) List(ctx context.Context, projectID, environment str
 		LIMIT $3
 	`
 
-	rows, err := r.db.QueryContext(ctx, query, projectID, environment, limit)
+    rows, err := r.db.QueryContext(ctx, query, projectID, environment, limit)
 	if err != nil {
 		return nil, "", err
 	}
-	defer rows.Close()
+    defer func(){ _ = rows.Close() }()
 
 	var secrets []*domain.Secret
 	for rows.Next() {

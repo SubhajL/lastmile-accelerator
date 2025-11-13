@@ -1,8 +1,10 @@
 package service
 
 import (
-	"context"
-	"testing"
+    "bufio"
+    "context"
+    "strings"
+    "testing"
 )
 
 func Test_isBinary_ByExtAndNull(t *testing.T) {
@@ -33,6 +35,14 @@ func Test_shouldIgnore_Globs(t *testing.T) {
 func Test_filterBuffer_SplitsLines(t *testing.T) {
 	lines := filterBuffer([]byte("a\nb\n"))
 	if len(lines) != 2 || lines[0] != "a" || lines[1] != "b" { t.Fatalf("unexpected lines: %#v", lines) }
+}
+
+// test helper local to tests
+func filterBuffer(content []byte) []string {
+    s := bufio.NewScanner(strings.NewReader(string(content)))
+    var lines []string
+    for s.Scan() { lines = append(lines, s.Text()) }
+    return lines
 }
 
 // --- ListFiles integration with fake client ---

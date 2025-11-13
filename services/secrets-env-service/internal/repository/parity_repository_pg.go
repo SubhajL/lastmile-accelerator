@@ -46,11 +46,11 @@ func (r *ParityRepositoryPG) GetLatest(ctx context.Context, projectID string) (*
 }
 
 func (r *ParityRepositoryPG) GetHistory(ctx context.Context, projectID string, limit int) ([]*domain.EnvParityCheck, error) {
-	rows, err := r.db.QueryContext(ctx,
+    rows, err := r.db.QueryContext(ctx,
 		`SELECT project_id, scan_timestamp, missing_keys, extra_keys, has_drift FROM env_parity_checks WHERE project_id=$1 ORDER BY scan_timestamp DESC LIMIT $2`, projectID, limit,
 	)
 	if err != nil { return nil, err }
-	defer rows.Close()
+    defer func(){ _ = rows.Close() }()
 	var out []*domain.EnvParityCheck
 	for rows.Next() {
 		var (
