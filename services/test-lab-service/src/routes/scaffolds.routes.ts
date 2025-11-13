@@ -9,7 +9,7 @@ const ParamsWithId = z.object({ id: z.string().uuid() });
 export function registerScaffoldRoutes(app: FastifyInstance) {
   // Create scaffold
   app.post('/v1/projects/:projectId/test-scaffolds', {
-    preHandler: [authenticateRequest as any, requireScopes('scaffold:write') as any],
+    preHandler: [authenticateRequest, requireScopes('scaffold:write')],
     schema: {},
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     const params = ParamsWithProject.parse(request.params);
@@ -20,7 +20,7 @@ export function registerScaffoldRoutes(app: FastifyInstance) {
 
   // List scaffolds
   app.get('/v1/projects/:projectId/test-scaffolds', {
-    preHandler: [authenticateRequest as any, requireScopes('scaffold:read') as any],
+    preHandler: [authenticateRequest, requireScopes('scaffold:read')],
   }, async (request, reply) => {
     const params = ParamsWithProject.parse(request.params);
     const query = ListScaffoldsQuerySchema.parse(request.query);
@@ -30,7 +30,7 @@ export function registerScaffoldRoutes(app: FastifyInstance) {
 
   // Get scaffold by id
   app.get('/v1/test-scaffolds/:id', {
-    preHandler: [authenticateRequest as any, requireScopes('scaffold:read') as any],
+    preHandler: [authenticateRequest, requireScopes('scaffold:read')],
   }, async (request, reply) => {
     const { id } = ParamsWithId.parse(request.params);
     const rec = await app.repos.scaffolds.getById(id);
@@ -40,7 +40,7 @@ export function registerScaffoldRoutes(app: FastifyInstance) {
 
   // Update scaffold
   app.put('/v1/test-scaffolds/:id', {
-    preHandler: [authenticateRequest as any, requireScopes('scaffold:write') as any],
+    preHandler: [authenticateRequest, requireScopes('scaffold:write')],
   }, async (request, reply) => {
     const { id } = ParamsWithId.parse(request.params);
     const patch = UpdateScaffoldSchema.parse(request.body);
@@ -51,7 +51,7 @@ export function registerScaffoldRoutes(app: FastifyInstance) {
 
   // Delete scaffold
   app.delete('/v1/test-scaffolds/:id', {
-    preHandler: [authenticateRequest as any, requireScopes('scaffold:write') as any],
+    preHandler: [authenticateRequest, requireScopes('scaffold:write')],
   }, async (request, reply) => {
     const { id } = ParamsWithId.parse(request.params);
     const ok = await app.repos.scaffolds.delete(id);

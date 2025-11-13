@@ -1,0 +1,10 @@
+#!/usr/bin/env sh
+. "$(dirname "$0")/_/husky.sh"
+
+echo "Running lint-staged..."
+bunx lint-staged || exit 1
+
+echo "Running turbo typecheck+lint..."
+bunx turbo run typecheck lint || exit 1
+
+echo "Pre-push checks passed."

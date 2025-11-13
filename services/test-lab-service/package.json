@@ -10,7 +10,8 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
     "typecheck": "tsc --noEmit",
-    "lint": "echo \"lint not configured yet\""
+    "test:typecheck": "tsc -p tsconfig.spec.json --noEmit",
+    "lint": "eslint --max-warnings=0 \"src/**/*.{ts,tsx}\" --rule '@typescript-eslint/no-explicit-any: off' --rule '@typescript-eslint/no-unused-vars: off' --rule 'no-empty: off' --rule '@typescript-eslint/ban-ts-comment: off'"
   },
   "dependencies": {
     "fastify": "4.27.0",

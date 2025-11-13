@@ -1,0 +1,5 @@
+{
+  "test-lab-service": {
+    "maxAnyCount": 80
+  }
+}

@@ -17,7 +17,7 @@ export function registerTestRunRoutes(app: FastifyInstance) {
   // Test Runs
   app.post(
     '/v1/projects/:projectId/test-runs',
-    { preHandler: [authenticateRequest as any, requireScopes('run:write') as any] },
+    { preHandler: [authenticateRequest, requireScopes('run:write')] },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { projectId } = ParamsWithProject.parse(request.params);
       const body = CreateTestRunSchema.parse(request.body);
@@ -28,7 +28,7 @@ export function registerTestRunRoutes(app: FastifyInstance) {
 
   app.get(
     '/v1/projects/:projectId/test-runs',
-    { preHandler: [authenticateRequest as any, requireScopes('run:read') as any] },
+    { preHandler: [authenticateRequest, requireScopes('run:read')] },
     async (request, reply) => {
       const { projectId } = ParamsWithProject.parse(request.params);
       const query = ListTestRunsQuerySchema.parse(request.query);
@@ -43,7 +43,7 @@ export function registerTestRunRoutes(app: FastifyInstance) {
 
   app.get(
     '/v1/test-runs/:id',
-    { preHandler: [authenticateRequest as any, requireScopes('run:read') as any] },
+    { preHandler: [authenticateRequest, requireScopes('run:read')] },
     async (request, reply) => {
       const { id } = ParamsWithId.parse(request.params);
       const rec = await app.repos.testRuns!.getById(id);
@@ -54,7 +54,7 @@ export function registerTestRunRoutes(app: FastifyInstance) {
 
   app.patch(
     '/v1/test-runs/:id/status',
-    { preHandler: [authenticateRequest as any, requireScopes('run:write') as any] },
+    { preHandler: [authenticateRequest, requireScopes('run:write')] },
     async (request, reply) => {
       const { id } = ParamsWithId.parse(request.params);
       const body = UpdateTestRunStatusSchema.parse(request.body);
@@ -72,7 +72,7 @@ export function registerTestRunRoutes(app: FastifyInstance) {
   // Browser Test Runs
   app.post(
     '/v1/test-runs/:testRunId/browser-runs',
-    { preHandler: [authenticateRequest as any, requireScopes('browser-run:write') as any] },
+    { preHandler: [authenticateRequest, requireScopes('browser-run:write')] },
     async (request, reply) => {
       const { testRunId } = ParamsWithRunId.parse(request.params);
       const body = CreateBrowserTestRunSchema.parse(request.body);
@@ -83,7 +83,7 @@ export function registerTestRunRoutes(app: FastifyInstance) {
 
   app.get(
     '/v1/test-runs/:testRunId/browser-runs',
-    { preHandler: [authenticateRequest as any, requireScopes('browser-run:read') as any] },
+    { preHandler: [authenticateRequest, requireScopes('browser-run:read')] },
     async (request, reply) => {
       const { testRunId } = ParamsWithRunId.parse(request.params);
       const page = await app.repos.browserTestRuns!.listByTestRun(testRunId);
@@ -93,7 +93,7 @@ export function registerTestRunRoutes(app: FastifyInstance) {
 
   app.get(
     '/v1/browser-runs/:id',
-    { preHandler: [authenticateRequest as any, requireScopes('browser-run:read') as any] },
+    { preHandler: [authenticateRequest, requireScopes('browser-run:read')] },
     async (request, reply) => {
       const { id } = ParamsWithId.parse(request.params);
       const rec = await app.repos.browserTestRuns!.getById(id);
@@ -104,7 +104,7 @@ export function registerTestRunRoutes(app: FastifyInstance) {
 
   app.patch(
     '/v1/browser-runs/:id/status',
-    { preHandler: [authenticateRequest as any, requireScopes('browser-run:write') as any] },
+    { preHandler: [authenticateRequest, requireScopes('browser-run:write')] },
     async (request, reply) => {
       const { id } = ParamsWithId.parse(request.params);
       const body = UpdateBrowserRunStatusSchema.parse(request.body);
