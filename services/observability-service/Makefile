@@ -12,6 +12,10 @@ test:
 lint:
 	golangci-lint run ./...
 
+lint.ci:
+	@golangci-lint version || true
+	golangci-lint run ./...
+
 coverage:
 	go test ./... -coverprofile=coverage.out
 	go tool cover -html=coverage.out -o coverage.html
