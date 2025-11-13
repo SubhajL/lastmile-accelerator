@@ -27,7 +27,13 @@ module.exports = {
       }
     },
     {
-      files: ['services/notification-service/src/worker.ts', 'services/notification-service/src/bootstrap/runtime.ts', 'services/notification-service/src/notifications/queue.ts'],
+      files: [
+        'services/notification-service/src/worker.ts',
+        'services/notification-service/src/bootstrap/runtime.ts',
+        'services/notification-service/src/notifications/queue.ts',
+        'services/notification-service/src/consumers/router.ts',
+        'services/notification-service/src/metrics/otel.ts'
+      ],
       rules: {
         '@typescript-eslint/no-explicit-any': 'off',
         'no-empty': 'off'

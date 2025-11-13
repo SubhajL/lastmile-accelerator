@@ -85,7 +85,7 @@ export async function bootstrap() {
   // Metrics (OTel)
   const { metrics: otelMetrics } = await import('@opentelemetry/api');
   const meter = (otelMetrics.getMeterProvider?.().getMeter?.(cfg.observability.serviceName)) || { createCounter: () => ({ add: () => {} }) } as any;
-  const metrics = createOtelMetrics({ meter, serviceName: cfg.observability.serviceName });
+  const metrics = createOtelMetrics({ meter: meter as any, serviceName: cfg.observability.serviceName });
 
   const adapters: Record<string, any> = { email: finalEmailAdapter };
 

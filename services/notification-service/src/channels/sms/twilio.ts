@@ -17,7 +17,7 @@ export function createTwilioSmsChannel(opts: {
     async send(job: NotificationJob): Promise<{ ok: true } | { ok: false; error: string }> {
       try {
         const to = await opts.resolveTo(job);
-const { subject, text } = await opts.renderTemplate(job.templateName, job.payload);
+        const { subject, text } = await opts.renderTemplate(job.templateName, job.payload);
         const body = text || subject || '[no content]';
         const retry = opts.reliability && createRetry<void>({
           max: opts.reliability.retry.max,
@@ -26,7 +26,8 @@ const { subject, text } = await opts.renderTemplate(job.templateName, job.payloa
           shouldRetry: (e) => e instanceof TimeoutError,
           sleep: opts.reliability.sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms)))
         });
-        const sendOnce = async () => opts.client.messages.create({ to, from: opts.from, body });
+        const sendOnce = async () => { await opts.client.messages.create({ to, from: opts.from, body }); };
+        
         if (opts.reliability) {
           await retry!(async () => withTimeout(() => sendOnce(), opts.reliability!.timeoutMs));
         } else {
