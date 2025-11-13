@@ -99,7 +99,12 @@ export async function bootstrap() {
   adapters['in-app'] = createInAppChannel({ publisher: inappPub as any, resolveToUserId: async (job:any) => job.userId });
 
   // Webhook/Slack wiring
-  const breaker = createCircuitBreaker({ failureThreshold: 3, halfOpenAfterMs: 15000, windowSize: 10, now: () => Date.now() });
+  const breaker = createCircuitBreaker({
+    failureThreshold: cfg.reliability.breaker.failureThreshold,
+    halfOpenAfterMs: cfg.reliability.breaker.halfOpenAfterMs,
+    windowSize: cfg.reliability.breaker.windowSize,
+    now: () => Date.now()
+  });
   if (cfg.channels.webhookUrl) {
     adapters['webhook'] = createWebhookChannel({ http: (globalThis as any).fetch, url: cfg.channels.webhookUrl, signingSecret: cfg.channels.webhookSigningSecret, metrics, breaker, reliability: { timeoutMs: cfg.reliability.timeoutMs, retry: cfg.reliability.retry } });
   }
