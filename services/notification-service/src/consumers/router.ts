@@ -7,7 +7,7 @@ export type HandlerResult =
   | { ok: true }
   | { ok: false; error: string };
 
-export type EventHandler = (data: any) => Promise<HandlerResult>;
+export type EventHandler = (data: unknown) => Promise<HandlerResult>;
 
 export interface EventRouterOptions {
   handlers: Record<string, EventHandler>;

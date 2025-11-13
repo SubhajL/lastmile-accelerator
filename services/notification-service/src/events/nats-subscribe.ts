@@ -1,7 +1,7 @@
 import { startJsonSubscription } from './nats.js';
 
-export function createNatsSubscribe(nc: { subscribe: (subject: string, opts?: unknown) => AsyncIterable<any> }) {
-  return function subscribe({ subject, router }: { subject: string; router: { route: (env: any) => Promise<{ ok: boolean }> } }) {
+export function createNatsSubscribe(nc: { subscribe: (subject: string, opts?: unknown) => AsyncIterable<Uint8Array> | AsyncIterable<{ data: Uint8Array }> }) {
+  return function subscribe({ subject, router }: { subject: string; router: { route: (env: { type: string; data: unknown }) => Promise<{ ok: boolean }> } }) {
     // Adapt the nats connection to the shape accepted by startJsonSubscription
     const client = {
       subscribe: (subj: string) => nc.subscribe(subj)

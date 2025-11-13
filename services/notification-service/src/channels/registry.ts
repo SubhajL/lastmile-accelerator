@@ -1,6 +1,6 @@
 import { createEmailChannel } from './email.js';
 import type { ChannelAdapter } from '../notifications/dispatcher.js';
-import type { TemplateRenderer } from './email.js';
+import type { EmailChannelOptions } from './email.js';
 
 export interface ChannelRegistry {
   get(channel: string): ChannelAdapter | undefined;
@@ -14,9 +14,7 @@ export function createChannelRegistry(adapters: Partial<Record<string, ChannelAd
   };
 }
 
-export function createDefaultChannelRegistry(opts: {
-  email: { transporter: any; renderTemplate: TemplateRenderer; from: string; resolveTo: (job: any) => Promise<string> };
-}): ChannelRegistry {
+export function createDefaultChannelRegistry(opts: { email: EmailChannelOptions }): ChannelRegistry {
   const email = createEmailChannel(opts.email);
   return createChannelRegistry({ email });
 }

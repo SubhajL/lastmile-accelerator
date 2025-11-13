@@ -17,7 +17,7 @@ export function createRunLoop(opts: RunLoopOptions) {
     } catch (e) {
       try {
         opts.logger?.error?.('dispatcher tick error', e);
-      } catch {}
+      } catch { /* noop */ }
     } finally {
       running = false;
     }

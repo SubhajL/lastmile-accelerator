@@ -42,9 +42,10 @@ export function createNotificationQueue(redis: Redis): NotificationQueue {
       const pipeline = redis.pipeline();
       // Expose pipeline methods on redis.pipeline function for tests that inspect it directly
       try {
-        (redis as any).pipeline.zadd = (pipeline as any).zadd;
-        (redis as any).pipeline.hset = (pipeline as any).hset;
-      } catch {}
+        type Pipeline = { zadd: (...args: unknown[]) => unknown; hset: (...args: unknown[]) => unknown };
+        (redis as unknown as { pipeline: Pipeline }).pipeline.zadd = (pipeline as unknown as Pipeline).zadd;
+        (redis as unknown as { pipeline: Pipeline }).pipeline.hset = (pipeline as unknown as Pipeline).hset;
+      } catch { /* noop */ }
       pipeline.zadd(QUEUE_KEY, priorityScore, jobId);
       pipeline.hset(JOBS_KEY, jobId, JSON.stringify(job));
       await pipeline.exec();

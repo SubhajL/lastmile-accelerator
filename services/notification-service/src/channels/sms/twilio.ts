@@ -1,7 +1,7 @@
 import type { NotificationJob } from '../../consumers/types.js';
 
 export interface TwilioClient {
-  messages: { create: (args: { to: string; from: string; body: string }) => Promise<any> };
+  messages: { create: (args: { to: string; from: string; body: string }) => Promise<unknown> };
 }
 
 export function createTwilioSmsChannel(opts: {

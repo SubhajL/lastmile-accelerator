@@ -1,6 +1,6 @@
 export interface TemplateBundle { subject?: string; html?: string; text?: string }
 
-export function createTemplateStore(opts: { redis: { get: (key:string)=>Promise<string|null>; set: (key:string, val:string)=>Promise<any>; del: (key:string)=>Promise<any>; sadd: (key:string, member:string)=>Promise<any>; srem: (key:string, member:string)=>Promise<any>; smembers: (key:string)=>Promise<string[]> }; namespace: string }) {
+export function createTemplateStore(opts: { redis: { get: (key:string)=>Promise<string|null>; set: (key:string, val:string)=>Promise<unknown>; del: (key:string)=>Promise<unknown>; sadd: (key:string, member:string)=>Promise<unknown>; srem: (key:string, member:string)=>Promise<unknown>; smembers: (key:string)=>Promise<string[]> }; namespace: string }) {
   const key = (name: string) => `${opts.namespace}:templates:${name}`;
   const idx = `${opts.namespace}:templates:index`;
 

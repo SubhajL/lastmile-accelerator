@@ -139,8 +139,8 @@ export async function bootstrap() {
 
   async function stop() {
     runloop.stop();
-    try { await (nc as any).close?.(); } catch {}
-    try { await (redis as any).quit?.(); } catch {}
+    try { await (nc as any).close?.(); } catch { /* noop */ }
+    try { await (redis as any).quit?.(); } catch { /* noop */ }
   }
 
   return { stop };

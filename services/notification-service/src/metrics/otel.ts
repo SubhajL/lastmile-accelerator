@@ -1,5 +1,5 @@
-export function createOtelMetrics({ meter, serviceName }: { meter: { createCounter: (name: string, opts?: any) => { add: (n: number, attrs?: Record<string, any>) => void } }, serviceName: string }) {
-  const counters = new Map<string, { add: (n: number, attrs?: Record<string, any>) => void }>();
+export function createOtelMetrics({ meter, serviceName }: { meter: { createCounter: (name: string, opts?: { description?: string }) => { add: (n: number, attrs?: Record<string, unknown>) => void } }, serviceName: string }) {
+  const counters = new Map<string, { add: (n: number, attrs?: Record<string, unknown>) => void }>();
 
   function counter(name: string) {
     if (!counters.has(name)) {

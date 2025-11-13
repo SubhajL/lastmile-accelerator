@@ -1,6 +1,6 @@
 import type { NotificationJob } from '../../consumers/types.js';
 
-export function createInAppChannel(opts: { publisher: { publish: (userId: string, payload: any) => Promise<string> }; resolveToUserId: (job: NotificationJob) => Promise<string> }) {
+export function createInAppChannel(opts: { publisher: { publish: (userId: string, payload: Record<string, unknown>) => Promise<string> }; resolveToUserId: (job: NotificationJob) => Promise<string> }) {
   return {
     async send(job: NotificationJob) {
       try {

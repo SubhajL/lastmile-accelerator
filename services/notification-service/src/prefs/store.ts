@@ -12,7 +12,7 @@ export interface UserPreferences {
   frequency?: DigestFrequency;
 }
 
-export function createPreferenceStore(opts: { redis: { get: (k:string)=>Promise<string|null>; set: (k:string,v:string)=>Promise<any> }; namespace: string }) {
+export function createPreferenceStore(opts: { redis: { get: (k:string)=>Promise<string|null>; set: (k:string,v:string)=>Promise<unknown> }; namespace: string }) {
   const key = (userId: string) => `${opts.namespace}:prefs:${userId}`;
   return {
     async get(userId: string): Promise<UserPreferences> {

@@ -22,8 +22,9 @@ export function startJsonSubscription(opts: StartJsonSubscriptionOptions) {
     let processed = 0;
     let failed = 0;
 
-    for await (const raw of sub as any) {
-      const bytes: Uint8Array = (raw && 'data' in raw) ? (raw as any).data : (raw as Uint8Array);
+    const iterable = sub as AsyncIterable<Uint8Array | { data: Uint8Array }>;
+    for await (const raw of iterable) {
+      const bytes: Uint8Array = (typeof raw === 'object' && raw !== null && 'data' in raw) ? (raw as { data: Uint8Array }).data : (raw as Uint8Array);
       const text = decoder.decode(bytes);
       try {
         const envelope = JSON.parse(text);
