@@ -12,6 +12,9 @@
     "ci:test": "vitest run",
     "ci:coverage": "vitest run --coverage",
     "lint": "eslint . --ext .ts,.tsx --max-warnings=0",
+    "typecheck": "tsc --noEmit",
+    "test:typecheck": "tsc -p tsconfig.spec.json --noEmit",
+    "quality:check": "npm run typecheck && npm run lint && npm run test:typecheck",
     "kill:watchers": "bash ./scripts/kill-watchers.sh",
     "migrate": "tsx src/db/migrations/migrate.ts",
     "seed": "tsx src/db/seed.ts"
