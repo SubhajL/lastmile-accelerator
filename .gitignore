@@ -46,3 +46,4 @@ pnpm-lock.yaml
 
 # Project docs (ignore all documentation assets; tracked service AGENTS.md remains unaffected)
 documentation/
+.turbo/
