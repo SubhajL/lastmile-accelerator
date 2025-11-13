@@ -110,13 +110,16 @@ mux.Handle("/v1/otel/presets", middleware.JWT(verifier)(middleware.RequireScopes
 // GET /v1/otel/presets/{framework} (read)
 mux.Handle("/v1/otel/presets/", middleware.JWT(verifier)(middleware.RequireScopes("observability:read")(http.HandlerFunc(otelHandler.GetPresetByFramework))))
 
-// Prepare SLO service and handler
+	// Prepare SLO service and handler
 sloRepo := repository.NewSLORepository(db)
 prom := metrics.NewPromClient(cfg.PrometheusURL, &http.Client{Timeout: 5 * time.Second})
 sloSvc := services.NewSLOService(sloRepo, telProvider.Tracer(), prom)
 sloHandler := handlers.NewSLOHandler(sloSvc)
 
-// Start SLO evaluator scheduler with configurable env
+	// Install scheduler metrics recorder (OTel-backed)
+	scheduler.UseMetricsRecorder(scheduler.NewOTelRecorder(telProvider.Meter()))
+
+	// Start SLO evaluator scheduler with configurable env
 slEval := scheduler.NewSLOEvaluator(sloRepo, sloSvc)
 interval := 1 * time.Minute
 if d, err := time.ParseDuration(strings.TrimSpace(cfg.SLOEvalInterval)); err == nil && d > 0 { interval = d }
