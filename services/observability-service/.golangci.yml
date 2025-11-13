@@ -1,27 +1,26 @@
-version: 1
+version: 2
 run:
   timeout: 5m
   tests: true
 
 linters:
   enable:
-    - gofmt
     - govet
     - errcheck
     - staticcheck
     - ineffassign
     - unused
-    - gosimple
     - misspell
     - unconvert
-    - typecheck
-    - exportloopref
+    - copyloopvar
     - nilerr
 
 linters-settings:
   errcheck:
     check-blank: true
     check-type-assertions: true
+  misspell:
+    locale: US
 
 issues:
   exclude-use-default: false
