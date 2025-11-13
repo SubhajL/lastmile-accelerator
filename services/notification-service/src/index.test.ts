@@ -14,7 +14,8 @@ vi.mock('./config.js', () => ({
     auth: {},
     channels: {},
     templates: { dir: 'src/templates' },
-    queue: { batchSize: 10, tickMs: 200, defaultMaxAttempts: 3 }
+    queue: { batchSize: 10, tickMs: 200, defaultMaxAttempts: 3 },
+    reliability: { timeoutMs: 5000, retry: { max: 2, baseMs: 10, jitterPct: 0 }, breaker: { failureThreshold: 3, windowSize: 10, halfOpenAfterMs: 15000 } }
   })
 }));
 

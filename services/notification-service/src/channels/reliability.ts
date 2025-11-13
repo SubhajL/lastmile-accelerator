@@ -11,7 +11,7 @@ export async function withTimeout<T>(op: (signal: AbortSignal) => Promise<T>, ms
   try {
     const timeout = new Promise<never>((_, reject) => {
       timer = setTimeout(() => {
-        try { ac.abort(); } catch { /* noop */ }
+        try { ac.abort(); } catch {}
         reject(new TimeoutError());
       }, ms);
     });

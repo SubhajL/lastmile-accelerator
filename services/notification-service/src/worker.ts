@@ -54,14 +54,13 @@ export async function bootstrap() {
   });
 
   // Primary email adapter (nodemailer)
-  const primaryEmail = createDefaultChannelRegistry({
-    email: {
-      transporter: transporter as any,
-      renderTemplate,
-      from: cfg.smtp.from,
-      resolveTo: getRecipientEmailFromJob
-    }
-  }).get('email')!;
+  const primaryEmail = (await import('./channels/email.js')).createEmailChannel({
+    transporter: transporter as any,
+    renderTemplate,
+    from: cfg.smtp.from,
+    resolveTo: getRecipientEmailFromJob,
+    reliability: { timeoutMs: cfg.reliability.timeoutMs, retry: cfg.reliability.retry }
+  }) as any;
 
   // Optional Resend fallback
   const resendApiKey = cfg.channels.resendApiKey;
@@ -87,7 +86,7 @@ export async function bootstrap() {
 
   // SMS wiring if Twilio configured
   if (cfg.channels.twilioAccountSid && cfg.channels.twilioAuthToken && cfg.channels.twilioFrom) {
-    const smsPrimary = createTwilioSmsChannel({ client: { messages: { create: async () => ({}) } } as any, from: cfg.channels.twilioFrom, resolveTo: getRecipientPhoneFromJob, renderTemplate, metrics });
+    const smsPrimary = createTwilioSmsChannel({ client: { messages: { create: async () => ({}) } } as any, from: cfg.channels.twilioFrom, resolveTo: getRecipientPhoneFromJob, renderTemplate, metrics, reliability: { timeoutMs: cfg.reliability.timeoutMs, retry: cfg.reliability.retry } });
     // Simple limiter: allow 5 per second burst 10
     let tokens = 10; let last = Date.now();
     const limiter = { tryRemoveTokens: () => { const now = Date.now(); const refill = Math.floor((now - last)/200); if (refill>0){ tokens=Math.min(10, tokens+refill); last=now; } if (tokens>0){ tokens--; return true; } return false; } };
@@ -102,10 +101,10 @@ export async function bootstrap() {
   // Webhook/Slack wiring
   const breaker = createCircuitBreaker({ failureThreshold: 3, halfOpenAfterMs: 15000, windowSize: 10, now: () => Date.now() });
   if (cfg.channels.webhookUrl) {
-    adapters['webhook'] = createWebhookChannel({ http: (globalThis as any).fetch, url: cfg.channels.webhookUrl, signingSecret: cfg.channels.webhookSigningSecret, metrics, breaker });
+    adapters['webhook'] = createWebhookChannel({ http: (globalThis as any).fetch, url: cfg.channels.webhookUrl, signingSecret: cfg.channels.webhookSigningSecret, metrics, breaker, reliability: { timeoutMs: cfg.reliability.timeoutMs, retry: cfg.reliability.retry } });
   }
   if (cfg.channels.slackWebhookUrl) {
-    adapters['slack'] = createSlackChannel({ http: (globalThis as any).fetch, webhookUrl: cfg.channels.slackWebhookUrl, metrics, breaker });
+    adapters['slack'] = createSlackChannel({ http: (globalThis as any).fetch, webhookUrl: cfg.channels.slackWebhookUrl, metrics, breaker, reliability: { timeoutMs: cfg.reliability.timeoutMs, retry: cfg.reliability.retry } });
   }
 
   const registry = createChannelRegistry(adapters);

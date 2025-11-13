@@ -13,11 +13,7 @@ export function createSlackChannel(opts: {
     max: opts.reliability.retry.max,
     baseMs: opts.reliability.retry.baseMs,
     jitterPct: opts.reliability.retry.jitterPct,
-    shouldRetry: (e) => {
-      if (e instanceof TimeoutError) return true;
-      const maybe = e as { retryable?: unknown };
-      return typeof maybe?.retryable === 'boolean' && maybe.retryable === true;
-    },
+    shouldRetry: (e) => e instanceof TimeoutError || (e as any)?.retryable === true,
     sleep: opts.reliability.sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms)))
   });
 
@@ -29,8 +25,8 @@ export function createSlackChannel(opts: {
           retry(async () => {
             const res = await withTimeout(() => opts.http(opts.webhookUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) } as RequestInit), opts.reliability.timeoutMs);
             if (!res.ok) {
-              const err: Error & { retryable?: boolean } = new Error(`HTTP ${res.status}`);
-              err.retryable = res.status >= 500;
+              const err = new Error(`HTTP ${res.status}`);
+              (err as any).retryable = res.status >= 500;
               throw err;
             }
             return { ok: true as const };

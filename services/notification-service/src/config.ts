@@ -11,7 +11,8 @@ import type {
   AuthConfig,
   ChannelProvidersConfig,
   TemplatesConfig,
-  QueueRuntimeConfig
+  QueueRuntimeConfig,
+  ChannelReliabilityConfig
 } from './types.js';
 
 export function loadConfig(): Config {
@@ -29,7 +30,8 @@ export function loadConfig(): Config {
     auth: parseAuthConfig(),
     channels: parseOptionalProviders(),
     templates: parseTemplatesConfig(),
-    queue: parseQueueRuntimeConfig()
+    queue: parseQueueRuntimeConfig(),
+    reliability: parseChannelReliabilityConfig()
   };
 }
 
@@ -189,6 +191,30 @@ function parseQueueRuntimeConfig(): QueueRuntimeConfig {
   if (isNaN(defaultMaxAttempts) || defaultMaxAttempts <= 0) throw new Error('DEFAULT_MAX_ATTEMPTS must be a positive number');
 
   return { batchSize, tickMs, defaultMaxAttempts };
+}
+
+function parseNumberEnv(name: string, def: number, min: number): number {
+  const raw = process.env[name];
+  if (raw == null) return def;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < min) throw new Error(`${name} must be a number >= ${min}`);
+  return n;
+}
+
+function parseChannelReliabilityConfig(): ChannelReliabilityConfig {
+  const timeoutMs = parseNumberEnv('CHANNEL_TIMEOUT_MS', 5000, 1);
+  const retryMax = parseNumberEnv('CHANNEL_RETRY_MAX', 3, 1);
+  const retryBase = parseNumberEnv('CHANNEL_RETRY_BASE_MS', 250, 1);
+  const jitterPct = parseNumberEnv('CHANNEL_RETRY_JITTER_PCT', 0.2, 0);
+  const failureThreshold = parseNumberEnv('CHANNEL_BREAKER_FAILURE_THRESHOLD', 3, 1);
+  const windowSize = parseNumberEnv('CHANNEL_BREAKER_WINDOW_SIZE', 10, 1);
+  const halfOpenAfterMs = parseNumberEnv('CHANNEL_BREAKER_HALF_OPEN_MS', 15000, 1);
+
+  return {
+    timeoutMs,
+    retry: { max: retryMax, baseMs: retryBase, jitterPct },
+    breaker: { failureThreshold, windowSize, halfOpenAfterMs }
+  };
 }
 
 function validateRequiredEnvVars(vars: string[]): void {
