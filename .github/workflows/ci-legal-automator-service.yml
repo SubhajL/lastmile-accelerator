@@ -1,7 +1,6 @@
 name: ci-legal-automator-service
 on:
-  push: { branches: [ main ], paths: [ 'services/legal-automator-service/**', 'packages/contracts/**' ] }
-  pull_request: { paths: [ 'services/legal-automator-service/**', 'packages/contracts/**' ] }
+  push: { branches: [ main ], paths: [ 'services/legal-automator-service/**' ] }
 jobs:
   call:
     uses: ./.github/workflows/_service-ci.yml

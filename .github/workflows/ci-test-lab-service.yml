@@ -1,7 +1,6 @@
 name: ci-test-lab-service
 on:
-  push: { branches: [ main ], paths: [ 'services/test-lab-service/**', 'packages/contracts/**' ] }
-  pull_request: { paths: [ 'services/test-lab-service/**', 'packages/contracts/**' ] }
+  push: { branches: [ main ], paths: [ 'services/test-lab-service/**' ] }
 jobs:
   call:
     uses: ./.github/workflows/_service-ci.yml

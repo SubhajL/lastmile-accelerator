@@ -1,7 +1,6 @@
 name: ci-fix-engine-service
 on:
-  push: { branches: [ main ], paths: [ 'services/fix-engine-service/**', 'packages/contracts/**' ] }
-  pull_request: { paths: [ 'services/fix-engine-service/**', 'packages/contracts/**' ] }
+  push: { branches: [ main ], paths: [ 'services/fix-engine-service/**' ] }
 jobs:
   call:
     uses: ./.github/workflows/_service-ci.yml

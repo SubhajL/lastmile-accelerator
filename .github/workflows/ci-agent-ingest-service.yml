@@ -1,7 +1,6 @@
 name: ci-agent-ingest-service
 on:
-  push: { branches: [ main ], paths: [ 'services/agent-ingest-service/**', 'packages/contracts/**' ] }
-  pull_request: { paths: [ 'services/agent-ingest-service/**', 'packages/contracts/**' ] }
+  push: { branches: [ main ], paths: [ 'services/agent-ingest-service/**' ] }
 jobs:
   call:
     uses: ./.github/workflows/_service-ci.yml

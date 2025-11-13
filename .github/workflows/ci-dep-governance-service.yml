@@ -1,7 +1,6 @@
 name: ci-dep-governance-service
 on:
-  push: { branches: [ main ], paths: [ 'services/dep-governance-service/**', 'packages/contracts/**' ] }
-  pull_request: { paths: [ 'services/dep-governance-service/**', 'packages/contracts/**' ] }
+  push: { branches: [ main ], paths: [ 'services/dep-governance-service/**' ] }
 jobs:
   call:
     uses: ./.github/workflows/_service-ci.yml

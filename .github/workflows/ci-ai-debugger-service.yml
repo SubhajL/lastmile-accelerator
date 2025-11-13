@@ -1,7 +1,6 @@
 name: ci-ai-debugger-service
 on:
-  push: { branches: [ main ], paths: [ 'services/ai-debugger-service/**', 'packages/contracts/**' ] }
-  pull_request: { paths: [ 'services/ai-debugger-service/**', 'packages/contracts/**' ] }
+  push: { branches: [ main ], paths: [ 'services/ai-debugger-service/**' ] }
 jobs:
   call:
     uses: ./.github/workflows/_service-ci.yml
