@@ -169,7 +169,8 @@ func cleanEnv() {
 		"ENV", "SERVICE_NAME", "SERVICE_PORT", "VAULT_ADDR",
         "VAULT_ROLE_ID", "VAULT_SECRET_"+"ID", "VAULT_NAMESPACE",
 		"DATABASE_URL", "REDIS_URL", "NATS_URL",
-		"OTEL_EXPORTER_OTLP_ENDPOINT", "JWT_PUBLIC_KEY", "LOG_LEVEL",
+        "OTEL_EXPORTER_OTLP_ENDPOINT", "OTEL_INSECURE", "OTEL_HEADERS", "OTEL_SERVICE_NAME",
+        "JWT_PUBLIC_KEY", "LOG_LEVEL",
         "STORAGE_S3_ENDPOINT", "STORAGE_S3_BUCKET", "STORAGE_S3_PREFIX",
         "STORAGE_S3_"+"ACCESS_KEY", "STORAGE_S3_"+"SECRET_"+"KEY", "STORAGE_S3_USE_TLS",
 		"STORAGE_S3_IGNORE_GLOBS", "STORAGE_S3_SIZE_LIMIT_BYTES",
@@ -177,6 +178,100 @@ func cleanEnv() {
 	for _, v := range envVars {
 		os.Unsetenv(v)
 	}
+}
+
+func TestObservabilityConfig_LoadsOTelEndpoint(t *testing.T) {
+    os.Setenv("VAULT_ADDR", "http://localhost:8200")
+    os.Setenv("VAULT_ROLE_ID", "role")
+    os.Setenv("VAULT_SECRET_"+"ID", "sec"+"ret")
+    os.Setenv("DATABASE_URL", "postgres://localhost:5432/db")
+    os.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
+    defer cleanEnv()
+
+    cfg, err := Load()
+    require.NoError(t, err)
+    assert.Equal(t, "http://localhost:4317", cfg.Observability.OTELEndpoint)
+}
+
+func TestObservabilityConfig_LoadsInsecureFlag_DefaultFalse(t *testing.T) {
+    os.Setenv("VAULT_ADDR", "http://localhost:8200")
+    os.Setenv("VAULT_ROLE_ID", "role")
+    os.Setenv("VAULT_SECRET_"+"ID", "sec"+"ret")
+    os.Setenv("DATABASE_URL", "postgres://localhost:5432/db")
+    defer cleanEnv()
+
+    cfg, err := Load()
+    require.NoError(t, err)
+    assert.Equal(t, false, cfg.Observability.OTELInsecure)
+}
+
+func TestObservabilityConfig_LoadsInsecureFlag_TrueValues(t *testing.T) {
+    trueVals := []string{"true", "1", "yes", "Y"}
+    for _, v := range trueVals {
+        t.Run("val="+v, func(t *testing.T) {
+            os.Setenv("VAULT_ADDR", "http://localhost:8200")
+            os.Setenv("VAULT_ROLE_ID", "role")
+            os.Setenv("VAULT_SECRET_"+"ID", "sec"+"ret")
+            os.Setenv("DATABASE_URL", "postgres://localhost:5432/db")
+            os.Setenv("OTEL_INSECURE", v)
+            defer cleanEnv()
+
+            cfg, err := Load()
+            require.NoError(t, err)
+            assert.True(t, cfg.Observability.OTELInsecure)
+        })
+    }
+}
+
+func TestGetEnvAsKVMap_ParsesPairsAndTrims(t *testing.T) {
+    os.Setenv("OTEL_HEADERS", "a=1, b=2 ,c=3")
+    defer os.Unsetenv("OTEL_HEADERS")
+    m := getEnvAsKVMap("OTEL_HEADERS")
+    assert.Equal(t, "1", m["a"])
+    assert.Equal(t, "2", m["b"])
+    assert.Equal(t, "3", m["c"])
+}
+
+func TestGetEnvAsKVMap_SkipsMalformedPairs(t *testing.T) {
+    os.Setenv("OTEL_HEADERS", "x, =y, k=")
+    defer os.Unsetenv("OTEL_HEADERS")
+    m := getEnvAsKVMap("OTEL_HEADERS")
+    assert.Empty(t, m)
+}
+
+func TestGetEnvAsKVMap_DuplicateKeys_LastWins(t *testing.T) {
+    os.Setenv("OTEL_HEADERS", "k=v1,k=v2")
+    defer os.Unsetenv("OTEL_HEADERS")
+    m := getEnvAsKVMap("OTEL_HEADERS")
+    assert.Equal(t, "v2", m["k"])
+}
+
+func TestObservabilityConfig_LoadsHeadersMap(t *testing.T) {
+    os.Setenv("VAULT_ADDR", "http://localhost:8200")
+    os.Setenv("VAULT_ROLE_ID", "role")
+    os.Setenv("VAULT_SECRET_"+"ID", "sec"+"ret")
+    os.Setenv("DATABASE_URL", "postgres://localhost:5432/db")
+    os.Setenv("OTEL_HEADERS", "api-key=abc, x-team=core")
+    defer cleanEnv()
+
+    cfg, err := Load()
+    require.NoError(t, err)
+    assert.Equal(t, map[string]string{"api-key": "abc", "x-team": "core"}, cfg.Observability.OTELHeaders)
+}
+
+func TestObservabilityConfig_ServiceNameOverride(t *testing.T) {
+    os.Setenv("VAULT_ADDR", "http://localhost:8200")
+    os.Setenv("VAULT_ROLE_ID", "role")
+    os.Setenv("VAULT_SECRET_"+"ID", "sec"+"ret")
+    os.Setenv("DATABASE_URL", "postgres://localhost:5432/db")
+    os.Setenv("OTEL_SERVICE_NAME", "svc-override")
+    defer cleanEnv()
+
+    cfg, err := Load()
+    require.NoError(t, err)
+    assert.Equal(t, "svc-override", cfg.Observability.OTELServiceName)
+    // Top-level remains default unless changed explicitly
+    assert.Equal(t, "secrets-env-service", cfg.ServiceName)
 }
 
 func TestLoad_S3Config_ParsesValues(t *testing.T) {
