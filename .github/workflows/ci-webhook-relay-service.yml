@@ -1,7 +1,6 @@
 name: ci-webhook-relay-service
 on:
-  push: { branches: [ main ], paths: [ 'services/webhook-relay-service/**', 'packages/contracts/**' ] }
-  pull_request: { paths: [ 'services/webhook-relay-service/**', 'packages/contracts/**' ] }
+  push: { branches: [ main ], paths: [ 'services/webhook-relay-service/**' ] }
 jobs:
   call:
     uses: ./.github/workflows/_service-ci.yml
