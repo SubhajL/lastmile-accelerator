@@ -85,6 +85,8 @@ fn build_router(pool: sqlx::PgPool, _nats: Option<NatsPublisher>, auth_ctx: Auth
         .route("/healthz", axum::routing::get(healthz))
         .route("/readyz", axum::routing::get(readyz))
         .route("/metrics", axum::routing::get(metrics))
+        // OpenAPI & Swagger UI (no auth)
+        .merge(dep_governance_service::openapi::routes())
         // v1 API
         .nest(
             "/v1",

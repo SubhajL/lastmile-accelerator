@@ -1,0 +1,625 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "dep-governance-service API",
+    "description": "",
+    "license": {
+      "name": ""
+    },
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/v1/cves": {
+      "post": {
+        "tags": [
+          "crate::handlers::api::cves"
+        ],
+        "operationId": "upsert_cve_handler",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/super.types.UpsertCveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Upserted CVE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/super.types.CveResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/crate.openapi.ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1/dependencies/{dependency_id}/vulns": {
+      "get": {
+        "tags": [
+          "crate::handlers::api::vulns"
+        ],
+        "operationId": "get_dependency_vulns_handler",
+        "parameters": [
+          {
+            "name": "dependency_id",
+            "in": "path",
+            "description": "Dependency ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dependency vulnerabilities",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DependencyVulnResponse"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1/dependencies/{dependency_id}/vulns/link": {
+      "post": {
+        "tags": [
+          "crate::handlers::api::cves"
+        ],
+        "operationId": "link_vuln_handler",
+        "parameters": [
+          {
+            "name": "dependency_id",
+            "in": "path",
+            "description": "Dependency ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/super.types.LinkVulnRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Linked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/super.types.LinkResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/crate.openapi.ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/crate.openapi.ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1/snapshots/{snapshot_id}/dependencies": {
+      "get": {
+        "tags": [
+          "crate::handlers::api::deps"
+        ],
+        "operationId": "list_dependencies_handler",
+        "parameters": [
+          {
+            "name": "snapshot_id",
+            "in": "path",
+            "description": "Snapshot ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "direct",
+            "in": "query",
+            "description": "Filter direct dependencies only",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "nullable": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dependencies",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DependencyResponse"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1/snapshots/{snapshot_id}/sbom": {
+      "get": {
+        "tags": [
+          "crate::handlers::api::sbom"
+        ],
+        "operationId": "get_latest_sbom_handler",
+        "parameters": [
+          {
+            "name": "snapshot_id",
+            "in": "path",
+            "description": "Snapshot ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Latest SBOM",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/crate.models.Sbom"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "crate::handlers::api::sbom"
+        ],
+        "operationId": "create_sbom_handler",
+        "parameters": [
+          {
+            "name": "snapshot_id",
+            "in": "path",
+            "description": "Snapshot ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SbomCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "SBOM created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/crate.models.Sbom"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/crate.openapi.ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/crate.openapi.ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ApiError": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        }
+      },
+      "CveResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "cveId",
+          "severity",
+          "updatedAt"
+        ],
+        "properties": {
+          "cveId": {
+            "type": "string"
+          },
+          "cvssScore": {
+            "type": "number",
+            "format": "float",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "severity": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string",
+            "nullable": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CveSummary": {
+        "type": "object",
+        "required": [
+          "cveId",
+          "severity"
+        ],
+        "properties": {
+          "cveId": {
+            "type": "string"
+          },
+          "cvssScore": {
+            "type": "number",
+            "format": "float",
+            "nullable": true
+          },
+          "severity": {
+            "type": "string"
+          }
+        }
+      },
+      "DependencyResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "version",
+          "ecosystem",
+          "isDirect"
+        ],
+        "properties": {
+          "ecosystem": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "isDirect": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "parentId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "version": {
+            "type": "string"
+          }
+        }
+      },
+      "DependencyVulnResponse": {
+        "type": "object",
+        "required": [
+          "cve",
+          "status"
+        ],
+        "properties": {
+          "affectedVersionRange": {
+            "type": "string",
+            "nullable": true
+          },
+          "cve": {
+            "$ref": "#/components/schemas/CveSummary"
+          },
+          "fixedVersion": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "LinkResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "dependencyId",
+          "cveId",
+          "status"
+        ],
+        "properties": {
+          "affectedVersionRange": {
+            "type": "string",
+            "nullable": true
+          },
+          "cveId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "dependencyId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fixedVersion": {
+            "type": "string",
+            "nullable": true
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "LinkVulnRequest": {
+        "type": "object",
+        "required": [
+          "cveId",
+          "status"
+        ],
+        "properties": {
+          "affectedVersionRange": {
+            "type": "string",
+            "nullable": true
+          },
+          "cveId": {
+            "type": "string"
+          },
+          "fixedVersion": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "Sbom": {
+        "type": "object",
+        "required": [
+          "id",
+          "snapshot_id",
+          "format",
+          "storage_key",
+          "file_hash",
+          "generated_at"
+        ],
+        "properties": {
+          "file_hash": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "snapshot_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "storage_key": {
+            "type": "string"
+          }
+        }
+      },
+      "SbomCreateRequest": {
+        "type": "object",
+        "required": [
+          "format",
+          "storageKey",
+          "fileHash"
+        ],
+        "properties": {
+          "fileHash": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string"
+          },
+          "storageKey": {
+            "type": "string"
+          }
+        }
+      },
+      "UpsertCveRequest": {
+        "type": "object",
+        "required": [
+          "cveId",
+          "severity"
+        ],
+        "properties": {
+          "cveId": {
+            "type": "string"
+          },
+          "cvssScore": {
+            "type": "number",
+            "format": "float",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "publishedAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "severity": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ]
+}

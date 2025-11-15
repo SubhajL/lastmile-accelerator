@@ -1,11 +1,12 @@
 use axum::{extract::{Path, State}, response::IntoResponse, Json};
 use serde::Deserialize;
+use utoipa::ToSchema;
 use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::{db::sboms as sboms_repo, error::AppError, errors::db::map_db_error, models::{Sbom, SbomFormat}};
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct SbomCreateRequest {
     pub format: String,
     #[serde(rename = "storageKey")]
@@ -47,6 +48,21 @@ mod tests {
     }
 }
 
+#[utoipa::path(
+    post,
+    path = "/v1/snapshots/{snapshot_id}/sbom",
+    request_body = SbomCreateRequest,
+    params(
+        ("snapshot_id" = uuid::Uuid, Path, description = "Snapshot ID"),
+    ),
+    responses(
+        (status = 201, description = "SBOM created", body = crate::models::Sbom),
+        (status = 400, description = "Bad request", body = crate::openapi::ApiError),
+        (status = 401, description = "Unauthorized"),
+        (status = 409, description = "Conflict", body = crate::openapi::ApiError),
+    ),
+    security(("bearerAuth" = []))
+)]
 pub async fn create_sbom_handler(
     Path(snapshot_id): Path<Uuid>,
     State(pool): State<PgPool>,
@@ -63,6 +79,19 @@ pub async fn create_sbom_handler(
     Ok((axum::http::StatusCode::CREATED, Json(created)))
 }
 
+#[utoipa::path(
+    get,
+    path = "/v1/snapshots/{snapshot_id}/sbom",
+    params(
+        ("snapshot_id" = uuid::Uuid, Path, description = "Snapshot ID"),
+    ),
+    responses(
+        (status = 200, description = "Latest SBOM", body = crate::models::Sbom),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Not found"),
+    ),
+    security(("bearerAuth" = []))
+)]
 pub async fn get_latest_sbom_handler(
     Path(snapshot_id): Path<Uuid>,
     State(pool): State<PgPool>,

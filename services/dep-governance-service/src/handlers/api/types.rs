@@ -1,8 +1,9 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UpsertCveRequest {
     pub cve_id: String,
@@ -13,7 +14,7 @@ pub struct UpsertCveRequest {
     pub source: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CveResponse {
     pub id: Uuid,
@@ -26,7 +27,7 @@ pub struct CveResponse {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct LinkVulnRequest {
     pub cve_id: String,
@@ -35,7 +36,7 @@ pub struct LinkVulnRequest {
     pub fixed_version: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct LinkResponse {
     pub id: Uuid,

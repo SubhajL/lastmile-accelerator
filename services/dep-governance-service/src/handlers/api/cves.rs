@@ -31,6 +31,17 @@ fn parse_published_at(s: &Option<String>) -> Result<Option<DateTime<Utc>>, AppEr
     }
 }
 
+#[utoipa::path(
+    post,
+    path = "/v1/cves",
+    request_body = super::types::UpsertCveRequest,
+    responses(
+        (status = 200, description = "Upserted CVE", body = super::types::CveResponse),
+        (status = 400, description = "Bad request", body = crate::openapi::ApiError),
+        (status = 401, description = "Unauthorized"),
+    ),
+    security(("bearerAuth" = []))
+)]
 pub async fn upsert_cve_handler(
     State(pool): State<PgPool>,
     Json(req): Json<UpsertCveRequest>,
@@ -61,6 +72,19 @@ pub async fn upsert_cve_handler(
     Ok(Json(resp))
 }
 
+#[utoipa::path(
+    post,
+    path = "/v1/dependencies/{dependency_id}/vulns/link",
+    request_body = super::types::LinkVulnRequest,
+    params(("dependency_id" = uuid::Uuid, Path, description = "Dependency ID")),
+    responses(
+        (status = 201, description = "Linked", body = super::types::LinkResponse),
+        (status = 400, description = "Bad request", body = crate::openapi::ApiError),
+        (status = 401, description = "Unauthorized"),
+        (status = 409, description = "Conflict", body = crate::openapi::ApiError),
+    ),
+    security(("bearerAuth" = []))
+)]
 pub async fn link_vuln_handler(
     Path(dependency_id): Path<Uuid>,
     State(pool): State<PgPool>,

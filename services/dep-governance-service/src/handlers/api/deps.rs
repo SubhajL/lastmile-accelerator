@@ -4,6 +4,7 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::{db::dependencies as deps_repo, error::AppError, models::Dependency};
+use utoipa::ToSchema;
 
 #[derive(Deserialize)]
 pub struct ListDepsQuery {
@@ -35,7 +36,7 @@ mod tests {
     }
 }
 
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct DependencyResponse {
     pub id: Uuid,
@@ -59,6 +60,19 @@ impl From<Dependency> for DependencyResponse {
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/v1/snapshots/{snapshot_id}/dependencies",
+    params(
+        ("snapshot_id" = uuid::Uuid, Path, description = "Snapshot ID"),
+        ("direct" = Option<bool>, Query, description = "Filter direct dependencies only"),
+    ),
+    responses(
+        (status = 200, description = "Dependencies", body = [DependencyResponse]),
+        (status = 401, description = "Unauthorized"),
+    ),
+    security(("bearerAuth" = []))
+)]
 pub async fn list_dependencies_handler(
     Path(snapshot_id): Path<Uuid>,
     Query(q): Query<ListDepsQuery>,

@@ -8,7 +8,8 @@ pub mod models;
 pub mod services;
 pub mod errors;
 pub mod metrics;
-// openapi module is added in the openapi-spec branch upstack
+pub mod openapi;
+// web & validation modules are added in api-validation-polish upstack
 
 pub use config::AppConfig;
 pub use error::{AppError, Result};

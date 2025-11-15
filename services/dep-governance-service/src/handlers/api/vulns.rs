@@ -1,11 +1,12 @@
 use axum::{extract::{Path, State}, Json};
 use serde::Serialize;
+use utoipa::ToSchema;
 use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::{db::vulnerabilities as vulns_repo, error::AppError};
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CveSummary {
     pub cve_id: String,
@@ -37,7 +38,7 @@ mod tests {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct DependencyVulnResponse {
     pub cve: CveSummary,
@@ -46,6 +47,16 @@ pub struct DependencyVulnResponse {
     pub fixed_version: Option<String>,
 }
 
+#[utoipa::path(
+    get,
+    path = "/v1/dependencies/{dependency_id}/vulns",
+    params(("dependency_id" = uuid::Uuid, Path, description = "Dependency ID")),
+    responses(
+        (status = 200, description = "Dependency vulnerabilities", body = [DependencyVulnResponse]),
+        (status = 401, description = "Unauthorized"),
+    ),
+    security(("bearerAuth" = []))
+)]
 pub async fn get_dependency_vulns_handler(
     Path(dependency_id): Path<Uuid>,
     State(pool): State<PgPool>,
