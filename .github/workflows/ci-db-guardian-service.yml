@@ -35,6 +35,15 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.24'
+      - name: go vet (pr)
+        working-directory: services/db-guardian-service
+        run: go vet ./...
+      - name: golangci-lint (pr)
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          working-directory: services/db-guardian-service
+          args: -c .golangci.yml
       - name: Unit tests (go)
         working-directory: services/db-guardian-service
         run: go test ./... -cover
