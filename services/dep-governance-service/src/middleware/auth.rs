@@ -246,11 +246,13 @@ impl CachingJwksProvider {
                     }
                     guard.map = newmap;
                     guard.expires_at = Self::next_expiry(self.ttl);
+                    crate::metrics::jwks().fetch_total.with_label_values(&["ok"]).inc();
                 }
             }
             Err(err) => {
                 tracing::warn!("JWKS fetch failed: {}", err);
                 guard.expires_at = Self::next_expiry(self.ttl);
+                crate::metrics::jwks().fetch_total.with_label_values(&["error"]).inc();
             }
         }
     }

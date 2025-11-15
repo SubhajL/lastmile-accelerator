@@ -21,16 +21,11 @@ pub async fn readyz(State(pool): State<PgPool>) -> impl IntoResponse {
 }
 
 pub async fn metrics() -> impl IntoResponse {
-    // Basic Prometheus metrics format
-    // In production, use prometheus crate
-    let metrics = "# HELP dep_governance_service_up Service is up\n\
-         # TYPE dep_governance_service_up gauge\n\
-         dep_governance_service_up 1\n";
-
+    let body = crate::metrics::encode();
     (
         StatusCode::OK,
         [("content-type", "text/plain; version=0.0.4")],
-        metrics,
+        body,
     )
 }
 

@@ -92,6 +92,7 @@ fn build_router(pool: sqlx::PgPool, _nats: Option<NatsPublisher>, auth_ctx: Auth
                 .layer(middleware::from_fn(jwt_auth_middleware))
                 .layer(Extension(auth_ctx)),
         )
+        .layer(dep_governance_service::middleware::metrics_layer())
         .layer(trace_layer())
         .with_state(pool)
 }

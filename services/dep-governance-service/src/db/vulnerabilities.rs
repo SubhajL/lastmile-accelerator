@@ -17,6 +17,7 @@ pub async fn get_cve_by_cve_id(pool: &PgPool, cve_id: &str) -> Result<Option<Cve
 }
 
 pub async fn upsert_cve(pool: &PgPool, cve: &Cve) -> Result<Cve, sqlx::Error> {
+    let start = std::time::Instant::now();
     let row = sqlx::query_as::<_, Cve>(
         r#"
         INSERT INTO cves (id, cve_id, severity, description, published_at, source, cvss_score, updated_at)
@@ -42,6 +43,11 @@ pub async fn upsert_cve(pool: &PgPool, cve: &Cve) -> Result<Cve, sqlx::Error> {
     .fetch_one(pool)
     .await?;
 
+    crate::metrics::db()
+        .query_duration_seconds
+        .with_label_values(&["upsert_cve"]) 
+        .observe(start.elapsed().as_secs_f64());
+
     Ok(row)
 }
 
@@ -53,6 +59,7 @@ pub async fn link_vulnerability_to_dependency(
     affected_version_range: Option<&str>,
     fixed_version: Option<&str>,
 ) -> Result<DependencyVulnerability, sqlx::Error> {
+    let start = std::time::Instant::now();
     let row = sqlx::query_as::<_, DependencyVulnerability>(
         r#"
         INSERT INTO dependency_vulnerabilities (id, dependency_id, cve_id, affected_version_range, fixed_version, discovered_at, status)
@@ -69,6 +76,11 @@ pub async fn link_vulnerability_to_dependency(
     .fetch_one(pool)
     .await?;
 
+    crate::metrics::db()
+        .query_duration_seconds
+        .with_label_values(&["link_vulnerability_to_dependency"]) 
+        .observe(start.elapsed().as_secs_f64());
+
     Ok(row)
 }
 
@@ -76,6 +88,7 @@ pub async fn get_vulnerabilities_for_dependency(
     pool: &PgPool,
     dep_id: Uuid,
 ) -> Result<Vec<(Cve, DependencyVulnerability)>, sqlx::Error> {
+    let start = std::time::Instant::now();
     use sqlx::Row;
     let rows = sqlx::query(
         r#"
@@ -94,6 +107,11 @@ pub async fn get_vulnerabilities_for_dependency(
     .bind(dep_id)
     .fetch_all(pool)
     .await?;
+
+    crate::metrics::db()
+        .query_duration_seconds
+        .with_label_values(&["get_vulnerabilities_for_dependency"]) 
+        .observe(start.elapsed().as_secs_f64());
 
     let mut result = Vec::with_capacity(rows.len());
     for r in rows {

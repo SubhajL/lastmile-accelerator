@@ -4,6 +4,7 @@ use uuid::Uuid;
 use crate::models::Sbom;
 
 pub async fn create_sbom(pool: &PgPool, sbom: &Sbom) -> Result<Sbom, sqlx::Error> {
+    let start = std::time::Instant::now();
     let row = sqlx::query_as::<_, Sbom>(
         r#"
         INSERT INTO sboms (id, snapshot_id, format, storage_key, file_hash, generated_at)
@@ -20,6 +21,11 @@ pub async fn create_sbom(pool: &PgPool, sbom: &Sbom) -> Result<Sbom, sqlx::Error
     .fetch_one(pool)
     .await?;
 
+    crate::metrics::db()
+        .query_duration_seconds
+        .with_label_values(&["create_sbom"]) 
+        .observe(start.elapsed().as_secs_f64());
+
     Ok(row)
 }
 
@@ -27,6 +33,7 @@ pub async fn get_latest_sbom_by_snapshot(
     pool: &PgPool,
     snapshot_id: Uuid,
 ) -> Result<Option<Sbom>, sqlx::Error> {
+    let start = std::time::Instant::now();
     let row = sqlx::query_as::<_, Sbom>(
         r#"
         SELECT id, snapshot_id, format, storage_key, file_hash, generated_at
@@ -40,6 +47,11 @@ pub async fn get_latest_sbom_by_snapshot(
     .fetch_optional(pool)
     .await?;
 
+    crate::metrics::db()
+        .query_duration_seconds
+        .with_label_values(&["get_latest_sbom_by_snapshot"]) 
+        .observe(start.elapsed().as_secs_f64());
+
     Ok(row)
 }
 
@@ -48,6 +60,7 @@ pub async fn update_sbom_storage_key(
     id: Uuid,
     storage_key: &str,
 ) -> Result<(), sqlx::Error> {
+    let start = std::time::Instant::now();
     sqlx::query(
         r#"
         UPDATE sboms SET storage_key = $2 WHERE id = $1
@@ -57,6 +70,11 @@ pub async fn update_sbom_storage_key(
     .bind(storage_key)
     .execute(pool)
     .await?;
+
+    crate::metrics::db()
+        .query_duration_seconds
+        .with_label_values(&["update_sbom_storage_key"]) 
+        .observe(start.elapsed().as_secs_f64());
 
     Ok(())
 }
