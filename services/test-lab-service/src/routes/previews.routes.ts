@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
-import { authenticateRequest, requireScopes } from '../middleware/auth.js';
+import { requireAuth, requireScopes } from '../middleware/auth.js';
 import { CreatePreviewSchema, ListPreviewsQuerySchema, UpdatePreviewSchema } from '../schemas/previews.js';
 
 const ParamsWithProject = z.object({ projectId: z.string().uuid() });
@@ -10,7 +10,7 @@ export function registerPreviewRoutes(app: FastifyInstance) {
   // Create preview env
   app.post(
     '/v1/projects/:projectId/previews',
-    { preHandler: [authenticateRequest, requireScopes('preview:write')] },
+    { preHandler: [requireAuth, requireScopes('preview:write')] },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { projectId } = ParamsWithProject.parse(request.params);
       const body = CreatePreviewSchema.parse(request.body);
@@ -22,7 +22,7 @@ export function registerPreviewRoutes(app: FastifyInstance) {
   // List previews
   app.get(
     '/v1/projects/:projectId/previews',
-    { preHandler: [authenticateRequest, requireScopes('preview:read')] },
+    { preHandler: [requireAuth, requireScopes('preview:read')] },
     async (request, reply) => {
       const { projectId } = ParamsWithProject.parse(request.params);
       const query = ListPreviewsQuerySchema.parse(request.query);
@@ -34,7 +34,7 @@ export function registerPreviewRoutes(app: FastifyInstance) {
   // Get preview by id
   app.get(
     '/v1/previews/:id',
-    { preHandler: [authenticateRequest, requireScopes('preview:read')] },
+    { preHandler: [requireAuth, requireScopes('preview:read')] },
     async (request, reply) => {
       const { id } = ParamsWithId.parse(request.params);
       const rec = await app.repos.previewEnvs!.getById(id);
@@ -46,7 +46,7 @@ export function registerPreviewRoutes(app: FastifyInstance) {
   // Update preview
   app.put(
     '/v1/previews/:id',
-    { preHandler: [authenticateRequest, requireScopes('preview:write')] },
+    { preHandler: [requireAuth, requireScopes('preview:write')] },
     async (request, reply) => {
       const { id } = ParamsWithId.parse(request.params);
       const patch = UpdatePreviewSchema.parse(request.body);
@@ -59,7 +59,7 @@ export function registerPreviewRoutes(app: FastifyInstance) {
   // Delete preview
   app.delete(
     '/v1/previews/:id',
-    { preHandler: [authenticateRequest, requireScopes('preview:write')] },
+    { preHandler: [requireAuth, requireScopes('preview:write')] },
     async (request, reply) => {
       const { id } = ParamsWithId.parse(request.params);
       const ok = await app.repos.previewEnvs!.delete(id);
