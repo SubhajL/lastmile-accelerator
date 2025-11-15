@@ -17,6 +17,10 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.24'
+      - name: Setup protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: '27.1'
       - name: go vet (db-guardian-service)
         working-directory: services/db-guardian-service
         run: go vet ./...
@@ -29,3 +33,8 @@ jobs:
       - name: Unit tests (db-guardian-service)
         working-directory: services/db-guardian-service
         run: go test ./... -cover
+      - name: Verify gRPC codegen is up-to-date
+        working-directory: services/db-guardian-service
+        run: |
+          make grpc-codegen
+          git --no-pager diff --exit-code -- dbguardian/v1 || (echo "Run 'make grpc-codegen' and commit generated code" && exit 1)

@@ -6,6 +6,10 @@ build:
 	go build -o bin/app ./cmd/$(SVC)
 test:
 	go test ./... -cover || true
+verify:
+	@echo "Running go vet..." && go vet ./...
+	@echo "Running unit tests..." && go test ./... -cover
+	@echo "Verify complete"
 bench:
 	go test -run '^$$' -bench . -benchmem ./internal/analyzer
 perf:
