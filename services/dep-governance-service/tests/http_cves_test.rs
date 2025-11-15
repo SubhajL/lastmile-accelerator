@@ -81,3 +81,53 @@ async fn test_link_vuln_404_when_cve_missing() {
     let err = link_vuln_handler(Path(dep.id), State(pool.clone()), Json(link_req)).await.unwrap_err();
     assert!(format!("{}", err).to_lowercase().contains("not found"));
 }
+
+#[tokio::test]
+async fn test_link_vuln_duplicate_returns_409_status() {
+    let Some(pool) = test_pool().await else { eprintln!("Skipping: TEST_DATABASE_URL not set"); return; };
+
+    let dep = dep_governance_service::models::Dependency::new(
+        Uuid::new_v4(), "pkg3", "1.0.0", dep_governance_service::models::Ecosystem::Cargo, true, None
+    ).unwrap();
+    let dep = dep_governance_service::db::dependencies::create_dependency(&pool, &dep).await.unwrap();
+
+    let req = UpsertCveRequest {
+        cve_id: "CVE-2025-3333".into(),
+        severity: "low".into(),
+        cvss_score: Some(2.0),
+        description: None,
+        published_at: None,
+        source: Some("OSV".into()),
+    };
+    let _ = upsert_cve_handler(State(pool.clone()), Json(req)).await.unwrap();
+
+    let link_req = LinkVulnRequest { cve_id: "CVE-2025-3333".into(), status: "open".into(), affected_version_range: None, fixed_version: None };
+    let _ = link_vuln_handler(Path(dep.id), State(pool.clone()), Json(link_req)).await.unwrap();
+
+    let link_req2 = LinkVulnRequest { cve_id: "CVE-2025-3333".into(), status: "open".into(), affected_version_range: None, fixed_version: None };
+    let err = link_vuln_handler(Path(dep.id), State(pool.clone()), Json(link_req2)).await.unwrap_err();
+    let resp = axum::response::IntoResponse::into_response(err);
+    assert_eq!(resp.status(), axum::http::StatusCode::CONFLICT);
+}
+
+#[tokio::test]
+async fn test_link_vuln_missing_dependency_returns_400() {
+    let Some(pool) = test_pool().await else { eprintln!("Skipping: TEST_DATABASE_URL not set"); return; };
+
+    // Create CVE so only dependency FK fails
+    let req = UpsertCveRequest {
+        cve_id: "CVE-2025-4444".into(),
+        severity: "medium".into(),
+        cvss_score: Some(5.0),
+        description: None,
+        published_at: None,
+        source: Some("OSV".into()),
+    };
+    let _ = upsert_cve_handler(State(pool.clone()), Json(req)).await.unwrap();
+
+    let missing_dep_id = Uuid::new_v4();
+    let link_req = LinkVulnRequest { cve_id: "CVE-2025-4444".into(), status: "open".into(), affected_version_range: None, fixed_version: None };
+    let err = link_vuln_handler(Path(missing_dep_id), State(pool.clone()), Json(link_req)).await.unwrap_err();
+    let resp = axum::response::IntoResponse::into_response(err);
+    assert_eq!(resp.status(), axum::http::StatusCode::BAD_REQUEST);
+}

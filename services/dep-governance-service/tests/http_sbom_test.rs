@@ -40,3 +40,32 @@ async fn test_post_sbom_validates_input() {
     let res = create_sbom_handler(Path(snapshot_id), State(pool), Json(bad_req)).await;
     assert!(res.is_err());
 }
+
+#[tokio::test]
+async fn test_post_sbom_duplicate_storage_key_returns_409() {
+    let Some(pool) = test_pool().await else { eprintln!("Skipping: TEST_DATABASE_URL not set"); return; };
+
+    let snapshot_id = Uuid::new_v4();
+    let req = SbomCreateRequest {
+        format: "spdx_json".into(),
+        storage_key: "s3://bucket/sboms/dupe.json".into(),
+        file_hash: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa".into(),
+    };
+
+    let created = create_sbom_handler(Path(snapshot_id), State(pool.clone()), Json(req)).await.unwrap();
+    assert_eq!(created.into_response().status(), StatusCode::CREATED);
+
+    // duplicate storage_key should violate unique constraint -> 409
+    let req2 = SbomCreateRequest {
+        format: "spdx_json".into(),
+        storage_key: "s3://bucket/sboms/dupe.json".into(),
+        file_hash: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb".into(),
+    };
+    let res = create_sbom_handler(Path(Uuid::new_v4()), State(pool.clone()), Json(req2)).await;
+    let err = match res {
+        Ok(ok) => panic!("expected error, got {}", ok.into_response().status()),
+        Err(e) => e,
+    };
+    let resp = axum::response::IntoResponse::into_response(err);
+    assert_eq!(resp.status(), StatusCode::CONFLICT);
+}

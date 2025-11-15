@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::{db::vulnerabilities as repo, error::AppError, models::{Cve, Severity, VulnerabilityStatus}};
+use crate::{db::vulnerabilities as repo, error::AppError, errors::db::map_db_error, models::{Cve, Severity, VulnerabilityStatus}};
 use super::types::{UpsertCveRequest, CveResponse, LinkVulnRequest, LinkResponse};
 
 fn parse_severity(s: &str) -> Result<Severity, AppError> {
@@ -47,7 +47,7 @@ pub async fn upsert_cve_handler(
         req.source,
     );
 
-    let saved = repo::upsert_cve(&pool, &cve).await.map_err(AppError::Database)?;
+    let saved = repo::upsert_cve(&pool, &cve).await.map_err(map_db_error)?;
     let resp = CveResponse {
         id: saved.id,
         cve_id: saved.cve_id,
@@ -89,9 +89,6 @@ pub async fn link_vuln_handler(
                 fixed_version: link.fixed_version,
             })
         )),
-        Err(sqlx::Error::Database(db_err)) if db_err.code().as_deref() == Some("23505") => {
-            Err(AppError::Conflict("dependency vulnerability link already exists".into()))
-        }
-        Err(e) => Err(AppError::Database(e)),
+        Err(e) => Err(map_db_error(e)),
     }
 }

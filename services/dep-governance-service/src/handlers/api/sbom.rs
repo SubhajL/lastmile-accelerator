@@ -3,7 +3,7 @@ use serde::Deserialize;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::{db::sboms as sboms_repo, error::AppError, models::{Sbom, SbomFormat}};
+use crate::{db::sboms as sboms_repo, error::AppError, errors::db::map_db_error, models::{Sbom, SbomFormat}};
 
 #[derive(Deserialize)]
 pub struct SbomCreateRequest {
@@ -58,7 +58,7 @@ pub async fn create_sbom_handler(
         .map_err(AppError::BadRequest)?;
 
     let created = sboms_repo::create_sbom(&pool, &sbom).await
-        .map_err(AppError::Database)?;
+        .map_err(map_db_error)?;
 
     Ok((axum::http::StatusCode::CREATED, Json(created)))
 }
