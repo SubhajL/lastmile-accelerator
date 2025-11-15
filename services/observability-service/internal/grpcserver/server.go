@@ -1,10 +1,10 @@
 package grpcserver
 
 import (
-	"context"
-	"encoding/json"
-	"strings"
-	"time"
+    "context"
+    "encoding/json"
+    "strings"
+    "time"
 
 	"example.com/lma/observability-service/internal/logs"
 	"example.com/lma/observability-service/internal/middleware"
@@ -246,20 +246,34 @@ func UnaryAuthInterceptor(verifier middleware.Verifier) grpc.UnaryServerIntercep
 }
 
 func requiredScopesFor(fullMethod string) []string {
-	switch fullMethod {
-	case "/"+serviceName+"/GetSLOStatus":
-		return []string{"observability:read"}
-	case "/"+serviceName+"/SearchTraces":
-		return []string{"observability:read"}
-	case "/"+serviceName+"/GetTrace":
-		return []string{"observability:read"}
-	case "/"+serviceName+"/SearchLogs":
-		return []string{"observability:read"}
-	case "/"+serviceName+"/Golden":
-		return []string{"observability:read"}
-	default:
-		return []string{"observability:read"}
-	}
+    // Match by method suffix to support both legacy JSON service and new proto service names.
+    switch {
+    case strings.HasSuffix(fullMethod, "/GetSLOStatus"),
+        strings.HasSuffix(fullMethod, "/SearchTraces"),
+        strings.HasSuffix(fullMethod, "/GetTrace"),
+        strings.HasSuffix(fullMethod, "/SearchLogs"),
+        strings.HasSuffix(fullMethod, "/Golden"),
+        strings.HasSuffix(fullMethod, "/GetSLO"),
+        strings.HasSuffix(fullMethod, "/ListSLOsByProject"),
+        strings.HasSuffix(fullMethod, "/GetAlert"),
+        strings.HasSuffix(fullMethod, "/ListAlertsBySLO"),
+        strings.HasSuffix(fullMethod, "/GetAlertHistory"),
+        strings.HasSuffix(fullMethod, "/ListErrorGroups"),
+        strings.HasSuffix(fullMethod, "/GetErrorGroup"),
+        strings.HasSuffix(fullMethod, "/ListGroupEvents"):
+        return []string{"observability:read"}
+    case strings.HasSuffix(fullMethod, "/CreateSLO"),
+        strings.HasSuffix(fullMethod, "/UpdateSLO"),
+        strings.HasSuffix(fullMethod, "/DeleteSLO"),
+        strings.HasSuffix(fullMethod, "/CreateAlert"),
+        strings.HasSuffix(fullMethod, "/UpdateAlert"),
+        strings.HasSuffix(fullMethod, "/DeleteAlert"):
+        return []string{"observability:write"}
+    case strings.HasSuffix(fullMethod, "/IngestError"):
+        return []string{"observability:ingest"}
+    default:
+        return []string{"observability:read"}
+    }
 }
 
 func contains(ss []string, s string) bool { for _, x := range ss { if x==s { return true } } ; return false }

@@ -21,6 +21,7 @@ import (
 	"example.com/lma/observability-service/internal/telemetry"
 
 	"example.com/lma/observability-service/internal/grpcserver"
+	obs "example.com/lma/observability-service/internal/gen/observability/v1/observability"
 	"example.com/lma/observability-service/internal/handlers"
 	"example.com/lma/observability-service/internal/metrics"
 	"example.com/lma/observability-service/internal/messaging"
@@ -255,11 +256,10 @@ srv := &http.Server{
 		IdleTimeout:  60 * time.Second,
 	}
 
-// Start gRPC server using JSON codec and auth interceptor
-grpcserver.RegisterJSONCodec()
-grps := grpc.NewServer(grpc.UnaryInterceptor(grpcserver.UnaryAuthInterceptor(verifier)))
-obsSrv := grpcserver.NewObservabilityServer(sloSvc, queriesSvc)
-grpcserver.RegisterObservabilityServer(grps, obsSrv)
+    // Start gRPC server with generated protobuf API and auth interceptor
+    grps := grpc.NewServer(grpc.UnaryInterceptor(grpcserver.UnaryAuthInterceptor(verifier)))
+    protoSrv := grpcserver.NewProtoObservabilityServer(sloSvc, alertSvc, errSvc, queriesSvc)
+    obs.RegisterObservabilityServiceServer(grps, protoSrv)
 
 l, err := net.Listen("tcp", ":"+cfg.GRPCPort)
 if err != nil { return fmt.Errorf("grpc listen: %w", err) }
