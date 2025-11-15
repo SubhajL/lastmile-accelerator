@@ -20,7 +20,6 @@ import (
 	grpcapi "example.com/lma/secrets-env-service/internal/grpc"
 	"example.com/lma/secrets-env-service/internal/handlers"
 	"example.com/lma/secrets-env-service/internal/logger"
-	"example.com/lma/secrets-env-service/internal/observability"
 	"example.com/lma/secrets-env-service/internal/repository"
 	"example.com/lma/secrets-env-service/internal/security"
 	"example.com/lma/secrets-env-service/internal/server"
@@ -34,10 +33,11 @@ func main() {
 
 	log := logger.New(cfg.ServiceName, cfg.LogLevel, os.Stdout)
 
-	// OpenTelemetry init (best-effort)
-	ctx := context.Background()
-	shutdownOTel, _ := observability.Init(ctx, cfg.Observability, cfg.ServiceName)
-	defer func() { _ = shutdownOTel(context.Background()) }()
+    // OpenTelemetry init (required when endpoint is configured)
+    ctx := context.Background()
+    shutdownOTel, err := initOTel(ctx, cfg.Observability, cfg.ServiceName)
+    if err != nil { panic(err) }
+    defer func() { _ = shutdownOTel(context.Background()) }()
 
 	// Repositories
 	var secretsRepo repository.SecretsMetaRepo
@@ -156,7 +156,7 @@ func main() {
 		_ = grpcapi.StartGRPCServer(appCtx, ":50064", secretsSvc, paritySvc, verifier, log, tlsCfg)
 	}()
 
-	<-ctx.Done()
+    <-appCtx.Done()
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	_ = h.Shutdown(shutdownCtx)
