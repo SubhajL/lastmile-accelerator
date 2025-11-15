@@ -80,6 +80,31 @@ export const authenticateRequest: preHandlerHookHandler = async (
   }
 };
 
+export const requireAuth: preHandlerHookHandler = async (
+  request: FastifyRequest,
+  _reply: FastifyReply
+) => {
+  const token = extractBearerToken(request.headers.authorization);
+  if (!token) {
+    throw new AuthError('Missing or invalid Authorization header');
+  }
+
+  const cfg = getConfig();
+  try {
+    const claims = await verifyJwt({
+      token,
+      issuer: cfg.jwtIssuer,
+      audience: cfg.jwtAudience,
+      alg: cfg.jwtAlg,
+      clockSkewSec: cfg.jwtClockSkewSec,
+      jwksUrl: cfg.jwtJwksUrl,
+    });
+    request.user = toUserContext(claims);
+  } catch {
+    throw new AuthError('Invalid token');
+  }
+};
+
 /**
  * Factory function that creates a preHandler hook to check for required OAuth scopes.
  * User must have ALL specified scopes to access the route.
