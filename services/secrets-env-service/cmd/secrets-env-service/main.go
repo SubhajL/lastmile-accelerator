@@ -125,6 +125,7 @@ func main() {
 		handlers.OtelTracing(),
 		handlers.RequestLogger(log),
 		handlers.ValidateEnvQuery(cfg.AllowedEnvironments),
+		handlers.BodyLimit(cfg.HTTPMaxBodyBytes),
 		handlers.RequireJSON(),
 		handlers.JWTAuth(verifier),
 		handlers.RBACAugment(),

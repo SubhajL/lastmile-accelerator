@@ -24,6 +24,7 @@ type Config struct {
 	TLS           TLSConfig
 	RateLimit     RateLimitConfig
     AllowedEnvironments []string
+    HTTPMaxBodyBytes    int64
 }
 
 // VaultConfig holds Vault-specific configuration
@@ -167,6 +168,7 @@ func Load() (*Config, error) {
 			Burst:          getEnvAsInt("RATE_LIMIT_BURST", 40),
 		},
         AllowedEnvironments: normalizeEnvs(getEnvAsList("ALLOWED_ENVS", []string{"dev","staging","prod","production"})),
+        HTTPMaxBodyBytes:    getEnvAsInt64("HTTP_MAX_BODY_BYTES", 1<<20),
 	}
 
 	if err := cfg.Validate(); err != nil {
