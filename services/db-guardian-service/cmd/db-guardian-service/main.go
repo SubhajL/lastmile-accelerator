@@ -87,7 +87,7 @@ func run() error {
 		}
 	}
 
-	// Initialize NATS (optional)
+    // Initialize NATS (optional)
 	var natsConn *nats.Conn
 	if cfg.NATSUrl != "" {
 		natsConn, err = events.NewNATSClient(cfg.NATSUrl)
@@ -100,19 +100,21 @@ func run() error {
 		}
 	}
 
-	// Initialize Vault (optional)
-	if cfg.VaultAddr != "" && cfg.VaultRoleID != "" && cfg.VaultSecretID != "" {
+    // Initialize Vault (optional)
+    var vaultClient *secrets.VaultClient
+    if cfg.VaultAddr != "" && cfg.VaultRoleID != "" && cfg.VaultSecretID != "" {
 		vaultCfg := &secrets.VaultConfig{
 			Address:  cfg.VaultAddr,
 			RoleID:   cfg.VaultRoleID,
 			SecretID: cfg.VaultSecretID,
 		}
-		_, err = secrets.NewVaultClient(vaultCfg)
+        vc, err := secrets.NewVaultClient(vaultCfg)
 		if err != nil {
 			log.Error("Failed to connect to Vault", logger.Field{Key: "error", Value: err.Error()})
 			// Not fatal - service can start without Vault
 		} else {
 			log.Info("Vault connection established")
+            vaultClient = vc
 		}
 	}
 
@@ -144,7 +146,7 @@ func run() error {
 		log.Info("Analyzers and services wired")
 	}
 
-	// Create HTTP server
+    // Create HTTP server
 	deps := &server.Dependencies{
 		DB:          db,
 		RedisClient: redisClient,
@@ -167,6 +169,11 @@ func run() error {
     } else {
         deps.Authenticator = auth.NewSimpleAuthenticator()
         log.Info("Simple authentication enabled (dev)")
+    }
+
+    // If Vault client was successfully created above, attach health function now
+    if vaultClient != nil {
+        deps.VaultHealth = func(ctx context.Context) error { return vaultClient.Health(ctx) }
     }
 	srv := server.New(cfg, deps)
 

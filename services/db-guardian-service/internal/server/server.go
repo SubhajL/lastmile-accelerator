@@ -60,7 +60,7 @@ type Dependencies struct {
 func New(cfg *config.Config, deps *Dependencies) *Server {
 	mux := http.NewServeMux()
 
-	// Register health check endpoint (expanded later)
+    // Register health check endpoint (expanded later)
     var dbRef *sql.DB
     var redisRef *redis.Client
     if deps != nil { dbRef = deps.DB; redisRef = deps.RedisClient }
@@ -70,6 +70,13 @@ func New(cfg *config.Config, deps *Dependencies) *Server {
         DBPing:      defaultDBPing,
         RedisPing:   defaultRedisPing,
     }
+    if deps != nil && deps.NATSConn != nil {
+        healthDeps.NATSReady = func() error {
+            if deps.NATSConn.Status() != nats.CONNECTED { return fmt.Errorf("not connected") }
+            return nil
+        }
+    }
+    if deps != nil && deps.VaultHealth != nil { healthDeps.VaultHealth = deps.VaultHealth }
 	mux.HandleFunc("/healthz", NewHealthHandler(healthDeps))
 
 	// Prometheus metrics endpoint

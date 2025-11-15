@@ -56,6 +56,18 @@ func NewVaultClient(cfg *VaultConfig) (*VaultClient, error) {
 	return &VaultClient{client: client}, nil
 }
 
+// Health checks Vault sys health; returns error if unhealthy or unreachable.
+func (vc *VaultClient) Health(ctx context.Context) error {
+    if vc == nil || vc.client == nil {
+        return fmt.Errorf("vault client not initialized")
+    }
+    // The API does not support context here; call and rely on handler timeout.
+    if _, err := vc.client.Sys().Health(); err != nil {
+        return fmt.Errorf("vault health: %w", err)
+    }
+    return nil
+}
+
 func GetSecret(ctx context.Context, vc *VaultClient, path string) (map[string]string, error) {
 	if vc == nil {
 		return nil, fmt.Errorf("Vault client is nil")
