@@ -349,6 +349,32 @@ func hasRequestBody(r *http.Request) bool {
     return false
 }
 
+// BodyLimit limits request body size for mutating methods; returns 413 when Content-Length exceeds.
+func BodyLimit(maxBytes int64) func(http.Handler) http.Handler {
+    isMutating := func(m string) bool {
+        switch m {
+        case http.MethodPost, http.MethodPut, http.MethodPatch:
+            return true
+        default:
+            return false
+        }
+    }
+    return func(next http.Handler) http.Handler {
+        return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+            if !isMutating(r.Method) { next.ServeHTTP(w, r); return }
+            if maxBytes <= 0 { next.ServeHTTP(w, r); return }
+            if r.ContentLength > maxBytes {
+                Error(w, http.StatusRequestEntityTooLarge, "request body too large", nil)
+                return
+            }
+            if hasRequestBody(r) {
+                r.Body = http.MaxBytesReader(w, r.Body, maxBytes)
+            }
+            next.ServeHTTP(w, r)
+        })
+    }
+}
+
 // routePattern returns the chi route pattern for the current request, if available.
 func routePattern(r *http.Request) string {
     if r == nil { return "" }
