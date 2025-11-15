@@ -30,6 +30,11 @@ jobs:
           bun run typecheck || true
           bun run test -- --reporter=dot || true
 
+      - name: Budget (optional)
+        working-directory: ${{ inputs.context }}
+        run: |
+          bun run -s budget || true
+
       - name: Playwright smoke
         working-directory: ${{ inputs.context }}
         run: |
