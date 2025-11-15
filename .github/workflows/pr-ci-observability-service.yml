@@ -22,3 +22,7 @@ jobs:
       - name: Unit tests (observability-service)
         working-directory: services/observability-service
         run: go test ./... -cover
+
+      - name: Budget (observability-service)
+        working-directory: services/observability-service
+        run: make budget
