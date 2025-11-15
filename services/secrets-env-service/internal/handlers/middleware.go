@@ -11,6 +11,7 @@ import (
 	"example.com/lma/secrets-env-service/internal/events"
 	"example.com/lma/secrets-env-service/internal/logger"
 	"github.com/go-chi/chi/v5"
+    "github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -265,4 +266,46 @@ func TenantIsolation() func(http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+// routePattern returns the chi route pattern for the current request, if available.
+func routePattern(r *http.Request) string {
+    if r == nil { return "" }
+    if rctx := chi.RouteContext(r.Context()); rctx != nil {
+        if p := rctx.RoutePattern(); p != "" { return p }
+    }
+    return r.URL.Path
+}
+
+// HttpMetrics records HTTP request metrics: counter and latency histogram by method/route/status.
+func HttpMetrics(reg prometheus.Registerer) func(http.Handler) http.Handler {
+    requests := prometheus.NewCounterVec(
+        prometheus.CounterOpts{
+            Name: "http_requests_total",
+            Help: "Total number of HTTP requests by method, route, status.",
+        },
+        []string{"method", "route", "status"},
+    )
+    durations := prometheus.NewHistogramVec(
+        prometheus.HistogramOpts{
+            Name:    "http_request_duration_seconds",
+            Help:    "HTTP request duration by method, route, status.",
+            Buckets: prometheus.DefBuckets,
+        },
+        []string{"method", "route", "status"},
+    )
+    reg.MustRegister(requests, durations)
+
+    return func(next http.Handler) http.Handler {
+        return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+            start := time.Now()
+            method := r.Method
+            rw := &statusWriter{ResponseWriter: w, status: 200}
+            next.ServeHTTP(rw, r)
+            status := fmt.Sprintf("%d", rw.status)
+            rp := routePattern(r)
+            requests.WithLabelValues(method, rp, status).Inc()
+            durations.WithLabelValues(method, rp, status).Observe(time.Since(start).Seconds())
+        })
+    }
 }
