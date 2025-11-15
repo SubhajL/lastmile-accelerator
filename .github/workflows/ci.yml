@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - secrets-env-service
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install Node deps
+        run: bun install
+
+      - name: Turbo pipeline (typecheck, lint, test, build)
+        run: bunx turbo run typecheck lint test build
+
+      - name: Change budget (PRs)
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          MAX_FILES: '25'
+          MAX_LOC: '500'
+        run: |
+          set -euo pipefail
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          if [ -z "$BASE_SHA" ]; then BASE_SHA="origin/${{ github.base_ref }}"; fi
+          git fetch origin "${{ github.base_ref }}:${{ github.base_ref }}" || true
+          FILES=$(git diff --name-only "$BASE_SHA"...HEAD | wc -l | tr -d ' ')
+          ADDED=$(git diff --numstat "$BASE_SHA"...HEAD | awk '{a+=$1} END{print a+0}')
+          DELETED=$(git diff --numstat "$BASE_SHA"...HEAD | awk '{d+=$2} END{print d+0}')
+          LOC=$((ADDED+DELETED))
+          echo "Changed files: $FILES, LOC delta: $LOC (added $ADDED, deleted $DELETED)"
+          if [ "$FILES" -gt "$MAX_FILES" ] || [ "$LOC" -gt "$MAX_LOC" ]; then
+            echo "::error title=Change budget exceeded::files=$FILES (max $MAX_FILES), loc=$LOC (max $MAX_LOC)"
+            exit 1
+          fi
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: services/secrets-env-service/go.mod
+
+      - name: Go Lint (secrets-env-service)
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.60.3
+          working-directory: services/secrets-env-service
+          args: ./...
+
+      - name: Go Test (secrets-env-service)
+        working-directory: services/secrets-env-service
+        run: make test
+
+      - name: Go Build (secrets-env-service)
+        working-directory: services/secrets-env-service
+        run: make build
