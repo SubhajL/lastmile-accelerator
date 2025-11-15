@@ -1,10 +1,17 @@
 run:
   timeout: 3m
   tests: true
+  go: "1.24"
+  skip-dirs:
+    - vendor
+    - tmp
+  skip-files:
+    - "dbguardian/v1/.*" # generated gRPC code
 
 linters:
   enable:
     - govet
+    - errcheck
     - staticcheck
     - gosimple
     - ineffassign
@@ -12,7 +19,6 @@ linters:
     - revive
   disable:
     - depguard
-    - errcheck
 
 issues:
   exclude-use-default: false
