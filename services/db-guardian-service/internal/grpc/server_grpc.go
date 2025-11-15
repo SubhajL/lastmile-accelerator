@@ -13,7 +13,9 @@ import (
 func NewGRPCServer(deps *server.Dependencies, opts ...grpc.ServerOption) *grpc.Server {
 	// default interceptors: tracing + logging; auth if provided
 	var intrs []grpc.UnaryServerInterceptor
-	intrs = append(intrs, TracingUnaryInterceptor())
+    // Metrics first so it observes all outcomes (including auth/rl denials)
+    intrs = append(intrs, MetricsUnaryInterceptor())
+    intrs = append(intrs, TracingUnaryInterceptor())
     if deps != nil && deps.Logger != nil { intrs = append(intrs, LoggingUnaryInterceptor(deps.Logger)) }
     if deps != nil && deps.Authenticator != nil { intrs = append(intrs, AuthUnaryInterceptor(deps.Authenticator, server.GRPCScopeResolver)) }
     if deps != nil && deps.RateLimiter != nil { intrs = append(intrs, RateLimitUnaryInterceptor(deps.RateLimiter, DefaultGRPCKeyFn, DefaultGRPCCostFn)) }
