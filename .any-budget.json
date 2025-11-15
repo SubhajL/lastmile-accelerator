@@ -1,0 +1,6 @@
+{
+  "defaults": { "maxAnyCount": 100 },
+  "overrides": {
+    "services/notification-service": { "maxAnyCount": 50 }
+  }
+}

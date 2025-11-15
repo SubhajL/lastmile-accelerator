@@ -1,0 +1,25 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+set -euo pipefail
+
+echo "[pre-push] Running lint-staged on staged files..."
+if command -v bunx >/dev/null 2>&1; then
+  bunx lint-staged || true
+else
+  npx --yes lint-staged || true
+fi
+
+echo "[pre-push] Determining default branch..."
+DEFAULT_REF=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null || echo "refs/remotes/origin/main")
+DEFAULT_BRANCH=${DEFAULT_REF##*/}
+echo "[pre-push] Default: origin/$DEFAULT_BRANCH"
+
+echo "[pre-push] Running turbo typecheck+lint since origin/$DEFAULT_BRANCH ..."
+if command -v bunx >/dev/null 2>&1; then
+  bunx turbo run typecheck lint --since=origin/$DEFAULT_BRANCH --concurrency=50% || true
+else
+  npx --yes turbo run typecheck lint --since=origin/$DEFAULT_BRANCH --concurrency=50% || true
+fi
+
+echo "[pre-push] Done"
