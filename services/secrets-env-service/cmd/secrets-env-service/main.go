@@ -124,6 +124,7 @@ func main() {
 		handlers.TraceContext(),
 		handlers.OtelTracing(),
 		handlers.RequestLogger(log),
+		handlers.ValidateEnvQuery(cfg.AllowedEnvironments),
 		handlers.JWTAuth(verifier),
 		handlers.RBACAugment(),
 	}
@@ -152,8 +153,10 @@ func main() {
 		}
 		_ = h.ListenAndServe()
 	}()
+	// Set allowed envs for handlers that validate body envs
+	handlers.SetAllowedEnvs(cfg.AllowedEnvironments)
 	go func() {
-		_ = grpcapi.StartGRPCServer(appCtx, ":50064", secretsSvc, paritySvc, verifier, log, tlsCfg)
+		_ = grpcapi.StartGRPCServer(appCtx, ":50064", secretsSvc, paritySvc, verifier, log, tlsCfg, cfg.AllowedEnvironments)
 	}()
 
     <-appCtx.Done()

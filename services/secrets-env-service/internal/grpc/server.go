@@ -83,7 +83,7 @@ type server struct {
 }
 
 // StartGRPCServer starts the gRPC server on addr and blocks until ctx is canceled.
-func StartGRPCServer(ctx context.Context, addr string, secrets *service.SecretsService, parity *service.ParityService, verifier handlers.TokenVerifier, log zerolog.Logger, tlsConfig *tls.Config) error {
+func StartGRPCServer(ctx context.Context, addr string, secrets *service.SecretsService, parity *service.ParityService, verifier handlers.TokenVerifier, log zerolog.Logger, tlsConfig *tls.Config, allowed []string) error {
 	// Interceptor chain: recovery -> logging -> auth -> scope enforcement
 	svc := &server{secrets: secrets, parity: parity, log: log}
 
@@ -94,6 +94,7 @@ func StartGRPCServer(ctx context.Context, addr string, secrets *service.SecretsS
 	}
 
 chain := grpc.ChainUnaryInterceptor(
+        unaryEnvAllowlist(allowed),
         unaryGRPCMetrics(prometheus.DefaultRegisterer),
 		unaryPanicRecovery(log),
 		unaryTraceContext(),
@@ -280,6 +281,32 @@ func unaryRBACAugment() grpc.UnaryServerInterceptor {
 		ctx = handlers.WithClaims(ctx, handlers.Claims{Subject: claims.Subject, TenantID: claims.TenantID, ProjectID: claims.ProjectID, Scopes: aug})
 		return handler(ctx, req)
 	}
+}
+
+// unaryEnvAllowlist validates env parameters present in requests and rejects disallowed values.
+// Validation rules:
+// - GetSecret: in.Environment
+// - ListSecrets: in.Environment
+// - CheckEnvParity: in.BaseEnv and in.CompareEnv
+func unaryEnvAllowlist(allowed []string) grpc.UnaryServerInterceptor {
+    norm := func(v string) string { return strings.ToLower(strings.TrimSpace(v)) }
+    isAllowed := func(v string) bool {
+        v = norm(v)
+        if v == "" { return true }
+        for _, a := range allowed { if norm(a) == v { return true } }
+        return false
+    }
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+        switch r := req.(type) {
+        case *pb.GetSecretRequest:
+            if !isAllowed(r.Environment) { return nil, status.Error(codes.InvalidArgument, "environment not allowed") }
+        case *pb.ListSecretsRequest:
+            if !isAllowed(r.Environment) { return nil, status.Error(codes.InvalidArgument, "environment not allowed") }
+        case *pb.CheckEnvParityRequest:
+            if !isAllowed(r.BaseEnv) || !isAllowed(r.CompareEnv) { return nil, status.Error(codes.InvalidArgument, "environment not allowed") }
+        }
+        return handler(ctx, req)
+    }
 }
 
 // unaryGRPCMetrics records gRPC request count and duration by method and final status code.

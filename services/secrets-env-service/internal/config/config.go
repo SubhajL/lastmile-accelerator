@@ -23,6 +23,7 @@ type Config struct {
 	Storage       StorageConfig
 	TLS           TLSConfig
 	RateLimit     RateLimitConfig
+    AllowedEnvironments []string
 }
 
 // VaultConfig holds Vault-specific configuration
@@ -165,6 +166,7 @@ func Load() (*Config, error) {
 			RequestsPerSec: getEnvAsInt("RATE_LIMIT_RPS", 20),
 			Burst:          getEnvAsInt("RATE_LIMIT_BURST", 40),
 		},
+        AllowedEnvironments: normalizeEnvs(getEnvAsList("ALLOWED_ENVS", []string{"dev","staging","prod","production"})),
 	}
 
 	if err := cfg.Validate(); err != nil {
@@ -202,6 +204,10 @@ if err := c.Database.Validate(); err != nil {
 	if c.RateLimit.RequestsPerSec < 0 || c.RateLimit.Burst < 0 {
 		return fmt.Errorf("rate limit values must be non-negative")
 	}
+
+    if len(c.AllowedEnvironments) == 0 {
+        return fmt.Errorf("ALLOWED_ENVS must not be empty")
+    }
 
 	return nil
 }
@@ -325,6 +331,20 @@ func getEnvAsList(key string, def []string) []string {
 		return parts
 	}
 	return def
+}
+
+// normalizeEnvs trims, lowercases, and de-duplicates environment names.
+func normalizeEnvs(in []string) []string {
+    m := map[string]struct{}{}
+    out := make([]string, 0, len(in))
+    for _, e := range in {
+        e = strings.ToLower(strings.TrimSpace(e))
+        if e == "" { continue }
+        if _, ok := m[e]; ok { continue }
+        m[e] = struct{}{}
+        out = append(out, e)
+    }
+    return out
 }
 
 // getEnvAsKVMap parses comma-separated key=value pairs into a map.

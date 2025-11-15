@@ -53,6 +53,7 @@ func (h *SecretsHandler) CreateSecret(w http.ResponseWriter, r *http.Request) {
 	fields := map[string]string{}
 	if req.Key == "" { fields["key"] = "required" }
 	if req.Environment == "" { fields["environment"] = "required" }
+    if req.Environment != "" && !isAllowedEnv(allowedEnvs, req.Environment) { fields["environment"] = "not allowed" }
 	// key format validation
 	var re = regexp.MustCompile(`^[A-Za-z0-9._-]{1,128}$`)
 	if req.Key != "" && !re.MatchString(req.Key) { fields["key"] = "invalid format" }
