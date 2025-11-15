@@ -15,6 +15,7 @@ import (
 	"example.com/lma/secrets-env-service/internal/security"
 	"example.com/lma/secrets-env-service/internal/service"
 	"example.com/lma/secrets-env-service/internal/events"
+    "github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -93,6 +94,7 @@ func StartGRPCServer(ctx context.Context, addr string, secrets *service.SecretsS
 	}
 
 chain := grpc.ChainUnaryInterceptor(
+        unaryGRPCMetrics(prometheus.DefaultRegisterer),
 		unaryPanicRecovery(log),
 		unaryTraceContext(),
 		unaryOtelTracing(),
@@ -278,4 +280,44 @@ func unaryRBACAugment() grpc.UnaryServerInterceptor {
 		ctx = handlers.WithClaims(ctx, handlers.Claims{Subject: claims.Subject, TenantID: claims.TenantID, ProjectID: claims.ProjectID, Scopes: aug})
 		return handler(ctx, req)
 	}
+}
+
+// unaryGRPCMetrics records gRPC request count and duration by method and final status code.
+func unaryGRPCMetrics(reg prometheus.Registerer) grpc.UnaryServerInterceptor {
+    requests := prometheus.NewCounterVec(
+        prometheus.CounterOpts{
+            Name: "grpc_requests_total",
+            Help: "Total number of gRPC requests by method and code.",
+        },
+        []string{"method", "code"},
+    )
+    if err := reg.Register(requests); err != nil {
+        if are, ok := err.(prometheus.AlreadyRegisteredError); ok {
+            if cv, ok := are.ExistingCollector.(*prometheus.CounterVec); ok { requests = cv }
+        }
+    }
+    durations := prometheus.NewHistogramVec(
+        prometheus.HistogramOpts{
+            Name:    "grpc_request_duration_seconds",
+            Help:    "gRPC request duration in seconds by method and code.",
+            Buckets: prometheus.DefBuckets,
+        },
+        []string{"method", "code"},
+    )
+    if err := reg.Register(durations); err != nil {
+        if are, ok := err.(prometheus.AlreadyRegisteredError); ok {
+            if hv, ok := are.ExistingCollector.(*prometheus.HistogramVec); ok { durations = hv }
+        }
+    }
+
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+        start := time.Now()
+        resp, err := handler(ctx, req)
+        code := codes.OK
+        if st, ok := status.FromError(err); ok { code = st.Code() }
+        method := info.FullMethod
+        requests.WithLabelValues(method, code.String()).Inc()
+        durations.WithLabelValues(method, code.String()).Observe(time.Since(start).Seconds())
+        return resp, err
+    }
 }
