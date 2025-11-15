@@ -7,6 +7,7 @@ import (
 
 	"example.com/lma/secrets-env-service/internal/domain"
 	"example.com/lma/secrets-env-service/internal/events"
+    "example.com/lma/secrets-env-service/internal/metrics"
 	"example.com/lma/secrets-env-service/internal/repository"
 )
 
@@ -40,15 +41,24 @@ func (s *ParityService) CheckParity(ctx context.Context, projectID, baseEnv, com
 			_ = s.pub.Publish(ctx, "env.parity.drift.detected", map[string]any{"project_id": projectID, "missing": missing, "extra": extra})
 		}
 	}
+    if metrics.Default != nil { metrics.Default.ObserveParity("compute", "success") }
 	return check, nil
 }
 
 func (s *ParityService) GetLatestCheck(ctx context.Context, projectID string) (*domain.EnvParityCheck, error) {
-	return s.parityRepo.GetLatest(ctx, projectID)
+    res, err := s.parityRepo.GetLatest(ctx, projectID)
+    if metrics.Default != nil {
+        if err != nil { metrics.Default.ObserveParity("latest", "error") } else { metrics.Default.ObserveParity("latest", "success") }
+    }
+    return res, err
 }
 
 func (s *ParityService) GetCheckHistory(ctx context.Context, projectID string, limit int) ([]*domain.EnvParityCheck, error) {
-return s.parityRepo.GetHistory(ctx, projectID, limit)
+    res, err := s.parityRepo.GetHistory(ctx, projectID, limit)
+    if metrics.Default != nil {
+        if err != nil { metrics.Default.ObserveParity("history", "error") } else { metrics.Default.ObserveParity("history", "success") }
+    }
+    return res, err
 }
 
 func compareSecretKeys(base, compare []string) (missing, extra []string) {
