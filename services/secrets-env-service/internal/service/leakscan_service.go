@@ -12,6 +12,7 @@ import (
 
 	"example.com/lma/secrets-env-service/internal/domain"
 	"example.com/lma/secrets-env-service/internal/events"
+	"example.com/lma/secrets-env-service/internal/metrics"
 	"example.com/lma/secrets-env-service/internal/repository"
 	"github.com/google/uuid"
 )
@@ -43,8 +44,11 @@ var (
 )
 
 func (s *LeakScanService) ScanSnapshot(ctx context.Context, projectID, snapshotID string) ([]*domain.ClientLeakScan, error) {
-	files, err := s.storage.ListFiles(ctx, projectID, snapshotID)
-	if err != nil { return nil, err }
+    files, err := s.storage.ListFiles(ctx, projectID, snapshotID)
+    if err != nil {
+        if metrics.Default != nil { metrics.Default.ObserveLeaks("scan", "error") }
+        return nil, err
+    }
 	var findings []*domain.ClientLeakScan
 	for _, f := range files {
 		ff, _ := s.scanFile(f.Path, f.Content)
@@ -57,14 +61,25 @@ func (s *LeakScanService) ScanSnapshot(ctx context.Context, projectID, snapshotI
 			_ = s.pub.Publish(ctx, "client.leak.found", map[string]any{"project_id": projectID, "snapshot_id": snapshotID, "count": len(findings)})
 		}
 	}
-	return findings, nil
+    if metrics.Default != nil { metrics.Default.ObserveLeaks("scan", "success") }
+    return findings, nil
 }
 
 func (s *LeakScanService) GetScanResults(ctx context.Context, projectID, snapshotID, severity string) ([]*domain.ClientLeakScan, error) {
-	return s.repo.GetBySnapshotID(ctx, snapshotID, severity)
+    res, err := s.repo.GetBySnapshotID(ctx, snapshotID, severity)
+    if metrics.Default != nil {
+        if err != nil { metrics.Default.ObserveLeaks("results", "error") } else { metrics.Default.ObserveLeaks("results", "success") }
+    }
+    return res, err
 }
 
-func (s *LeakScanService) MarkAsFixed(ctx context.Context, scanID string) error { return s.repo.MarkAsFixed(ctx, scanID) }
+func (s *LeakScanService) MarkAsFixed(ctx context.Context, scanID string) error {
+    err := s.repo.MarkAsFixed(ctx, scanID)
+    if metrics.Default != nil {
+        if err != nil { metrics.Default.ObserveLeaks("fix", "error") } else { metrics.Default.ObserveLeaks("fix", "success") }
+    }
+    return err
+}
 
 func (s *LeakScanService) scanFile(path string, content []byte) ([]*domain.ClientLeakScan, error) {
 	var out []*domain.ClientLeakScan
