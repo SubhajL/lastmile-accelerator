@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"fmt"
+    "mime"
 	"net/http"
 	"regexp"
 	"strings"
@@ -304,6 +305,48 @@ func ValidateEnvQuery(allowed []string) func(http.Handler) http.Handler {
             next.ServeHTTP(w, r)
         })
     }
+}
+
+// RequireJSON enforces application/json content-type for mutating requests with a body.
+func RequireJSON() func(http.Handler) http.Handler {
+    isMutating := func(m string) bool {
+        switch m {
+        case http.MethodPost, http.MethodPut, http.MethodPatch:
+            return true
+        default:
+            return false
+        }
+    }
+    return func(next http.Handler) http.Handler {
+        return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+            if !isMutating(r.Method) || !hasRequestBody(r) {
+                next.ServeHTTP(w, r)
+                return
+            }
+            ct := r.Header.Get("Content-Type")
+            if !isJSONContentType(ct) {
+                Error(w, http.StatusUnsupportedMediaType, "unsupported media type: require application/json", nil)
+                return
+            }
+            next.ServeHTTP(w, r)
+        })
+    }
+}
+
+func isJSONContentType(ct string) bool {
+    if ct == "" { return false }
+    mt, _, err := mime.ParseMediaType(ct)
+    if err != nil { return false }
+    return strings.ToLower(mt) == "application/json"
+}
+
+func hasRequestBody(r *http.Request) bool {
+    if r == nil { return false }
+    if r.ContentLength > 0 { return true }
+    for _, te := range r.TransferEncoding {
+        if strings.ToLower(te) == "chunked" { return true }
+    }
+    return false
 }
 
 // routePattern returns the chi route pattern for the current request, if available.
