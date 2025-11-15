@@ -1,0 +1,37 @@
+run:
+  timeout: 3m
+  tests: true
+  go: "1.24"
+  skip-dirs:
+    - vendor
+    - tmp
+  skip-files:
+    - "dbguardian/v1/.*" # generated gRPC code
+
+linters:
+  enable:
+    - govet
+    - errcheck
+    - staticcheck
+    - gosimple
+    - ineffassign
+    - unused
+    - revive
+  disable:
+    - depguard
+
+issues:
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+linters-settings:
+  revive:
+    severity: warning
+    rules:
+      - name: var-naming
+      - name: indent-error-flow
+      - name: if-return
+      - name: range-val-address
+  staticcheck:
+    checks: ["all"]
