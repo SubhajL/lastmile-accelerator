@@ -55,11 +55,11 @@ type NATSConfig struct {
 
 // ObservabilityConfig holds observability settings
 type ObservabilityConfig struct {
-	OTELEndpoint string
-    OTELInsecure bool
-    OTELHeaders  map[string]string
+    OTELEndpoint   string
+    OTELInsecure   bool
+    OTELHeaders    map[string]string
     OTELServiceName string
-	MetricsPort  string
+    MetricsPort    string
 }
 
 // AuthConfig holds authentication settings
@@ -129,13 +129,13 @@ func Load() (*Config, error) {
 		NATS: NATSConfig{
 			URL: getEnvOrDefault("NATS_URL", ""),
 		},
-		Observability: ObservabilityConfig{
-			OTELEndpoint: getEnvOrDefault("OTEL_EXPORTER_OTLP_ENDPOINT", ""),
-            OTELInsecure: getEnvAsBool("OTEL_INSECURE", false),
-            OTELHeaders:  getEnvAsKVMap("OTEL_HEADERS"),
+        Observability: ObservabilityConfig{
+            OTELEndpoint:   getEnvOrDefault("OTEL_EXPORTER_OTLP_ENDPOINT", ""),
+            OTELInsecure:   getEnvAsBool("OTEL_INSECURE", false),
+            OTELHeaders:    getEnvAsKVMap("OTEL_HEADERS"),
             OTELServiceName: getEnvOrDefault("OTEL_SERVICE_NAME", ""),
-			MetricsPort:  getEnvOrDefault("METRICS_PORT", "9090"),
-		},
+            MetricsPort:    getEnvOrDefault("METRICS_PORT", "9090"),
+        },
 		Auth: AuthConfig{
 			JWTPublicKey: getEnvOrDefault("JWT_PUBLIC_KEY", ""),
 			JWKSURL:      getEnvOrDefault("JWT_JWKS_URL", ""),
@@ -328,30 +328,21 @@ func getEnvAsList(key string, def []string) []string {
 }
 
 // getEnvAsKVMap parses comma-separated key=value pairs into a map.
-// - Splits on commas, trims spaces
-// - Splits each pair on the first '=' only; values may contain '='
-// - Skips malformed pairs (no key or no '=')
-// - Last key wins on duplicates
+// - Splits on commas; trims spaces
+// - Splits on first '=' only so values may contain '='
+// - Skips malformed pairs; last key wins
 func getEnvAsKVMap(key string) map[string]string {
     raw := os.Getenv(key)
-    if raw == "" {
-        return map[string]string{}
-    }
+    if raw == "" { return map[string]string{} }
     out := make(map[string]string)
     for _, part := range strings.Split(raw, ",") {
         part = strings.TrimSpace(part)
-        if part == "" {
-            continue
-        }
+        if part == "" { continue }
         eq := strings.Index(part, "=")
-        if eq <= 0 { // no '=' or empty key
-            continue
-        }
+        if eq <= 0 { continue }
         k := strings.TrimSpace(part[:eq])
         v := strings.TrimSpace(part[eq+1:])
-        if k == "" || v == "" {
-            continue
-        }
+        if k == "" || v == "" { continue }
         out[k] = v
     }
     return out
