@@ -16,6 +16,7 @@ func NewGRPCServer(deps *server.Dependencies, opts ...grpc.ServerOption) *grpc.S
 	intrs = append(intrs, TracingUnaryInterceptor())
     if deps != nil && deps.Logger != nil { intrs = append(intrs, LoggingUnaryInterceptor(deps.Logger)) }
     if deps != nil && deps.Authenticator != nil { intrs = append(intrs, AuthUnaryInterceptor(deps.Authenticator, server.GRPCScopeResolver)) }
+    if deps != nil && deps.RateLimiter != nil { intrs = append(intrs, RateLimitUnaryInterceptor(deps.RateLimiter, DefaultGRPCKeyFn, DefaultGRPCCostFn)) }
 
 	if len(intrs) > 0 {
 		opts = append(opts, grpc.ChainUnaryInterceptor(intrs...))
