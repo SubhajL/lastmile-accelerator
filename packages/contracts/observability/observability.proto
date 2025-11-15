@@ -1,0 +1,219 @@
+syntax = "proto3";
+
+package lma.observability.v1;
+
+option go_package = "example.com/lma/observability-service/internal/gen/observability/v1;observabilityv1";
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+
+// ----- Enums -----
+
+enum SLOType {
+  SLO_TYPE_UNSPECIFIED = 0;
+  AVAILABILITY = 1;
+  LATENCY = 2;
+  THROUGHPUT = 3;
+  ERROR_RATE = 4;
+}
+
+enum AlertChannel {
+  ALERT_CHANNEL_UNSPECIFIED = 0;
+  EMAIL = 1;
+  SLACK = 2;
+  PAGERDUTY = 3;
+}
+
+// ----- Common -----
+
+message TimeRange {
+  google.protobuf.Timestamp from = 1;
+  google.protobuf.Timestamp to = 2;
+}
+
+// ----- SLO domain -----
+
+message SLO {
+  string id = 1;
+  string project_id = 2;
+  string service_name = 3;
+  SLOType type = 4;
+  double target = 5;
+  google.protobuf.Duration window = 6;
+  string query = 7;
+  string status = 8; // e.g., "active"
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+}
+
+message SLOStatus {
+  string slo_id = 1;
+  double compliance = 2;
+  double burn_rate = 3;
+  double remaining_budget = 4;
+  google.protobuf.Timestamp last_calculated = 5;
+}
+
+message SLOHistoryPoint {
+  string slo_id = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  double compliance = 3;
+  double burn_rate = 4;
+}
+
+// ----- Alerts domain -----
+
+message AlertRule {
+  string id = 1;
+  string slo_id = 2;
+  double threshold = 3;
+  repeated AlertChannel channels = 4;
+  string rule = 5; // textual/DSL condition
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+message AlertEvent {
+  string id = 1;
+  string alert_id = 2;
+  string status = 3;
+  google.protobuf.Timestamp timestamp = 4;
+  string message = 5;
+}
+
+// ----- Error Inbox domain -----
+
+message ErrorEvent {
+  string id = 1;
+  string group_id = 2;
+  string message = 3;
+  string stack = 4;
+  google.protobuf.Timestamp timestamp = 5;
+  map<string, string> attrs = 6;
+}
+
+message ErrorGroup {
+  string id = 1;
+  string project_id = 2;
+  string fingerprint = 3;
+  int64 count = 4;
+  google.protobuf.Timestamp last_seen = 5;
+  bool resolved = 6;
+}
+
+// ----- Traces/Logs/Dashboard domain -----
+
+message TraceSummary {
+  string trace_id = 1;
+  string service_name = 2;
+  int64 duration_ms = 3;
+  google.protobuf.Timestamp start_time = 4;
+  map<string, string> attrs = 5;
+}
+
+message Trace {
+  string trace_id = 1;
+  bytes payload = 2; // producer-defined content
+}
+
+message LogEntry {
+  google.protobuf.Timestamp ts = 1;
+  string level = 2;
+  string message = 3;
+  map<string, string> labels = 4;
+}
+
+message GoldenDashboard {
+  map<string, double> metrics = 1; // golden signals
+}
+
+// ----- Requests/Responses: SLO -----
+
+message CreateSLORequest { SLO slo = 1; }
+message CreateSLOResponse { SLO slo = 1; }
+message GetSLORequest { string id = 1; }
+message GetSLOResponse { SLO slo = 1; }
+message ListSLOsByProjectRequest { string project_id = 1; }
+message ListSLOsByProjectResponse { repeated SLO slos = 1; }
+message UpdateSLORequest { SLO slo = 1; }
+message UpdateSLOResponse { SLO slo = 1; }
+message DeleteSLORequest { string id = 1; }
+message DeleteSLOResponse {}
+
+message GetSLOStatusRequest { string id = 1; }
+message GetSLOStatusResponse { SLOStatus status = 1; }
+message GetSLOHistoryRequest { string id = 1; TimeRange range = 2; }
+message GetSLOHistoryResponse { repeated SLOHistoryPoint points = 1; }
+
+// ----- Requests/Responses: Alerts -----
+
+message CreateAlertRequest { AlertRule rule = 1; }
+message CreateAlertResponse { AlertRule rule = 1; }
+message GetAlertRequest { string id = 1; }
+message GetAlertResponse { AlertRule rule = 1; }
+message ListAlertsBySLORequest { string slo_id = 1; }
+message ListAlertsBySLOResponse { repeated AlertRule rules = 1; }
+message UpdateAlertRequest { AlertRule rule = 1; }
+message UpdateAlertResponse { AlertRule rule = 1; }
+message DeleteAlertRequest { string id = 1; }
+message DeleteAlertResponse {}
+message GetAlertHistoryRequest { string id = 1; TimeRange range = 2; }
+message GetAlertHistoryResponse { repeated AlertEvent events = 1; }
+
+// ----- Requests/Responses: Error Inbox -----
+
+message IngestErrorRequest { string project_id = 1; ErrorEvent event = 2; }
+message IngestErrorResponse { string group_id = 1; string event_id = 2; }
+message ListErrorGroupsRequest { string project_id = 1; int32 limit = 2; string filter = 3; }
+message ListErrorGroupsResponse { repeated ErrorGroup groups = 1; }
+message GetErrorGroupRequest { string group_id = 1; }
+message GetErrorGroupResponse { ErrorGroup group = 1; }
+message ListGroupEventsRequest { string group_id = 1; int32 limit = 2; }
+message ListGroupEventsResponse { repeated ErrorEvent events = 1; }
+message ResolveGroupRequest { string group_id = 1; }
+message ResolveGroupResponse { ErrorGroup group = 1; }
+
+// ----- Requests/Responses: Traces/Logs/Dashboard -----
+
+message SearchTracesRequest { string project_id = 1; string q = 2; TimeRange range = 3; int32 limit = 4; }
+message SearchTracesResponse { repeated TraceSummary traces = 1; }
+message GetTraceRequest { string trace_id = 1; }
+message GetTraceResponse { Trace trace = 1; }
+message SearchLogsRequest { string project_id = 1; string q = 2; TimeRange range = 3; int32 limit = 4; }
+message SearchLogsResponse { repeated LogEntry logs = 1; }
+message GoldenRequest { string project_id = 1; }
+message GoldenResponse { GoldenDashboard dashboard = 1; }
+
+// ----- Service -----
+
+service ObservabilityService {
+  // SLO
+  rpc CreateSLO(CreateSLORequest) returns (CreateSLOResponse);
+  rpc GetSLO(GetSLORequest) returns (GetSLOResponse);
+  rpc ListSLOsByProject(ListSLOsByProjectRequest) returns (ListSLOsByProjectResponse);
+  rpc UpdateSLO(UpdateSLORequest) returns (UpdateSLOResponse);
+  rpc DeleteSLO(DeleteSLORequest) returns (DeleteSLOResponse);
+  rpc GetSLOStatus(GetSLOStatusRequest) returns (GetSLOStatusResponse);
+  rpc GetSLOHistory(GetSLOHistoryRequest) returns (GetSLOHistoryResponse);
+
+  // Alerts
+  rpc CreateAlert(CreateAlertRequest) returns (CreateAlertResponse);
+  rpc GetAlert(GetAlertRequest) returns (GetAlertResponse);
+  rpc ListAlertsBySLO(ListAlertsBySLORequest) returns (ListAlertsBySLOResponse);
+  rpc UpdateAlert(UpdateAlertRequest) returns (UpdateAlertResponse);
+  rpc DeleteAlert(DeleteAlertRequest) returns (DeleteAlertResponse);
+  rpc GetAlertHistory(GetAlertHistoryRequest) returns (GetAlertHistoryResponse);
+
+  // Error inbox
+  rpc IngestError(IngestErrorRequest) returns (IngestErrorResponse);
+  rpc ListErrorGroups(ListErrorGroupsRequest) returns (ListErrorGroupsResponse);
+  rpc GetErrorGroup(GetErrorGroupRequest) returns (GetErrorGroupResponse);
+  rpc ListGroupEvents(ListGroupEventsRequest) returns (ListGroupEventsResponse);
+  rpc ResolveGroup(ResolveGroupRequest) returns (ResolveGroupResponse);
+
+  // Traces/logs/dashboards
+  rpc SearchTraces(SearchTracesRequest) returns (SearchTracesResponse);
+  rpc GetTrace(GetTraceRequest) returns (GetTraceResponse);
+  rpc SearchLogs(SearchLogsRequest) returns (SearchLogsResponse);
+  rpc Golden(GoldenRequest) returns (GoldenResponse);
+}
