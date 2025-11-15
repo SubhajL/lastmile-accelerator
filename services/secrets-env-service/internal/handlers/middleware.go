@@ -268,6 +268,44 @@ func TenantIsolation() func(http.Handler) http.Handler {
 	}
 }
 
+// allowedEnvs holds normalized allowed envs for handlers that validate body fields.
+var allowedEnvs = []string{"dev","staging","prod","production"}
+
+// SetAllowedEnvs normalizes and sets the allowed environments for handler-level validation.
+func SetAllowedEnvs(envs []string) {
+    m := map[string]struct{}{}
+    out := make([]string, 0, len(envs))
+    for _, e := range envs {
+        e = strings.TrimSpace(strings.ToLower(e))
+        if e == "" { continue }
+        if _, ok := m[e]; ok { continue }
+        m[e] = struct{}{}
+        out = append(out, e)
+    }
+    allowedEnvs = out
+}
+
+func isAllowedEnv(list []string, env string) bool {
+    env = strings.TrimSpace(strings.ToLower(env))
+    if env == "" { return false }
+    for _, e := range list { if e == env { return true } }
+    return false
+}
+
+// ValidateEnvQuery ensures that optional ?env= query param, when present, is allowed.
+func ValidateEnvQuery(allowed []string) func(http.Handler) http.Handler {
+    return func(next http.Handler) http.Handler {
+        return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+            env := r.URL.Query().Get("env")
+            if env != "" && !isAllowedEnv(allowed, env) {
+                Error(w, http.StatusBadRequest, "invalid environment", nil)
+                return
+            }
+            next.ServeHTTP(w, r)
+        })
+    }
+}
+
 // routePattern returns the chi route pattern for the current request, if available.
 func routePattern(r *http.Request) string {
     if r == nil { return "" }

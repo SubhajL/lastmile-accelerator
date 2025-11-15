@@ -80,6 +80,7 @@ func TestValidate_ValidConfig(t *testing.T) {
 		ServiceName: "secrets-env-service",
 		ServicePort: "7104",
 		LogLevel:    "info",
+        AllowedEnvironments: []string{"dev","staging","prod","production"},
 		Vault: VaultConfig{
 			Address:  "https://vault.example.com",
 			RoleID:   "role-123",
@@ -174,6 +175,7 @@ func cleanEnv() {
         "STORAGE_S3_ENDPOINT", "STORAGE_S3_BUCKET", "STORAGE_S3_PREFIX",
         "STORAGE_S3_"+"ACCESS_KEY", "STORAGE_S3_"+"SECRET_"+"KEY", "STORAGE_S3_USE_TLS",
 		"STORAGE_S3_IGNORE_GLOBS", "STORAGE_S3_SIZE_LIMIT_BYTES",
+        "ALLOWED_ENVS",
 	}
 	for _, v := range envVars {
 		os.Unsetenv(v)
@@ -299,4 +301,35 @@ func TestLoad_S3Config_ParsesValues(t *testing.T) {
 	assert.Equal(t, false, cfg.Storage.S3.UseTLS)
 	assert.Equal(t, int64(2048), cfg.Storage.S3.SizeLimitBytes)
 	assert.ElementsMatch(t, []string{"*.map", "dist/*"}, cfg.Storage.S3.IgnoreGlobs)
+}
+
+func TestAllowedEnvs_Defaults(t *testing.T) {
+    os.Setenv("VAULT_ADDR", "http://localhost:8200")
+    os.Setenv("VAULT_ROLE_ID", "role")
+    os.Setenv("VAULT_SECRET_"+"ID", "sec"+"ret")
+    os.Setenv("DATABASE_URL", "postgres://localhost:5432/db")
+    defer cleanEnv()
+
+    cfg, err := Load()
+    require.NoError(t, err)
+    // default should include dev, staging, prod
+    got := cfg.AllowedEnvironments
+    require.NotEmpty(t, got)
+    assert.Contains(t, got, "dev")
+    assert.Contains(t, got, "staging")
+    assert.Contains(t, got, "prod")
+}
+
+func TestAllowedEnvs_Override_Normalized(t *testing.T) {
+    os.Setenv("VAULT_ADDR", "http://localhost:8200")
+    os.Setenv("VAULT_ROLE_ID", "role")
+    os.Setenv("VAULT_SECRET_"+"ID", "sec"+"ret")
+    os.Setenv("DATABASE_URL", "postgres://localhost:5432/db")
+    os.Setenv("ALLOWED_ENVS", "Dev, Prod , DEV, staging ")
+    defer cleanEnv()
+
+    cfg, err := Load()
+    require.NoError(t, err)
+    // Normalize to lowercase and unique
+    assert.ElementsMatch(t, []string{"dev","prod","staging"}, cfg.AllowedEnvironments)
 }
