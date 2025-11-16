@@ -21,7 +21,11 @@ class DummyRedis {
 
 describe('redis/client', () => {
   const logger = { error: vi.fn() };
+<<<<<<< HEAD
   const cfg = { url: 'r' + 'edis://localhost:6379', maxRetriesPerRequest: 3 };
+=======
+  const cfg = { url: 'redis://localhost:6379', maxRetriesPerRequest: 3 };
+>>>>>>> origin/main
 
   beforeEach(() => {
     DummyRedis.instances = [];
@@ -35,7 +39,11 @@ describe('redis/client', () => {
     const r = createRedisClient(cfg as any, { RedisCtor: DummyRedis as any, logger });
 
     expect(DummyRedis.instances.length).toBe(1);
+<<<<<<< HEAD
     expect(DummyRedis.instances[0].url).toBe('r' + 'edis://localhost:6379');
+=======
+    expect(DummyRedis.instances[0].url).toBe('redis://localhost:6379');
+>>>>>>> origin/main
     expect(DummyRedis.instances[0].options.maxRetriesPerRequest).toBe(3);
     expect(r.on).toBeDefined();
   });

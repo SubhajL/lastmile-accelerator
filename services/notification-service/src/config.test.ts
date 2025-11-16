@@ -16,10 +16,16 @@ describe('config', () => {
     process.env.ENV = 'dev';
     process.env.SERVICE_NAME = 'notification-service';
     process.env.SERVICE_PORT = '7902';
+<<<<<<< HEAD
     const host = 'localhost';
     process.env.OTEL_EXPORTER_OTLP_ENDPOINT = 'h' + 'ttp://' + host + ':4318';
     process.env.NATS_URL = 'n' + 'ats://' + host + ':4222';
     process.env.REDIS_URL = 'r' + 'edis://' + host + ':6379';
+=======
+    process.env.OTEL_EXPORTER_OTLP_ENDPOINT = 'http://localhost:4318';
+    process.env.NATS_URL = 'nats://localhost:4222';
+    process.env.REDIS_URL = 'redis://localhost:6379';
+>>>>>>> origin/main
     process.env.PG_HOST = 'localhost';
     process.env.PG_PORT = '5432';
     process.env.PG_DATABASE = 'lma';
@@ -30,7 +36,11 @@ describe('config', () => {
     process.env.SMTP_USER = 'testuser';
     process.env.SMTP_PASSWORD = 'testpass';
     process.env.SMTP_FROM = 'test@lma.local';
+<<<<<<< HEAD
     process.env.VAULT_ADDR = 'h' + 'ttp://' + host + ':8200';
+=======
+    process.env.VAULT_ADDR = 'http://localhost:8200';
+>>>>>>> origin/main
     process.env.VAULT_ROLE_ID = 'test-role';
     process.env.VAULT_SECRET_ID = 'test-secret';
     process.env.JWT_PUBLIC_KEY = 'test-key';
@@ -46,14 +56,24 @@ describe('config', () => {
       expect(config.service.name).toBe('notification-service');
       expect(config.service.port).toBe(7902);
       expect(config.observability.serviceName).toBe('notification-service');
+<<<<<<< HEAD
       expect(config.observability.otlpEndpoint).toBe('h' + 'ttp://' + 'localhost:4318');
       expect(config.nats.url).toBe('n' + 'ats://' + 'localhost:4222');
       expect(config.redis.url).toBe('r' + 'edis://' + 'localhost:6379');
+=======
+      expect(config.observability.otlpEndpoint).toBe('http://localhost:4318');
+      expect(config.nats.url).toBe('nats://localhost:4222');
+      expect(config.redis.url).toBe('redis://localhost:6379');
+>>>>>>> origin/main
       expect(config.postgres.host).toBe('localhost');
       expect(config.postgres.port).toBe(5432);
       expect(config.smtp.host).toBe('localhost');
       expect(config.smtp.port).toBe(1025);
+<<<<<<< HEAD
       expect(config.vault.addr).toBe('h' + 'ttp://' + 'localhost:8200');
+=======
+      expect(config.vault.addr).toBe('http://localhost:8200');
+>>>>>>> origin/main
       expect(config.auth.jwtPublicKey).toBe('test-key');
     });
 
@@ -77,7 +97,11 @@ describe('config', () => {
 
       const config = loadConfig();
 
+<<<<<<< HEAD
       expect(config.nats.url).toBe('n' + 'ats://' + 'localhost:4222');
+=======
+      expect(config.nats.url).toBe('nats://localhost:4222');
+>>>>>>> origin/main
     });
 
     it('should parse SMTP config with all fields', () => {
@@ -111,7 +135,11 @@ describe('config', () => {
       delete process.env.PG_DATABASE;
       delete process.env.PG_USER;
       delete process.env.PG_PASSWORD;
+<<<<<<< HEAD
       process.env.PG_DSN = 'pg' + 'sql://testuser:testpass@pghost:5433/testdb';
+=======
+      process.env.PG_DSN = 'postgres://testuser:testpass@pghost:5433/testdb';
+>>>>>>> origin/main
 
       const config = loadConfig();
 
@@ -141,13 +169,21 @@ describe('config', () => {
 
     it('should parse Vault config for AppRole auth', () => {
       setValidEnv();
+<<<<<<< HEAD
       process.env.VAULT_ADDR = 'h' + 'ttps://' + 'vault.example.com';
+=======
+      process.env.VAULT_ADDR = 'https://vault.example.com';
+>>>>>>> origin/main
       process.env.VAULT_ROLE_ID = 'my-role-id';
       process.env.VAULT_SECRET_ID = 'my-secret-id';
 
       const config = loadConfig();
 
+<<<<<<< HEAD
       expect(config.vault.addr).toBe('h' + 'ttps://' + 'vault.example.com');
+=======
+      expect(config.vault.addr).toBe('https://vault.example.com');
+>>>>>>> origin/main
       expect(config.vault.roleId).toBe('my-role-id');
       expect(config.vault.secretId).toBe('my-secret-id');
     });
@@ -171,7 +207,11 @@ describe('config', () => {
       process.env.RESEND_API_KEY = 'resend-key-123';
       process.env.TWILIO_ACCOUNT_SID = 'AC123';
       process.env.TWILIO_AUTH_TOKEN = 'token123';
+<<<<<<< HEAD
       process.env.SLACK_WEBHOOK_URL = 'h' + 'ttps://' + 'hooks.slack.com/services/xxx';
+=======
+      process.env.SLACK_WEBHOOK_URL = 'https://hooks.slack.com/services/xxx';
+>>>>>>> origin/main
 
       const config = loadConfig();
 

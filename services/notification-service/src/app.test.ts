@@ -18,11 +18,19 @@ describe('app', () => {
       observability: {
         serviceName: 'notification-service',
         serviceVersion: '1.0.0',
+<<<<<<< HEAD
         otlpEndpoint: 'h' + 'ttp://localhost:4318',
         environment: 'dev'
       },
       nats: { url: 'n' + 'ats://localhost:4222' },
       redis: { url: 'r' + 'edis://localhost:6379', maxRetriesPerRequest: 3 },
+=======
+        otlpEndpoint: 'http://localhost:4318',
+        environment: 'dev'
+      },
+      nats: { url: 'nats://localhost:4222' },
+      redis: { url: 'redis://localhost:6379', maxRetriesPerRequest: 3 },
+>>>>>>> origin/main
       postgres: {
         host: 'localhost',
         port: 5432,
@@ -40,7 +48,11 @@ describe('app', () => {
         secure: false
       },
       vault: {
+<<<<<<< HEAD
         addr: 'h' + 'ttp://localhost:8200',
+=======
+        addr: 'http://localhost:8200',
+>>>>>>> origin/main
         roleId: 'test',
         secretId: 'test'
       },
