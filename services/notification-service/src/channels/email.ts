@@ -1,6 +1,8 @@
 import type nodemailer from 'nodemailer';
 import type { NotificationJob } from '../consumers/types.js';
 import { withTimeout, createRetry, TimeoutError } from './reliability.js';
+import { getTracer } from '../telemetry/tracing.js';
+import { SpanStatusCode } from '@opentelemetry/api';
 
 export type TemplateRenderer = (
   templateName: string,
@@ -24,8 +26,12 @@ export interface EmailChannel {
 export function createEmailChannel(opts: EmailChannelOptions): EmailChannel {
   return {
     async send(job: NotificationJob): Promise<SendResult> {
+      const tracer = getTracer('notification-service');
+      const span = tracer.startSpan('channel.email.send', { attributes: { channel: 'email' } });
+      span.setAttributes({ channel: 'email' });
       try {
         const to = await opts.resolveTo(job);
+        span.setAttributes({ channel: 'email', to });
         const { subject, html, text } = await opts.renderTemplate(job.templateName, job.payload);
         const retry = opts.reliability && createRetry<void>({
           max: opts.reliability.retry.max,
@@ -40,9 +46,16 @@ export function createEmailChannel(opts: EmailChannelOptions): EmailChannel {
         } else {
           await sendOnce();
         }
+        span.setStatus({ code: SpanStatusCode.OK });
+        span.end();
         return { ok: true };
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
+        if (err instanceof Error && typeof (span as { recordException?: (er: Error) => void }).recordException === 'function') {
+          (span as { recordException: (er: Error) => void }).recordException(err);
+        }
+        span.setStatus({ code: SpanStatusCode.ERROR, message: msg });
+        span.end();
         return { ok: false, error: msg };
       }
     }
