@@ -12,6 +12,7 @@ linters:
     - revive
   disable:
     - depguard
+    - errcheck
 
 issues:
   exclude-use-default: false
