@@ -13,6 +13,8 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "quality:check": "bunx turbo run typecheck lint --concurrency=50% && node scripts/check-any-budget.mjs && bunx turbo run test:typecheck --concurrency=50%",
+    "openapi:export": "cargo run --manifest-path services/dep-governance-service/Cargo.toml --bin openapi_export",
+    "openapi:lint": "bunx @redocly/openapi-cli@latest lint services/dep-governance-service/openapi.yaml",
     "prepare": "husky install"
   },
   "devDependencies": {

@@ -1,0 +1,24 @@
+name: openapi-validate
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+jobs:
+  openapi-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Export OpenAPI artifacts
+        run: |
+          cargo run --manifest-path services/dep-governance-service/Cargo.toml --bin openapi_export
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: 1.0.0
+      - name: Lint OpenAPI YAML with Redocly
+        run: bun run openapi:lint
+      - name: Assert artifacts in sync with code
+        run: |
+          git diff --exit-code -- services/dep-governance-service/openapi.json services/dep-governance-service/openapi.yaml
