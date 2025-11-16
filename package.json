@@ -12,12 +12,8 @@
     "test": "turbo run test",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
-<<<<<<< HEAD
     "quality:check": "bunx turbo run typecheck lint && node scripts/check-any-budget.mjs --config .any-budget.json && bunx turbo run test:typecheck --continue",
     "prepare": "husky"
-=======
-    "quality:check": "bunx turbo run typecheck lint && node scripts/check-any-budget.mjs --config .any-budget.json && bunx turbo run test:typecheck --continue"
->>>>>>> 8320f36 (chore(quality): add quality-check job (typecheck+lint+any-budget+test:typecheck) and scripts\n\n- Add scripts/check-any-budget.mjs and .any-budget.json baseline\n- Add root script quality:check and Husky pre-push (lint-staged + turbo on changed pkgs)\n- Add tsconfig.spec.json and test:typecheck in notification-service\n- Add workflow CI / quality-check)
   },
   "devDependencies": {
     "@types/node": "20.11.30",
