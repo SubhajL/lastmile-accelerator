@@ -61,7 +61,7 @@ func (r *MigrationAuditsRepository) ListByProject(ctx context.Context, projectID
 	if err != nil {
 		return nil, fmt.Errorf("failed to list migration audits: %w", err)
 	}
-	defer rows.Close()
+    defer func(){ _ = rows.Close() }()
 
 	var audits []models.MigrationAudit
 	for rows.Next() {

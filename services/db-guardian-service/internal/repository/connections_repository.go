@@ -85,7 +85,7 @@ func (r *ConnectionsRepository) ListByProject(ctx context.Context, projectID str
 	if err != nil {
 		return nil, fmt.Errorf("failed to list connections: %w", err)
 	}
-	defer rows.Close()
+    defer func(){ _ = rows.Close() }()
 
 	var connections []models.DBConnection
 	for rows.Next() {

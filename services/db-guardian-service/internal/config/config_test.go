@@ -1,8 +1,7 @@
 package config
 
 import (
-	"os"
-	"testing"
+    "testing"
 )
 
 func TestLoad_WithAllEnvVars_ReturnsValidConfig(t *testing.T) {
@@ -20,10 +19,7 @@ func TestLoad_WithAllEnvVars_ReturnsValidConfig(t *testing.T) {
 		"VAULT_ROLE_ID":                "test-role",
 		"VAULT_SECRET_ID":              "test-secret",
 	}
-	for k, v := range envVars {
-		os.Setenv(k, v)
-		defer os.Unsetenv(k)
-	}
+    for k, v := range envVars { t.Setenv(k, v) }
 
 	// Act
 	cfg, err := Load()
@@ -45,8 +41,7 @@ func TestLoad_WithAllEnvVars_ReturnsValidConfig(t *testing.T) {
 
 func TestLoad_WithDefaults_UsesDefaultValues(t *testing.T) {
 	// Arrange
-	os.Setenv("SERVICE_NAME", "db-guardian-service")
-	defer os.Unsetenv("SERVICE_NAME")
+    t.Setenv("SERVICE_NAME", "db-guardian-service")
 
 	// Act
 	cfg, err := Load()
@@ -68,7 +63,7 @@ func TestLoad_WithDefaults_UsesDefaultValues(t *testing.T) {
 
 func TestLoad_MissingRequired_ReturnsError(t *testing.T) {
 	// Arrange - no SERVICE_NAME set
-	os.Unsetenv("SERVICE_NAME")
+    t.Setenv("SERVICE_NAME", "")
 
 	// Act
 	_, err := Load()
