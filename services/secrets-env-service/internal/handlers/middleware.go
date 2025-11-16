@@ -25,6 +25,7 @@ type Claims struct {
 	TenantID  string
 	ProjectID string
 	Scopes    []string
+    Roles     []string
 }
 
 type ctxKeyClaims struct{}
@@ -181,24 +182,24 @@ func RBACAugment() func(http.Handler) http.Handler {
 				next.ServeHTTP(w, r)
 				return
 			}
-			rolesHeader := r.Header.Get("X-Roles")
-			roles := []string{}
-			if rolesHeader != "" { roles = strings.Split(rolesHeader, ",") }
-			aug := claims.Scopes
-			for i := range roles { roles[i] = strings.TrimSpace(strings.ToLower(roles[i])) }
-			for _, role := range roles {
-				switch role {
-				case "admin":
-					aug = mergeScopes(aug, []string{"secrets:write", "parity:compute", "leaks:write"})
-				case "auditor":
-					aug = mergeScopes(aug, []string{"secrets:read", "parity:read", "leaks:read"})
-				}
-			}
+            aug := claims.Scopes
+            roles := make([]string, len(claims.Roles))
+            copy(roles, claims.Roles)
+            for i := range roles { roles[i] = strings.TrimSpace(strings.ToLower(roles[i])) }
+            for _, role := range roles {
+                switch role {
+                case "admin":
+                    aug = mergeScopes(aug, []string{"secrets:write", "parity:compute", "leaks:write", "secrets:read", "parity:read", "leaks:read"})
+                case "auditor":
+                    aug = mergeScopes(aug, []string{"secrets:read", "parity:read", "leaks:read"})
+                }
+            }
 			ctx := context.WithValue(r.Context(), ctxKeyClaims{}, Claims{
 				Subject:   claims.Subject,
 				TenantID:  claims.TenantID,
 				ProjectID: claims.ProjectID,
-				Scopes:    aug,
+                Scopes:    aug,
+                Roles:     roles,
 			})
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})

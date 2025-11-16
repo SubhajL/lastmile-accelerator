@@ -119,7 +119,7 @@ func TestIntegration_SecretsCreate_SucceedsWithScopesAndTenant(t *testing.T) {
 }
 
 func TestIntegration_RBAC_AugmentsScopes_AllowsWithoutDirectScope(t *testing.T) {
-	ver := &fakeVerifier{allow:true, claims: handlers.Claims{TenantID:"t1", ProjectID:"p", Scopes: []string{"secrets:read"}}}
+    ver := &fakeVerifier{allow:true, claims: handlers.Claims{TenantID:"t1", ProjectID:"p", Scopes: []string{"secrets:read"}, Roles: []string{"admin"}}}
 	log := appLogger.New("test","info", new(bytes.Buffer))
 	router := SetupRoutes(okSecretsHandler{}, nil, nil, handlers.PanicRecovery(log), handlers.RequestLogger(log), handlers.JWTAuth(ver), handlers.RBACAugment())
 	ts := httptest.NewServer(router)
@@ -130,7 +130,6 @@ func TestIntegration_RBAC_AugmentsScopes_AllowsWithoutDirectScope(t *testing.T) 
 	req.Header.Set("Content-Type","application/json")
 	req.Header.Set("Authorization","Bearer ok")
 	req.Header.Set("X-Tenant-ID","t1")
-	req.Header.Set("X-Roles", "admin")
 	resp, _ := http.DefaultClient.Do(req)
 	if resp.StatusCode != http.StatusCreated { t.Fatalf("want 201 with RBAC admin, got %d", resp.StatusCode) }
 }

@@ -263,24 +263,33 @@ func unaryRateLimit(l *security.RateLimiter) grpc.UnaryServerInterceptor {
 func unaryRBACAugment() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 		claims, ok := handlers.ClaimsFromContext(ctx)
-		if !ok { return handler(ctx, req) }
-		md, _ := metadata.FromIncomingContext(ctx)
-		var roles []string
-		if md != nil {
-			roles = md.Get("x-roles")
-		}
-		aug := claims.Scopes
-		for _, role := range roles {
-			switch strings.ToLower(strings.TrimSpace(role)) {
-			case "admin":
-				aug = append(aug, "secrets:write", "parity:compute", "leaks:write")
-			case "auditor":
-				aug = append(aug, "secrets:read", "parity:read", "leaks:read")
-			}
-		}
-		ctx = handlers.WithClaims(ctx, handlers.Claims{Subject: claims.Subject, TenantID: claims.TenantID, ProjectID: claims.ProjectID, Scopes: aug})
+        if !ok { return handler(ctx, req) }
+        roles := make([]string, len(claims.Roles))
+        copy(roles, claims.Roles)
+        aug := claims.Scopes
+        for _, role := range roles {
+            switch strings.ToLower(strings.TrimSpace(role)) {
+            case "admin":
+                aug = append(aug, "secrets:write", "parity:compute", "leaks:write", "secrets:read", "parity:read", "leaks:read")
+            case "auditor":
+                aug = append(aug, "secrets:read", "parity:read", "leaks:read")
+            }
+        }
+        ctx = handlers.WithClaims(ctx, handlers.Claims{Subject: claims.Subject, TenantID: claims.TenantID, ProjectID: claims.ProjectID, Scopes: dedupScopes(aug), Roles: roles})
 		return handler(ctx, req)
 	}
+}
+
+func dedupScopes(in []string) []string {
+    m := map[string]struct{}{}
+    out := make([]string, 0, len(in))
+    for _, s := range in {
+        if s == "" { continue }
+        if _, ok := m[s]; ok { continue }
+        m[s] = struct{}{}
+        out = append(out, s)
+    }
+    return out
 }
 
 // unaryEnvAllowlist validates env parameters present in requests and rejects disallowed values.

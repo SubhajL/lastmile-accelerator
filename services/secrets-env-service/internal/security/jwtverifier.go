@@ -100,11 +100,12 @@ func (v *JWKSVerifier) Verify(ctx context.Context, tokenStr string) (*handlers.C
 	}
 
 	// Extract custom claims
-	tenantID, _ := stringField(claims, "tenant_id")
-	projectID, _ := stringField(claims, "project_id")
-	subject, _ := stringField(claims, "sub")
-	scopes := scopesFromClaims(claims)
-	return &handlers.Claims{Subject: subject, TenantID: tenantID, ProjectID: projectID, Scopes: scopes}, nil
+    tenantID, _ := stringField(claims, "tenant_id")
+    projectID, _ := stringField(claims, "project_id")
+    subject, _ := stringField(claims, "sub")
+    scopes := scopesFromClaims(claims)
+    roles := rolesFromClaims(claims)
+    return &handlers.Claims{Subject: subject, TenantID: tenantID, ProjectID: projectID, Scopes: scopes, Roles: roles}, nil
 }
 
 func (v *JWKSVerifier) getKey(kid string) interface{} {
@@ -186,6 +187,26 @@ func scopesFromClaims(m jwt.MapClaims) []string {
 	default:
 		return nil
 	}
+}
+
+func rolesFromClaims(m jwt.MapClaims) []string {
+    v, ok := m["roles"]
+    if !ok || v == nil { return nil }
+    out := []string{}
+    switch s := v.(type) {
+    case []any:
+        for _, x := range s { if str, ok := x.(string); ok { out = append(out, strings.ToLower(strings.TrimSpace(str))) } }
+    case []string:
+        for _, str := range s { out = append(out, strings.ToLower(strings.TrimSpace(str))) }
+    case string:
+        fields := strings.FieldsFunc(s, func(r rune) bool { return r == ' ' || r == ',' })
+        for _, f := range fields { out = append(out, strings.ToLower(strings.TrimSpace(f))) }
+    }
+    // dedupe
+    seen := map[string]struct{}{}
+    uniq := make([]string, 0, len(out))
+    for _, r := range out { if r=="" {continue}; if _,ok:=seen[r]; ok {continue}; seen[r]=struct{}{}; uniq=append(uniq,r) }
+    return uniq
 }
 
 func checkExpNbf(m jwt.MapClaims) error {
