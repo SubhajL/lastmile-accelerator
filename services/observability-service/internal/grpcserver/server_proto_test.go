@@ -45,8 +45,12 @@ func (f *fakeQueries2) SearchTraces(ctx context.Context, service, operation stri
     return []traces.TraceSummary{{TraceID: "t1", Service: "svc", Operation: "op", DurationMs: 10, Error: false}}, nil
 }
 func (f *fakeQueries2) GetTrace(ctx context.Context, id string) (*traces.TraceDetail, error) { return &traces.TraceDetail{TraceID: id}, nil }
-func (f *fakeQueries2) SearchLogs(ctx context.Context, q string, start, end time.Time, limit int, direction string) ([]logs.LogEntry, error) { return nil, nil }
+func (f *fakeQueries2) SearchLogs(ctx context.Context, q string, start, end time.Time, limit int, direction string) ([]logs.LogEntry, error) {
+    return []logs.LogEntry{{Timestamp: time.Now(), Line: "hello", Labels: map[string]string{"lvl":"info"}}}, nil
+}
 func (f *fakeQueries2) Golden(ctx context.Context, service string, window time.Duration) (*services.GoldenSignals, error) { return &services.GoldenSignals{RequestRate: 1, ErrorRate: 0, P95Latency: 0.1}, nil }
+
+// fake alert/error services are defined in other *_test.go files in this package
 
 func dialBufConnProto(t *testing.T, slo *fakeSLOService2, q *fakeQueries2, scopes []string) (context.Context, *grpc.ClientConn, func()) {
     t.Helper()
