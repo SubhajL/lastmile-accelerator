@@ -186,34 +186,57 @@ message GoldenResponse { GoldenDashboard dashboard = 1; }
 
 // ----- Service -----
 
+// ObservabilityService provides SLO, Alerts, Errors, and query APIs.
 service ObservabilityService {
   // SLO
+  // CreateSLO creates a new SLO.
   rpc CreateSLO(CreateSLORequest) returns (CreateSLOResponse);
+  // GetSLO returns an SLO by ID.
   rpc GetSLO(GetSLORequest) returns (GetSLOResponse);
+  // ListSLOsByProject lists SLOs for a project.
   rpc ListSLOsByProject(ListSLOsByProjectRequest) returns (ListSLOsByProjectResponse);
+  // UpdateSLO updates an existing SLO.
   rpc UpdateSLO(UpdateSLORequest) returns (UpdateSLOResponse);
+  // DeleteSLO deletes an SLO by ID.
   rpc DeleteSLO(DeleteSLORequest) returns (DeleteSLOResponse);
+  // GetSLOStatus returns current compliance metrics for an SLO.
   rpc GetSLOStatus(GetSLOStatusRequest) returns (GetSLOStatusResponse);
+  // GetSLOHistory returns historical compliance for an SLO within a range.
   rpc GetSLOHistory(GetSLOHistoryRequest) returns (GetSLOHistoryResponse);
 
   // Alerts
+  // CreateAlert creates an alert rule for an SLO.
   rpc CreateAlert(CreateAlertRequest) returns (CreateAlertResponse);
+  // GetAlert returns an alert rule by ID.
   rpc GetAlert(GetAlertRequest) returns (GetAlertResponse);
+  // ListAlertsBySLO lists alert rules for an SLO.
   rpc ListAlertsBySLO(ListAlertsBySLORequest) returns (ListAlertsBySLOResponse);
+  // UpdateAlert updates an alert rule.
   rpc UpdateAlert(UpdateAlertRequest) returns (UpdateAlertResponse);
+  // DeleteAlert deletes an alert rule by ID.
   rpc DeleteAlert(DeleteAlertRequest) returns (DeleteAlertResponse);
+  // GetAlertHistory lists alert events for a rule.
   rpc GetAlertHistory(GetAlertHistoryRequest) returns (GetAlertHistoryResponse);
 
   // Error inbox
+  // IngestError records an error event and groups it.
   rpc IngestError(IngestErrorRequest) returns (IngestErrorResponse);
+  // ListErrorGroups lists error groups for a project.
   rpc ListErrorGroups(ListErrorGroupsRequest) returns (ListErrorGroupsResponse);
+  // GetErrorGroup returns an error group by ID.
   rpc GetErrorGroup(GetErrorGroupRequest) returns (GetErrorGroupResponse);
+  // ListGroupEvents lists events for an error group.
   rpc ListGroupEvents(ListGroupEventsRequest) returns (ListGroupEventsResponse);
+  // ResolveGroup marks an error group as resolved.
   rpc ResolveGroup(ResolveGroupRequest) returns (ResolveGroupResponse);
 
   // Traces/logs/dashboards
+  // SearchTraces queries trace summaries for a project.
   rpc SearchTraces(SearchTracesRequest) returns (SearchTracesResponse);
+  // GetTrace returns a full trace by ID.
   rpc GetTrace(GetTraceRequest) returns (GetTraceResponse);
+  // SearchLogs queries logs using the provider's syntax.
   rpc SearchLogs(SearchLogsRequest) returns (SearchLogsResponse);
+  // Golden returns golden-signal metrics for a project.
   rpc Golden(GoldenRequest) returns (GoldenResponse);
 }

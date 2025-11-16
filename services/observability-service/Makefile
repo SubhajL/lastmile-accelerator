@@ -1,7 +1,7 @@
 SVC=observability-service
 TAG?=dev
 
-.PHONY: build test lint coverage image sbom run clean budget proto proto.clean proto.verify
+.PHONY: build test lint coverage image sbom run clean budget proto proto.clean proto.verify docs.verify
 
 build:
 	go build -o bin/app ./cmd/$(SVC)
@@ -67,3 +67,7 @@ proto.clean:
 
 proto.verify: proto
 	@echo "proto: generation succeeded; please ensure generated files are committed"
+
+# ---- Docs ----
+docs.verify:
+	go test ./internal/docs -v
