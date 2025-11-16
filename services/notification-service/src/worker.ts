@@ -18,6 +18,7 @@ import { createWebhookChannel } from './channels/webhook/http.js';
 import { createSlackChannel } from './channels/slack/slack.js';
 import { createNatsSubscribe } from './events/nats-subscribe.js';
 import { createNotificationQueue } from './notifications/queue.js';
+import { createDbClient } from './db/client.js';
 import { SubscriptionSubjects } from './events/subjects.js';
 import { createRedisClient } from './redis/client.js';
 import { createTemplateStore } from './templates/store.js';
@@ -32,7 +33,11 @@ export async function bootstrap() {
 
   // Redis + queue
   const redis = createRedisClient(cfg.redis, { RedisCtor: IORedis, logger: console });
-  const queue = createNotificationQueue(redis as any);
+  const db = createDbClient(cfg.postgres);
+  const queue = createNotificationQueue(redis as any, {
+    db: db as any,
+    outboxDedupEnabled: Boolean(cfg.features?.outboxEnqueueDedup)
+  });
 
   // NATS
   const nc = await natsConnect({ servers: cfg.nats.url });

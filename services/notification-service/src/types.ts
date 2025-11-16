@@ -108,4 +108,9 @@ export interface Config {
   templates: TemplatesConfig;
   queue: QueueRuntimeConfig;
   reliability: ChannelReliabilityConfig;
+  features: FeaturesConfig;
+}
+
+export interface FeaturesConfig {
+  outboxEnqueueDedup: boolean;
 }

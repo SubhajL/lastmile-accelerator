@@ -1,5 +1,6 @@
 import type Redis from 'ioredis';
 import type { NotificationJob, NotificationPriority } from '../consumers/types.js';
+import { upsertOutboxPending } from '../outbox/pg-outbox.js';
 import { randomUUID } from 'crypto';
 
 export interface NotificationQueue {
@@ -23,12 +24,27 @@ const PRIORITY_SCORES: Record<NotificationPriority, number> = {
   low: 1
 };
 
-export function createNotificationQueue(redis: Redis): NotificationQueue {
+type QueueOptions = {
+  db?: { query: (text: string, params?: unknown[]) => Promise<{ rows: unknown[] }> };
+  outboxDedupEnabled?: boolean;
+  dedupKeyFn?: (input: Omit<NotificationJob, 'id' | 'createdAt' | 'attempt'>) => string;
+};
+
+export function createNotificationQueue(redis: Redis, opts?: QueueOptions): NotificationQueue {
   return {
     async enqueue(notification) {
       const jobId = randomUUID();
       const now = Date.now();
       
+      // Enqueue-time dedup via PG outbox when feature flag enabled
+      if (opts?.outboxDedupEnabled && opts.db) {
+        const key = (opts.dedupKeyFn ?? defaultDedupKeyForJobInput)(notification);
+        const inserted = await upsertOutboxPending(opts.db, key);
+        if (!inserted) {
+          return jobId; // suppressed duplicate
+        }
+      }
+
       const job: NotificationJob = {
         ...notification,
         id: jobId,
@@ -142,4 +158,21 @@ export function createNotificationQueue(redis: Redis): NotificationQueue {
       return await redis.hlen(PROCESSING_KEY);
     }
   };
+}
+
+function sortDeep<T>(v: T): T {
+  if (Array.isArray(v)) return v.map(sortDeep) as unknown as T;
+  if (v && typeof v === 'object') {
+    const o = v as Record<string, unknown>;
+    const sorted: Record<string, unknown> = {};
+    for (const k of Object.keys(o).sort()) sorted[k] = sortDeep(o[k]);
+    return sorted as unknown as T;
+  }
+  return v;
+}
+
+function defaultDedupKeyForJobInput(input: Omit<NotificationJob, 'id' | 'createdAt' | 'attempt'>): string {
+  const base = `${input.tenantId}:${input.userId}:${input.channel}:${input.templateName}`;
+  const payload = JSON.stringify(sortDeep(input.payload));
+  return `${base}:${payload}`;
 }

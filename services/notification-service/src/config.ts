@@ -31,7 +31,8 @@ export function loadConfig(): Config {
     channels: parseOptionalProviders(),
     templates: parseTemplatesConfig(),
     queue: parseQueueRuntimeConfig(),
-    reliability: parseChannelReliabilityConfig()
+    reliability: parseChannelReliabilityConfig(),
+    features: parseFeaturesConfig()
   };
 }
 
@@ -215,6 +216,12 @@ function parseChannelReliabilityConfig(): ChannelReliabilityConfig {
     retry: { max: retryMax, baseMs: retryBase, jitterPct },
     breaker: { failureThreshold, windowSize, halfOpenAfterMs }
   };
+}
+
+function parseFeaturesConfig() {
+  const v = (process.env.OUTBOX_ENQUEUE_DEDUP || '').toLowerCase();
+  const outboxEnqueueDedup = v === '1' || v === 'true' || v === 'yes';
+  return { outboxEnqueueDedup };
 }
 
 function validateRequiredEnvVars(vars: string[]): void {
