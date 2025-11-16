@@ -39,8 +39,8 @@ func (s *DriftService) Check(ctx context.Context, projectID string) (*dto.DriftR
 		if err != nil { continue }
 		live := map[string]bool{}
 		for _, i := range idxs { live[i.Name] = true }
-		for rn := range recNames { if strings.HasPrefix(rn, "idx_"+tbl) && !live[rn] { missing = append(missing, rn) } }
-		for ln := range live { if recNames[ln] == false { extra = append(extra, ln) } }
+        for rn := range recNames { if strings.HasPrefix(rn, "idx_"+tbl) && !live[rn] { missing = append(missing, rn) } }
+        for ln := range live { if !recNames[ln] { extra = append(extra, ln) } }
 	}
 	return &dto.DriftResponse{MissingIndexes: missing, ExtraIndexes: extra, RoleDrift: []string{}}, nil
 }
