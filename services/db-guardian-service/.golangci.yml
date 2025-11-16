@@ -2,11 +2,6 @@ run:
   timeout: 3m
   tests: true
 
-path-ignore:
-  - vendor/**
-  - tmp/**
-  - dbguardian/v1/** # generated gRPC code
-
 linters:
   enable:
     - govet
