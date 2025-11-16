@@ -1,0 +1,8 @@
+{
+  "cveId": "CVE-2025-1234",
+  "severity": "low",
+  "cvssScore": 4.5,
+  "description": "Example CVE",
+  "publishedAt": null,
+  "source": "OSV"
+}

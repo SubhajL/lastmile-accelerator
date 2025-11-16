@@ -1,0 +1,5 @@
+{
+  "format": "spdx_json",
+  "storageKey": "s3://bucket/example.json",
+  "fileHash": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+}
