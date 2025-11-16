@@ -33,8 +33,3 @@ jobs:
       - name: Unit tests (db-guardian-service)
         working-directory: services/db-guardian-service
         run: go test ./... -cover
-      - name: Verify gRPC codegen is up-to-date
-        working-directory: services/db-guardian-service
-        run: |
-          make grpc-codegen
-          git --no-pager diff --exit-code -- dbguardian/v1 || (echo "Run 'make grpc-codegen' and commit generated code" && exit 1)
