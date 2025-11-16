@@ -24,8 +24,8 @@ jobs:
       - name: Install protoc plugins
         run: |
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-          go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.35.1
-          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.5.1
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.33.0
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
       - name: go vet (db-guardian-service)
         working-directory: services/db-guardian-service
         run: go vet ./...
