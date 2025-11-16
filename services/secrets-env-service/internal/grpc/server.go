@@ -22,6 +22,9 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	health "google.golang.org/grpc/health"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/reflection"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 )
@@ -83,7 +86,7 @@ type server struct {
 }
 
 // StartGRPCServer starts the gRPC server on addr and blocks until ctx is canceled.
-func StartGRPCServer(ctx context.Context, addr string, secrets *service.SecretsService, parity *service.ParityService, verifier handlers.TokenVerifier, log zerolog.Logger, tlsConfig *tls.Config, allowed []string) error {
+func StartGRPCServer(ctx context.Context, addr string, secrets *service.SecretsService, parity *service.ParityService, verifier handlers.TokenVerifier, log zerolog.Logger, tlsConfig *tls.Config, allowed []string, enableHealth bool, enableReflection bool) error {
 	// Interceptor chain: recovery -> logging -> auth -> scope enforcement
 	svc := &server{secrets: secrets, parity: parity, log: log}
 
@@ -113,6 +116,19 @@ if tlsConfig != nil {
 gs := grpc.NewServer(opts...)
 pb.RegisterSecretsEnvServiceServer(gs, svc)
 
+    // Optional health and reflection
+    var hs *health.Server
+    if enableHealth {
+        var cleanup func()
+        hs, cleanup = registerHealth(gs, ctx)
+        _ = cleanup
+        // Mark overall server as SERVING
+        hs.SetServingStatus("", healthpb.HealthCheckResponse_SERVING)
+    }
+    if enableReflection {
+        registerReflection(gs)
+    }
+
 	lis, err := net.Listen("tcp", addr)
 	if err != nil { return err }
 	go func() {
@@ -121,6 +137,20 @@ pb.RegisterSecretsEnvServiceServer(gs, svc)
 		_ = lis.Close()
 	}()
 	return gs.Serve(lis)
+}
+
+// registerHealth registers the health server and ties its shutdown to ctx.
+func registerHealth(gs *grpc.Server, ctx context.Context) (*health.Server, func()) {
+    hs := health.NewServer()
+    healthpb.RegisterHealthServer(gs, hs)
+    cleanup := func() { hs.Shutdown() }
+    go func() { <-ctx.Done(); hs.Shutdown() }()
+    return hs, cleanup
+}
+
+// registerReflection registers the gRPC reflection service.
+func registerReflection(gs *grpc.Server) {
+    reflection.Register(gs)
 }
 
 // Handlers (pb interfaces)

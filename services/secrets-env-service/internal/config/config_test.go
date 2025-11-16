@@ -303,6 +303,34 @@ func TestLoad_S3Config_ParsesValues(t *testing.T) {
 	assert.ElementsMatch(t, []string{"*.map", "dist/*"}, cfg.Storage.S3.IgnoreGlobs)
 }
 
+func TestGRPC_Toggles_DefaultFalse(t *testing.T) {
+    os.Setenv("VAULT_ADDR", "http://localhost:8200")
+    os.Setenv("VAULT_ROLE_ID", "role")
+    os.Setenv("VAULT_SECRET_"+"ID", "sec"+"ret")
+    os.Setenv("DATABASE_URL", "postgres://localhost:5432/db")
+    defer cleanEnv()
+
+    cfg, err := Load()
+    require.NoError(t, err)
+    assert.False(t, cfg.GRPC.EnableHealth)
+    assert.False(t, cfg.GRPC.EnableReflection)
+}
+
+func TestGRPC_Toggles_EnvOverrideTrue(t *testing.T) {
+    os.Setenv("VAULT_ADDR", "http://localhost:8200")
+    os.Setenv("VAULT_ROLE_ID", "role")
+    os.Setenv("VAULT_SECRET_"+"ID", "sec"+"ret")
+    os.Setenv("DATABASE_URL", "postgres://localhost:5432/db")
+    os.Setenv("GRPC_HEALTH_ENABLED", "true")
+    os.Setenv("GRPC_REFLECTION_ENABLED", "1")
+    defer cleanEnv()
+
+    cfg, err := Load()
+    require.NoError(t, err)
+    assert.True(t, cfg.GRPC.EnableHealth)
+    assert.True(t, cfg.GRPC.EnableReflection)
+}
+
 func TestAllowedEnvs_Defaults(t *testing.T) {
     os.Setenv("VAULT_ADDR", "http://localhost:8200")
     os.Setenv("VAULT_ROLE_ID", "role")

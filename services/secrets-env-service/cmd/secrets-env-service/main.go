@@ -158,7 +158,7 @@ func main() {
 	// Set allowed envs for handlers that validate body envs
 	handlers.SetAllowedEnvs(cfg.AllowedEnvironments)
 	go func() {
-		_ = grpcapi.StartGRPCServer(appCtx, ":50064", secretsSvc, paritySvc, verifier, log, tlsCfg, cfg.AllowedEnvironments)
+		_ = grpcapi.StartGRPCServer(appCtx, ":50064", secretsSvc, paritySvc, verifier, log, tlsCfg, cfg.AllowedEnvironments, cfg.GRPC.EnableHealth, cfg.GRPC.EnableReflection)
 	}()
 
     <-appCtx.Done()

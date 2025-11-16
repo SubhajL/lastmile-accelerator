@@ -25,6 +25,13 @@ type Config struct {
 	RateLimit     RateLimitConfig
     AllowedEnvironments []string
     HTTPMaxBodyBytes    int64
+    GRPC                GRPCConfig
+}
+
+// GRPCConfig holds gRPC feature toggles
+type GRPCConfig struct {
+    EnableHealth     bool
+    EnableReflection bool
 }
 
 // VaultConfig holds Vault-specific configuration
@@ -169,6 +176,10 @@ func Load() (*Config, error) {
 		},
         AllowedEnvironments: normalizeEnvs(getEnvAsList("ALLOWED_ENVS", []string{"dev","staging","prod","production"})),
         HTTPMaxBodyBytes:    getEnvAsInt64("HTTP_MAX_BODY_BYTES", 1<<20),
+        GRPC: GRPCConfig{
+            EnableHealth:     getEnvAsBool("GRPC_HEALTH_ENABLED", false),
+            EnableReflection: getEnvAsBool("GRPC_REFLECTION_ENABLED", false),
+        },
 	}
 
 	if err := cfg.Validate(); err != nil {
