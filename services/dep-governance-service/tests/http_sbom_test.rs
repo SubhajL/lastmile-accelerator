@@ -3,7 +3,7 @@ use axum::response::IntoResponse;
 use dep_governance_service::handlers::api::sbom::{create_sbom_handler, get_latest_sbom_handler, SbomCreateRequest};
 use dep_governance_service::db::migrate::test_pool;
 use axum::extract::State;
-use axum::Json;
+use dep_governance_service::web::strict_json::StrictJson;
 use uuid::Uuid;
 
 #[tokio::test]
@@ -17,7 +17,7 @@ async fn test_post_and_get_sbom_happy_path() {
         file_hash: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef".into(),
     };
 
-    let created = create_sbom_handler(Path(snapshot_id), State(pool.clone()), Json(req)).await.unwrap();
+    let created = create_sbom_handler(Path(snapshot_id), State(pool.clone()), dep_governance_service::web::strict_json::StrictJson(req)).await.unwrap();
     let created_resp = created.into_response();
     assert_eq!(created_resp.status(), StatusCode::CREATED);
 
@@ -37,7 +37,7 @@ async fn test_post_sbom_validates_input() {
         file_hash: "not-a-sha".into(),
     };
 
-    let res = create_sbom_handler(Path(snapshot_id), State(pool), Json(bad_req)).await;
+    let res = create_sbom_handler(Path(snapshot_id), State(pool), dep_governance_service::web::strict_json::StrictJson(bad_req)).await;
     assert!(res.is_err());
 }
 
@@ -52,7 +52,7 @@ async fn test_post_sbom_duplicate_storage_key_returns_409() {
         file_hash: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa".into(),
     };
 
-    let created = create_sbom_handler(Path(snapshot_id), State(pool.clone()), Json(req)).await.unwrap();
+    let created = create_sbom_handler(Path(snapshot_id), State(pool.clone()), StrictJson(req)).await.unwrap();
     assert_eq!(created.into_response().status(), StatusCode::CREATED);
 
     // duplicate storage_key should violate unique constraint -> 409
@@ -61,7 +61,7 @@ async fn test_post_sbom_duplicate_storage_key_returns_409() {
         storage_key: "s3://bucket/sboms/dupe.json".into(),
         file_hash: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb".into(),
     };
-    let res = create_sbom_handler(Path(Uuid::new_v4()), State(pool.clone()), Json(req2)).await;
+    let res = create_sbom_handler(Path(Uuid::new_v4()), State(pool.clone()), StrictJson(req2)).await;
     let err = match res {
         Ok(ok) => panic!("expected error, got {}", ok.into_response().status()),
         Err(e) => e,

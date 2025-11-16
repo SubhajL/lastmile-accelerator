@@ -4,7 +4,7 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 
 #[derive(Deserialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct UpsertCveRequest {
     pub cve_id: String,
     pub severity: String,
@@ -28,7 +28,7 @@ pub struct CveResponse {
 }
 
 #[derive(Deserialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct LinkVulnRequest {
     pub cve_id: String,
     pub status: String,

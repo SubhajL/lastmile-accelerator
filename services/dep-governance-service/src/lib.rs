@@ -7,9 +7,11 @@ pub mod middleware;
 pub mod models;
 pub mod services;
 pub mod errors;
-pub mod metrics;
 pub mod openapi;
-// web & validation modules are added in api-validation-polish upstack
+pub mod metrics;
+pub mod web;
+pub mod validation;
+// modules above are added across stacked branches
 
 pub use config::AppConfig;
 pub use error::{AppError, Result};

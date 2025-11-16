@@ -44,8 +44,10 @@ fn parse_published_at(s: &Option<String>) -> Result<Option<DateTime<Utc>>, AppEr
 )]
 pub async fn upsert_cve_handler(
     State(pool): State<PgPool>,
-    Json(req): Json<UpsertCveRequest>,
+    crate::web::strict_json::StrictJson(req): crate::web::strict_json::StrictJson<UpsertCveRequest>,
 ) -> Result<Json<CveResponse>, AppError> {
+    crate::validation::validate_cve_id(&req.cve_id)?;
+    crate::validation::validate_cvss_score(req.cvss_score)?;
     let severity = parse_severity(&req.severity)?;
     let published_at = parse_published_at(&req.published_at)?;
 
@@ -88,7 +90,7 @@ pub async fn upsert_cve_handler(
 pub async fn link_vuln_handler(
     Path(dependency_id): Path<Uuid>,
     State(pool): State<PgPool>,
-    Json(req): Json<LinkVulnRequest>,
+    crate::web::strict_json::StrictJson(req): crate::web::strict_json::StrictJson<LinkVulnRequest>,
 ) -> Result<(StatusCode, Json<LinkResponse>), AppError> {
     let status = parse_status(&req.status)?;
     let maybe = repo::get_cve_by_cve_id(&pool, &req.cve_id).await.map_err(AppError::Database)?;

@@ -7,6 +7,7 @@ use uuid::Uuid;
 use crate::{db::sboms as sboms_repo, error::AppError, errors::db::map_db_error, models::{Sbom, SbomFormat}};
 
 #[derive(Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
 pub struct SbomCreateRequest {
     pub format: String,
     #[serde(rename = "storageKey")]
@@ -32,7 +33,7 @@ mod tests {
         let created = super::create_sbom_handler(
             axum::extract::Path(snapshot_id),
             axum::extract::State(pool.clone()),
-            axum::Json(req),
+            crate::web::strict_json::StrictJson(req),
         )
         .await
         .unwrap();
@@ -66,7 +67,7 @@ mod tests {
 pub async fn create_sbom_handler(
     Path(snapshot_id): Path<Uuid>,
     State(pool): State<PgPool>,
-    Json(req): Json<SbomCreateRequest>,
+    crate::web::strict_json::StrictJson(req): crate::web::strict_json::StrictJson<SbomCreateRequest>,
 ) -> Result<impl IntoResponse, AppError> {
     let format = SbomFormat::try_from(req.format.as_str()).map_err(AppError::BadRequest)?;
 
