@@ -61,23 +61,28 @@ func New(cfg *config.Config, deps *Dependencies) *Server {
 	mux := http.NewServeMux()
 
 	// Register health check endpoint (expanded later)
-	healthDeps := &HealthDeps{
-		DB:          deps.DB,
-		RedisClient: deps.RedisClient,
-		DBPing:      defaultDBPing,
-		RedisPing:   defaultRedisPing,
-	}
+    var dbRef *sql.DB
+    var redisRef *redis.Client
+    if deps != nil { dbRef = deps.DB; redisRef = deps.RedisClient }
+    healthDeps := &HealthDeps{
+        DB:          dbRef,
+        RedisClient: redisRef,
+        DBPing:      defaultDBPing,
+        RedisPing:   defaultRedisPing,
+    }
 	mux.HandleFunc("/healthz", NewHealthHandler(healthDeps))
 
 	// Prometheus metrics endpoint
 	mux.Handle("/metrics", promhttp.Handler())
 
-	// Register API endpoints if services provided
-	registerAPI(mux, cfg, deps)
-	registerAPIv1(mux, cfg, deps)
+    // Register API endpoints if services provided
+    registerAPI(mux, cfg, deps)
+    registerAPIv1(mux, cfg, deps)
 
     // Global middlewares: auth scopes (if configured) and http metrics
-    base := Chain(mux, RequireScopesFunc(deps.Authenticator, HTTPScopeResolver), Metrics())
+    var authn Authenticator
+    if deps != nil { authn = deps.Authenticator }
+    base := Chain(mux, RequireScopesFunc(authn, HTTPScopeResolver), Metrics())
     // Wrap with OpenTelemetry instrumentation
     handler := otelhttp.NewHandler(base, "db-guardian-service")
 
@@ -91,7 +96,7 @@ func New(cfg *config.Config, deps *Dependencies) *Server {
 		},
 		handler: handler,
 		config:  cfg,
-		logger:  deps.Logger,
+        logger:  func() *logger.Logger { if deps != nil { return deps.Logger }; return nil }(),
 	}
 
 	return srv
