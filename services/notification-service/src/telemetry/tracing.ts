@@ -7,7 +7,7 @@ export function getTracer(serviceName: string) {
 export async function withSpan<T>(name: string, attrs: Attributes, fn: () => Promise<T>): Promise<T> {
   const tracer = getTracer('notification-service');
   const options = attrs && Object.keys(attrs as Record<string, unknown>).length ? { attributes: attrs } : undefined;
-  const span = tracer.startSpan(name, options as any);
+  const span = tracer.startSpan(name, options as unknown as { attributes?: Attributes });
   try {
     if (attrs && Object.keys(attrs as Record<string, unknown>).length) span.setAttributes(attrs);
     const res = await context.with(ROOT_CONTEXT, fn);
