@@ -26,12 +26,19 @@ type Config struct {
     AllowedEnvironments []string
     HTTPMaxBodyBytes    int64
     GRPC                GRPCConfig
+    Startup             StartupConfig
 }
 
 // GRPCConfig holds gRPC feature toggles
 type GRPCConfig struct {
     EnableHealth     bool
     EnableReflection bool
+}
+
+// StartupConfig controls startup readiness timeouts (seconds)
+type StartupConfig struct {
+    CriticalTimeoutS int
+    OptionalTimeoutS int
 }
 
 // VaultConfig holds Vault-specific configuration
@@ -179,6 +186,10 @@ func Load() (*Config, error) {
         GRPC: GRPCConfig{
             EnableHealth:     getEnvAsBool("GRPC_HEALTH_ENABLED", false),
             EnableReflection: getEnvAsBool("GRPC_REFLECTION_ENABLED", false),
+        },
+        Startup: StartupConfig{
+            CriticalTimeoutS: getEnvAsInt("STARTUP_CRITICAL_TIMEOUT_S", 3),
+            OptionalTimeoutS: getEnvAsInt("STARTUP_OPTIONAL_TIMEOUT_S", 1),
         },
 	}
 

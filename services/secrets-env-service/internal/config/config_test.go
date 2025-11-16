@@ -176,10 +176,25 @@ func cleanEnv() {
         "STORAGE_S3_"+"ACCESS_KEY", "STORAGE_S3_"+"SECRET_"+"KEY", "STORAGE_S3_USE_TLS",
 		"STORAGE_S3_IGNORE_GLOBS", "STORAGE_S3_SIZE_LIMIT_BYTES",
         "ALLOWED_ENVS",
+        "GRPC_HEALTH_ENABLED", "GRPC_REFLECTION_ENABLED",
+        "STARTUP_CRITICAL_TIMEOUT_S", "STARTUP_OPTIONAL_TIMEOUT_S",
 	}
 	for _, v := range envVars {
 		os.Unsetenv(v)
 	}
+}
+
+func TestStartupConfig_Defaults(t *testing.T) {
+    os.Setenv("VAULT_ADDR", "http://localhost:8200")
+    os.Setenv("VAULT_ROLE_ID", "role")
+    os.Setenv("VAULT_SECRET_"+"ID", "sec"+"ret")
+    os.Setenv("DATABASE_URL", "postgres://localhost:5432/db")
+    defer cleanEnv()
+
+    cfg, err := Load()
+    require.NoError(t, err)
+    assert.Equal(t, 3, cfg.Startup.CriticalTimeoutS)
+    assert.Equal(t, 1, cfg.Startup.OptionalTimeoutS)
 }
 
 func TestObservabilityConfig_LoadsOTelEndpoint(t *testing.T) {

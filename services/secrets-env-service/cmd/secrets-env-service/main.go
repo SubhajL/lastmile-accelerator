@@ -24,6 +24,7 @@ import (
 	"example.com/lma/secrets-env-service/internal/security"
 	"example.com/lma/secrets-env-service/internal/server"
 	"example.com/lma/secrets-env-service/internal/service"
+	"example.com/lma/secrets-env-service/internal/startup"
 	"example.com/lma/secrets-env-service/internal/vault"
 )
 
@@ -79,6 +80,11 @@ func main() {
 	// Vault client (test mode for dev wiring; replace with AppRole auth later)
 	v := &vault.Client{}
 	v.SetTestMode(true)
+
+	// Startup readiness checks (fail-fast)
+	if _, err := startup.Run(context.Background(), cfg, v); err != nil {
+		panic(err)
+	}
 
 	// Eventing (optional)
 	var publisher events.Publisher

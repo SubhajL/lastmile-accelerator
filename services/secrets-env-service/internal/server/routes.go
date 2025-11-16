@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"example.com/lma/secrets-env-service/internal/handlers"
+    "example.com/lma/secrets-env-service/internal/startup"
 	"github.com/go-chi/chi/v5"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -34,6 +35,14 @@ func SetupRoutes(secretsH secretsHTTP, parityH parityHTTP, leakH leakHTTP, middl
 
 	// health
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) { handlers.HealthCheck(w, r) })
+    // readiness
+    r.Get("/readyz", func(w http.ResponseWriter, r *http.Request) {
+        if startup.IsReady() {
+            handlers.Success(w, http.StatusOK, startup.Details())
+            return
+        }
+        handlers.Error(w, http.StatusServiceUnavailable, "not ready", nil)
+    })
 	// metrics (Prometheus)
 	r.Get("/metrics", func(w http.ResponseWriter, r *http.Request) {
 		promhttp.Handler().ServeHTTP(w, r)
