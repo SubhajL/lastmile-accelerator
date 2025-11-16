@@ -23,8 +23,8 @@ export async function createApp() {
   // Error handler first
   registerErrorHandler(app);
 
-  // Auth plugin
-  await registerAuthPlugin(app, cfg.jwtJwksUrl);
+  // Auth plugin (JWKS-based hooks handle verification)
+  await registerAuthPlugin(app);
 
   // Repos: choose backend from config
   if (cfg.repoBackend === 'pg') {

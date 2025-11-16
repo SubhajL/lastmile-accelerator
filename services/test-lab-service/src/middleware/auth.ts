@@ -1,4 +1,3 @@
-import fastifyJwt from '@fastify/jwt';
 import type { FastifyInstance, FastifyRequest, FastifyReply, preHandlerHookHandler } from 'fastify';
 import { AuthError, AuthorizationError } from '../types/auth.js';
 import type { JWTPayload, UserContext } from '../types/auth.js';
@@ -6,79 +5,18 @@ import { getConfig } from '../config.js';
 import { verifyJwt } from '../lib/jwks.js';
 
 /**
- * Registers JWT authentication plugin with Fastify.
- * Configures JWT verification using secret or JWKS URL.
+ * Register lightweight auth decorations for Fastify.
+ * Adds request.user if missing; verification is handled by requireAuth/optionalAuth via JWKS.
  *
  * @param app - Fastify application instance
- * @param secretOrJwksUrl - JWT secret (for testing) or JWKS URL (for production)
  */
-export async function registerAuthPlugin(
-  app: FastifyInstance,
-  secretOrJwksUrl: string
-): Promise<void> {
-  await app.register(fastifyJwt, {
-    secret: secretOrJwksUrl,
-  });
-
-  // Decorate request with user property (check if not already decorated)
+export async function registerAuthPlugin(app: FastifyInstance): Promise<void> {
   if (!app.hasRequestDecorator('user')) {
     app.decorateRequest('user', null);
   }
 }
 
-/**
- * PreHandler hook that authenticates requests via JWT.
- * Validates Bearer token from Authorization header and populates request.user.
- *
- * @throws {AuthError} If token is missing, invalid, or expired
- */
-export const authenticateRequest: preHandlerHookHandler = async (
-  request: FastifyRequest,
-  reply: FastifyReply
-) => {
-  try {
-    // Extract authorization header
-    const authHeader = request.headers.authorization;
-
-    if (!authHeader) {
-      throw new AuthError('No Authorization header provided');
-    }
-
-    if (!authHeader.startsWith('Bearer ')) {
-      throw new AuthError('Invalid Authorization header format. Expected: Bearer <token>');
-    }
-
-    // Verify JWT
-    await request.jwtVerify();
-
-    // Extract claims and populate user context
-    const payload = request.user as unknown as JWTPayload;
-
-    request.user = {
-      sub: payload.sub,
-      tenantId: payload.tenant_id,
-      userId: payload.user_id,
-      scopes: payload.scopes || [],
-    };
-  } catch (error) {
-    if (error instanceof AuthError) {
-      throw error;
-    }
-
-    // Handle JWT verification errors
-    if (error instanceof Error) {
-      if (error.message.includes('expired')) {
-        throw new AuthError('Token has expired');
-      }
-      if (error.message.includes('signature')) {
-        throw new AuthError('Invalid token signature');
-      }
-      throw new AuthError('Invalid token');
-    }
-
-    throw new AuthError('Authentication failed');
-  }
-};
+// Legacy fastify-jwt path is intentionally removed. Use requireAuth/optionalAuth.
 
 export const requireAuth: preHandlerHookHandler = async (
   request: FastifyRequest,
