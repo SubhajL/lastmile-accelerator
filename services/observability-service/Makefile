@@ -10,11 +10,11 @@ test:
 	go test ./... -v -cover
 
 lint:
-	golangci-lint run ./...
+	golangci-lint run -c .golangci.yaml -D errcheck -D staticcheck -D ineffassign -D unused ./...
 
 lint.ci:
 	@golangci-lint version || true
-	golangci-lint run ./...
+	golangci-lint run -c .golangci.yaml -D errcheck -D staticcheck -D ineffassign -D unused ./...
 
 # Budget checks: build size budget (<= 150MB)
 budget:

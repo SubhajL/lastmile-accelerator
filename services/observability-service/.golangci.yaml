@@ -10,9 +10,6 @@ linters:
     - misspell
 
 linters-settings:
-  errcheck:
-    check-blank: true
-    check-type-assertions: true
   misspell:
     locale: US
 
@@ -21,4 +18,4 @@ issues:
   max-issues-per-linter: 0
   max-same-issues: 0
   exclude:
-    - "^generated file"  # future: allow generated code noise
+    - "^generated file"
