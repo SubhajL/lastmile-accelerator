@@ -1,4 +1,4 @@
-import { SpanStatusCode, trace, context, ROOT_CONTEXT, type Attributes } from '@opentelemetry/api';
+import { SpanStatusCode, trace, context, type Attributes } from '@opentelemetry/api';
 
 export function getTracer(serviceName: string) {
   return trace.getTracer(serviceName);
@@ -10,7 +10,8 @@ export async function withSpan<T>(name: string, attrs: Attributes, fn: () => Pro
   const span = tracer.startSpan(name, options as unknown as { attributes?: Attributes });
   try {
     if (attrs && Object.keys(attrs as Record<string, unknown>).length) span.setAttributes(attrs);
-    const res = await context.with(ROOT_CONTEXT, fn);
+    const ctx = trace.setSpan(context.active(), span);
+    const res = await context.with(ctx, fn);
     span.setStatus({ code: SpanStatusCode.OK });
     return res;
   } catch (err) {
