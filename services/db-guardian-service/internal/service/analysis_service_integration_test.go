@@ -13,11 +13,6 @@ import (
 
 type capturePublisher struct{ subjects []string }
 
-func (c *capturePublisher) pub(_ context.Context, _ any, subject string, _ []byte) error {
-	c.subjects = append(c.subjects, subject)
-	return nil
-}
-
 // fakeInspectorFull produces one breaking migration and one index recommendation
 type fakeInspectorFull struct{}
 

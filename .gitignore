@@ -48,7 +48,11 @@ services/**/tmp/
 pnpm-lock.yaml
 
 # Local dev environment (contains example endpoints/secrets)
+<<<<<<< HEAD
 dev/.env.local
+=======
+dev/
+>>>>>>> d7563df0 (chore(repo): ignore dev/ and devstack volumes; untrack committed artifacts (#33))
 
 # Devstack volumes and generated state (may contain keys/dbs)
 lma-devstack-compose-gitea4001/vol/**

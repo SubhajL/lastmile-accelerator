@@ -8,6 +8,31 @@ on:
     paths:
       - 'services/db-guardian-service/**'
 jobs:
+  push-lint:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-22.04
+    permissions: { contents: read }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: '1.24' }
+      - name: Setup protoc
+        uses: arduino/setup-protoc@v3
+        with: { version: '27.1' }
+      - name: go vet (push)
+        working-directory: services/db-guardian-service
+        run: go vet ./...
+      - name: golangci-lint (push)
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          working-directory: services/db-guardian-service
+          args: -c .golangci.yml
+      - name: Verify gRPC codegen (push)
+        working-directory: services/db-guardian-service
+        run: |
+          make grpc-codegen
+          git --no-pager diff --exit-code -- dbguardian/v1 || (echo "Run 'make grpc-codegen' and commit generated code" && exit 1)
   pr-tests:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-22.04
@@ -18,12 +43,30 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.24'
+      - name: Setup protoc
+        uses: arduino/setup-protoc@v3
+        with: { version: '27.1' }
+      - name: go vet (pr)
+        working-directory: services/db-guardian-service
+        run: go vet ./...
+      - name: golangci-lint (pr)
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          working-directory: services/db-guardian-service
+          args: -c .golangci.yml
       - name: Unit tests (go)
         working-directory: services/db-guardian-service
         run: go test ./... -cover
+      - name: Verify gRPC codegen (pr)
+        working-directory: services/db-guardian-service
+        run: |
+          make grpc-codegen
+          git --no-pager diff --exit-code -- dbguardian/v1 || (echo "Run 'make grpc-codegen' and commit generated code" && exit 1)
 
   push-build:
     if: github.event_name == 'push'
+    needs: [push-lint]
     uses: ./.github/workflows/_service-ci.yml
     with:
       lang: go

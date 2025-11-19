@@ -27,6 +27,10 @@ spec:
           {{- end }}
           ports:
             - containerPort: 7105
+          {{- if .Values.grpc.enabled }}
+            - containerPort: {{ .Values.grpc.port }}
+              name: grpc
+          {{- end }}
           readinessProbe:
             httpGet: { path: /healthz, port: 7105 }
             initialDelaySeconds: 2

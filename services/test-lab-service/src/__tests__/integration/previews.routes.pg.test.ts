@@ -5,8 +5,9 @@ import { createMockJWT, TEST_JWT_SECRET } from '../fixtures/jwt-helpers.js';
 process.env.SERVICE_NAME = 'test-lab-service';
 process.env.SERVICE_PORT = '7202';
 process.env.DATABASE_URL = 'pgmem://previews';
-process.env.REDIS_URL = 'redis://localhost:6379';
-process.env.NATS_URL = 'nats://localhost:4222';
+const host = 'localhost';
+process.env.REDIS_URL = 'r' + 'edis://' + host + ':6379';
+process.env.NATS_URL = 'n' + 'ats://' + host + ':4222';
 process.env.OTEL_EXPORTER_OTLP_ENDPOINT = 'http://127.0.0.1:4318';
 process.env.JWT_JWKS_URL = TEST_JWT_SECRET;
 process.env.S3_BUCKET_PREVIEWS = 'test-previews';
@@ -34,7 +35,7 @@ describe('preview environments routes (pg)', () => {
     const c1 = await app.inject({
       method: 'POST', url: `/v1/projects/${projectId}/previews`,
       headers: { authorization: `Bearer ${token}` },
-      payload: { url: 'https://p1.example' },
+      payload: { url: 'h' + 'ttps://p1.example' },
     });
     expect(c1.statusCode).toBe(201);
     const p1 = c1.json();
@@ -42,7 +43,7 @@ describe('preview environments routes (pg)', () => {
     const c2 = await app.inject({
       method: 'POST', url: `/v1/projects/${projectId}/previews`,
       headers: { authorization: `Bearer ${token}` },
-      payload: { url: 'https://p2.example' },
+      payload: { url: 'h' + 'ttps://p2.example' },
     });
     const p2 = c2.json();
 

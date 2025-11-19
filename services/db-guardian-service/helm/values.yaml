@@ -3,6 +3,10 @@ image:
   tag: latest
 service:
   port: 7105
+grpc:
+  enabled: true
+  port: 50065
+env: {}
 resources:
   requests:
     cpu: 50m

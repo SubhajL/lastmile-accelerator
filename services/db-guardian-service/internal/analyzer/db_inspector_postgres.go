@@ -41,7 +41,7 @@ func (i *PostgresInspector) GetTables(ctx context.Context, schema string) ([]Tab
 	if err != nil {
 		return nil, fmt.Errorf("query tables: %w", err)
 	}
-	defer rows.Close()
+    defer func(){ _ = rows.Close() }()
 
 	var tables []TableInfo
 	for rows.Next() {
@@ -72,7 +72,7 @@ func (i *PostgresInspector) GetTableColumns(ctx context.Context, tableName strin
 	if err != nil {
 		return nil, fmt.Errorf("query columns: %w", err)
 	}
-	defer rows.Close()
+    defer func(){ _ = rows.Close() }()
 
 	var columns []ColumnInfo
 	for rows.Next() {
@@ -111,7 +111,7 @@ func (i *PostgresInspector) GetIndexes(ctx context.Context, tableName string) ([
 	if err != nil {
 		return nil, fmt.Errorf("query indexes: %w", err)
 	}
-	defer rows.Close()
+    defer func(){ _ = rows.Close() }()
 
 	indexes := []IndexInfo{}
 	for rows.Next() {
@@ -151,7 +151,7 @@ func (i *PostgresInspector) GetRoles(ctx context.Context) ([]RoleInfo, error) {
 	if err != nil {
 		return nil, fmt.Errorf("query roles: %w", err)
 	}
-	defer rows.Close()
+    defer func(){ _ = rows.Close() }()
 
 	var roles []RoleInfo
 	for rows.Next() {
@@ -198,7 +198,7 @@ func (i *PostgresInspector) GetQueryStats(ctx context.Context, limit int) ([]Que
 	if err != nil {
 		return nil, fmt.Errorf("query stats (pg_stat_statements required): %w", err)
 	}
-	defer rows.Close()
+    defer func(){ _ = rows.Close() }()
 
 	var stats []QueryStat
 	for rows.Next() {
