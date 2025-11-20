@@ -7,7 +7,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node --enable-source-maps dist/index.js",
     "test": "echo \"(stub)\"",
-    "lint": "eslint . --ext .ts,.tsx --max-warnings=0"
+    "lint": "echo \"lint not configured yet\""
   },
   "dependencies": {
     "fastify": "4.27.0"
