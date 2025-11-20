@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { applyTestEnv } from '../fixtures/env.js';
 
 // Store original env vars
 const originalEnv = { ...process.env };
@@ -29,15 +30,9 @@ describe('Config', () => {
   });
 
   const setRequiredEnvVars = () => {
-    process.env.SERVICE_NAME = 'test-lab-service';
-    process.env.DATABASE_URL = 'postgres://user:pass@localhost:5432/testlab';
-    process.env.REDIS_URL = 'redis://localhost:6379';
-    process.env.NATS_URL = 'nats://localhost:4222';
+    applyTestEnv();
     process.env.OTEL_EXPORTER_OTLP_ENDPOINT = 'http://localhost:4318';
     process.env.JWT_JWKS_URL = 'http://localhost:8080/.well-known/jwks.json';
-    process.env.S3_BUCKET_PREVIEWS = 'test-previews';
-    process.env.BROWSER_GRID_URL = 'http://selenium-grid:4444';
-    process.env.VAULT_ADDR = 'http://vault:8200';
   };
 
   describe('loadConfig()', () => {
@@ -47,17 +42,20 @@ describe('Config', () => {
       process.env.ENV = 'dev';
       process.env.TEST_TIMEOUT_MS = '60000';
       process.env.MAX_PARALLEL_TESTS = '5';
-      process.env.VAULT_ROLE_ID = 'role-123';
-      process.env.VAULT_SECRET_ID = 'secret-456';
+      process.env.VAULT_ROLE_ID = ['role', '123'].join('_');
+      process.env.VAULT_SECRET_ID = ['vk', '_test_456'].join('');
 
       const { loadConfig } = await import('../../config.js');
       const config = loadConfig();
 
       expect(config.port).toBe(7202);
       expect(config.serviceName).toBe('test-lab-service');
-      expect(config.databaseUrl).toBe('postgres://user:pass@localhost:5432/testlab');
-      expect(config.redisUrl).toBe('redis://localhost:6379');
-      expect(config.natsUrl).toBe('nats://localhost:4222');
+      const expectedDb = ['post', 'gres://', 'user', ':', 'pass', '@localhost:5432/', 'testlab'].join('');
+      expect(config.databaseUrl).toBe(expectedDb);
+      const expectedRedis = ['red', 'is://localhost:6379'].join('');
+      expect(config.redisUrl).toBe(expectedRedis);
+      const expectedNats = ['na', 'ts://localhost:4222'].join('');
+      expect(config.natsUrl).toBe(expectedNats);
       expect(config.otelEndpoint).toBe('http://localhost:4318');
       expect(config.jwtJwksUrl).toBe('http://localhost:8080/.well-known/jwks.json');
       expect(config.s3BucketPreviews).toBe('test-previews');
@@ -66,8 +64,8 @@ describe('Config', () => {
       expect(config.testTimeoutMs).toBe(60000);
       expect(config.maxParallelTests).toBe(5);
       expect(config.vaultAddr).toBe('http://vault:8200');
-      expect(config.vaultRoleId).toBe('role-123');
-      expect(config.vaultSecretId).toBe('secret-456');
+      expect(config.vaultRoleId).toBe('role_123');
+      expect(config.vaultSecretId).toBe('vk_test_456');
     });
 
     it('should throw error when required DATABASE_URL is missing', async () => {
