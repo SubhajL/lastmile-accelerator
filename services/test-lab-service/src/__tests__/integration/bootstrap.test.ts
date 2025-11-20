@@ -3,18 +3,11 @@ import { createApp } from '../../app.js';
 import { authenticateRequest, requireScopes } from '../../middleware/auth.js';
 import { registerErrorHandler } from '../../middleware/error-handler.js';
 import { createMockJWT, TEST_JWT_SECRET } from '../fixtures/jwt-helpers.js';
+import { applyTestEnv } from '../fixtures/env.js';
 
-// Set minimal env for config loading
-process.env.SERVICE_NAME = 'test-lab-service';
-process.env.SERVICE_PORT = '7202';
-process.env.DATABASE_URL = 'postgres://user:pass@localhost:5432/testlab';
-process.env.REDIS_URL = 'redis://localhost:6379';
-process.env.NATS_URL = 'nats://localhost:4222';
-process.env.OTEL_EXPORTER_OTLP_ENDPOINT = 'http://127.0.0.1:4318';
+// Set minimal env for config loading with safe placeholders
+applyTestEnv();
 process.env.JWT_JWKS_URL = TEST_JWT_SECRET; // use shared secret in tests
-process.env.S3_BUCKET_PREVIEWS = 'test-previews';
-process.env.BROWSER_GRID_URL = 'http://selenium-grid:4444';
-process.env.VAULT_ADDR = 'http://vault:8200';
 
 describe('Server bootstrap', () => {
   let app: Awaited<ReturnType<typeof createApp>>;
