@@ -16,16 +16,10 @@ func (f *fakeStorage) ListFiles(ctx context.Context, projectID, snapshotID strin
 
 func TestLeakScanService_ScanSnapshot_FindsAWSAndJWT(t *testing.T) {
 	repo := repository.NewLeakScanRepository()
-<<<<<<< HEAD
-    ak := "AKIA" + "1234567890ABCDEF"
-    jwt := "eyJhbGciOi" + ".abc.def"
-    storage := &fakeStorage{files: []fileBlob{{Path:"/src/app.js", Content: []byte("const k='" + ak + "'; const t='" + jwt + "';")}}}
-=======
     // Build sensitive-looking tokens in parts to avoid static scanners
     akia := "AKIA" + "1234567890ABCDEF"
     jwt := "eyJhbGciOi" + ".abc.def"
     storage := &fakeStorage{files: []fileBlob{{Path:"/src/app.js", Content: []byte("const k='" + akia + "'; const t='" + jwt + "';")}}}
->>>>>>> aa772c1 (test(secrets-env-service): scrub test fixtures to avoid secret scanner false positives)
 	svc := NewLeakScanService(repo, storage, nil)
 
 	findings, err := svc.ScanSnapshot(context.Background(), "p", "snap1")
@@ -36,18 +30,6 @@ func TestLeakScanService_ScanSnapshot_FindsAWSAndJWT(t *testing.T) {
 func Test_scanFile_DetectsCommonPatterns(t *testing.T) {
 	repo := repository.NewLeakScanRepository()
 	svc := NewLeakScanService(repo, nil, nil)
-<<<<<<< HEAD
-    gh := "gh" + "px_abcdefghijklmnopqrstuvwxyzABCDE12345"
-    skL := "sk_" + "livex_abcdefghijklmnopqrstuvwxyzabcd"
-    skT := "sk_" + "testx_abcdefghijklmnopqrstuvwxyzabcd"
-    content := []byte(
-        "github=" + gh + "\n" +
-        "stripe_live=" + skL + "\n" +
-        "stripe_test=" + skT + "\n" +
-        "slack=xoxb-1234567890-abcdef\n" +
-        "google=AIzaSyA-abcdefghijklmnopqrstuvwxyz_12345\n" +
-        "-----BEGIN RSA PRIVATE KEY-----\n",
-=======
     // Construct tokens via concatenation to keep tests realistic without tripping repo secret scanners
     gh := "gh" + "p_abcdefghijklmnopqrstuvwxyzABCDE12345"
     skLive := "sk_" + "live_abcdefghijklmnopqrstuvwxyzabcd"
@@ -62,7 +44,6 @@ func Test_scanFile_DetectsCommonPatterns(t *testing.T) {
         "slack=" + slack + "\n" +
         "google=" + gapi + "\n" +
         pem,
->>>>>>> aa772c1 (test(secrets-env-service): scrub test fixtures to avoid secret scanner false positives)
     )
 	finds, _ := svc.scanFile("/src/app.js", content)
 	// Expect at least 6 findings (github, stripe live, stripe test, slack, google, private key)
@@ -73,22 +54,6 @@ func Test_scanFile_PatternSeverities(t *testing.T) {
 	repo := repository.NewLeakScanRepository()
 	svc := NewLeakScanService(repo, nil, nil)
 	// Lines crafted to hit patterns with expected severities
-<<<<<<< HEAD
-    ak2 := "AKIA" + "1234567890ABCDEF"
-    jwt2 := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9" + ".eyJhIjoiYiJ9" + ".dGVzdGlnbm9yZWRz"
-    gh2 := "gh" + "px_abcdefghijklmnopqrstuvwxyzABCDE12345"
-    skL2 := "sk_" + "livex_abcdefghijklmnopqrstuvwxyzabcd"
-    skT2 := "sk_" + "testx_abcdefghijklmnopqrstuvwxyzabcd"
-    content := []byte(
-        "aws=" + ak2 + "\n" +
-        "jwt=" + jwt2 + "\n" +
-        "stripe_live=" + skL2 + "\n" +
-        "stripe_test=" + skT2 + "\n" +
-        "github=" + gh2 + "\n" +
-        "slack=xoxp-1234567890-abcdef\n" +
-        "google=AIzaSyA-abcdefghijklmnopqrstuvwxyz_12345\n" +
-        "-----BEGIN EC PRIVATE KEY-----\n",
-=======
     ak := "AKIA" + "1234567890ABCDEF"
     jwt2 := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9" + ".eyJhIjoiYiJ9" + ".dGVzdGlnbm9yZWRz"
     skL := "sk_" + "live_abcdefghijklmnopqrstuvwxyzabcd"
@@ -106,7 +71,6 @@ func Test_scanFile_PatternSeverities(t *testing.T) {
         "slack=" + slack2 + "\n" +
         "google=" + gapi2 + "\n" +
         pem2,
->>>>>>> aa772c1 (test(secrets-env-service): scrub test fixtures to avoid secret scanner false positives)
     )
 	finds, _ := svc.scanFile("/src/app.js", content)
 got := map[string]string{}
