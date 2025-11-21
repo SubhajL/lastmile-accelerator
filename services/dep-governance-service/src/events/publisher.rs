@@ -112,9 +112,10 @@ mod tests {
         let invalid_url = "nats://240.0.0.0:65535";
         let result = tokio::time::timeout(
             std::time::Duration::from_secs(5),
-            NatsPublisher::connect(invalid_url)
-        ).await;
-        
+            NatsPublisher::connect(invalid_url),
+        )
+        .await;
+
         // Either timeout or error is acceptable as connection failure
         match result {
             Ok(Ok(_)) => panic!("Expected connection to fail but it succeeded"),
