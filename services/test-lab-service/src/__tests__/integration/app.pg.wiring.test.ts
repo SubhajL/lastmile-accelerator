@@ -1,6 +1,16 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createApp } from '../../app.js';
 import { createMockJWT, TEST_JWT_SECRET } from '../fixtures/jwt-helpers.js';
+
+// Mock JWKS verifier to decode JWT for testing
+vi.mock('../../lib/jwks.js', () => ({
+  verifyJwt: vi.fn(async (opts: { token: string }) => {
+    const parts = opts.token.split('.');
+    if (parts.length !== 3) throw new Error('Invalid token');
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
+    return payload;
+  }),
+}));
 
 process.env.SERVICE_NAME = 'test-lab-service';
 process.env.SERVICE_PORT = '7202';
@@ -27,6 +37,8 @@ describe('app with pg repo', () => {
 
   afterEach(async () => {
     await app.close();
+    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   it('persists scaffold via pg backend', async () => {
