@@ -36,7 +36,7 @@ func Test_scanFile_DetectsCommonPatterns(t *testing.T) {
     skTest := "sk_" + "test_abcdefghijklmnopqrstuvwxyzabcd"
     slack := "xox" + "b-1234567890-abcdef"
     gapi := "AI" + "zaSyA-abcdefghijklmnopqrstuvwxyz_12345"
-    pem := "-----BEGIN " + "RSA PRIVATE KEY-----\n"
+    pem := "-----" + "BEGIN " + "RSA PRIVATE KEY" + "-----\n"
     content := []byte(
         "github=" + gh + "\n" +
         "stripe_live=" + skLive + "\n" +
@@ -61,7 +61,7 @@ func Test_scanFile_PatternSeverities(t *testing.T) {
     gh2 := "gh" + "p_abcdefghijklmnopqrstuvwxyzABCDE12345"
     slack2 := "xox" + "p-1234567890-abcdef"
     gapi2 := "AI" + "zaSyA-abcdefghijklmnopqrstuvwxyz_12345"
-    pem2 := "-----BEGIN " + "EC PRIVATE KEY-----\n"
+    pem2 := "-----" + "BEGIN " + "EC PRIVATE KEY" + "-----\n"
     content := []byte(
         "aws=" + ak + "\n" +
         "jwt=" + jwt2 + "\n" +
