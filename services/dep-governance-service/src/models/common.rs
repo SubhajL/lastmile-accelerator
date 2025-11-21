@@ -271,7 +271,10 @@ mod tests {
         assert_eq!("npm".parse::<Ecosystem>().unwrap(), Ecosystem::Npm);
         assert_eq!("CARGO".parse::<Ecosystem>().unwrap(), Ecosystem::Cargo);
         assert_eq!("crates.io".parse::<Ecosystem>().unwrap(), Ecosystem::Cargo);
-        assert_eq!("unknown-eco".parse::<Ecosystem>().unwrap(), Ecosystem::Unknown);
+        assert_eq!(
+            "unknown-eco".parse::<Ecosystem>().unwrap(),
+            Ecosystem::Unknown
+        );
     }
 
     #[test]
@@ -313,9 +316,18 @@ mod tests {
 
     #[test]
     fn test_license_type_parsing() {
-        assert_eq!("permissive".parse::<LicenseType>().unwrap(), LicenseType::Permissive);
-        assert_eq!("copyleft".parse::<LicenseType>().unwrap(), LicenseType::Copyleft);
-        assert_eq!("unknown-license".parse::<LicenseType>().unwrap(), LicenseType::Unknown);
+        assert_eq!(
+            "permissive".parse::<LicenseType>().unwrap(),
+            LicenseType::Permissive
+        );
+        assert_eq!(
+            "copyleft".parse::<LicenseType>().unwrap(),
+            LicenseType::Copyleft
+        );
+        assert_eq!(
+            "unknown-license".parse::<LicenseType>().unwrap(),
+            LicenseType::Unknown
+        );
     }
 
     #[test]
@@ -335,6 +347,9 @@ mod tests {
     fn test_vulnerability_status_display() {
         assert_eq!(VulnerabilityStatus::Open.to_string(), "open");
         assert_eq!(VulnerabilityStatus::Fixed.to_string(), "fixed");
-        assert_eq!(VulnerabilityStatus::FalsePositive.to_string(), "false_positive");
+        assert_eq!(
+            VulnerabilityStatus::FalsePositive.to_string(),
+            "false_positive"
+        );
     }
 }

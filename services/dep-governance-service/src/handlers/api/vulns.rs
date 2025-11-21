@@ -1,4 +1,7 @@
-use axum::{extract::{Path, State}, Json};
+use axum::{
+    extract::{Path, State},
+    Json,
+};
 use serde::Serialize;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -18,14 +21,40 @@ mod tests {
     use super::*;
     #[tokio::test]
     async fn test_get_vulns() {
-        let Some(pool) = crate::db::migrate::test_pool().await else { eprintln!("Skipping: TEST_DATABASE_URL not set"); return; };
+        let Some(pool) = crate::db::migrate::test_pool().await else {
+            eprintln!("Skipping: TEST_DATABASE_URL not set");
+            return;
+        };
 
         // seed
-        let dep = crate::models::Dependency::new(Uuid::new_v4(), "x", "1.0.0", crate::models::Ecosystem::Cargo, true, None).unwrap();
-        let dep = crate::db::dependencies::create_dependency(&pool, &dep).await.unwrap();
-        let cve = crate::models::Cve::new("CVE-2025-0001", crate::models::Severity::High, Some(7.5), None, None, Some("OSV".into()));
-        let cve = crate::db::vulnerabilities::upsert_cve(&pool, &cve).await.unwrap();
-        let _ = crate::db::vulnerabilities::link_vulnerability_to_dependency(&pool, dep.id, cve.id, "open", None, None).await.unwrap();
+        let dep = crate::models::Dependency::new(
+            Uuid::new_v4(),
+            "x",
+            "1.0.0",
+            crate::models::Ecosystem::Cargo,
+            true,
+            None,
+        )
+        .unwrap();
+        let dep = crate::db::dependencies::create_dependency(&pool, &dep)
+            .await
+            .unwrap();
+        let cve = crate::models::Cve::new(
+            "CVE-2025-0001",
+            crate::models::Severity::High,
+            Some(7.5),
+            None,
+            None,
+            Some("OSV".into()),
+        );
+        let cve = crate::db::vulnerabilities::upsert_cve(&pool, &cve)
+            .await
+            .unwrap();
+        let _ = crate::db::vulnerabilities::link_vulnerability_to_dependency(
+            &pool, dep.id, cve.id, "open", None, None,
+        )
+        .await
+        .unwrap();
 
         let json = super::get_dependency_vulns_handler(
             axum::extract::Path(dep.id),
