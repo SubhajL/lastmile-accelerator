@@ -1,9 +1,25 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import Fastify from 'fastify';
 import type { FastifyInstance } from 'fastify';
-import { registerAuthPlugin, authenticateRequest, requireScopes } from '../../../middleware/auth.js';
-import { createMockJWT, createExpiredJWT, createInvalidSignatureJWT, TEST_JWT_SECRET } from '../../fixtures/jwt-helpers.js';
+import { registerAuthPlugin, requireAuth, requireScopes } from '../../../middleware/auth.js';
+import {
+  createMockJWT,
+  createExpiredJWT,
+  createInvalidSignatureJWT,
+  TEST_JWT_SECRET,
+} from '../../fixtures/jwt-helpers.js';
 import { registerErrorHandler } from '../../../middleware/error-handler.js';
+
+// Mock JWKS verifier to use test JWT secret instead of fetching from URL
+vi.mock('../../../lib/jwks.js', () => ({
+  verifyJwt: vi.fn(async (opts: { token: string }) => {
+    // Simple JWT decode for testing (not secure, only for tests)
+    const parts = opts.token.split('.');
+    if (parts.length !== 3) throw new Error('Invalid token');
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
+    return payload;
+  }),
+}));
 
 describe('Auth Middleware', () => {
   let app: FastifyInstance;
@@ -11,20 +27,22 @@ describe('Auth Middleware', () => {
   beforeEach(async () => {
     app = Fastify();
     registerErrorHandler(app);
-    
-    // Register JWT plugin with test secret (not JWKS for simplicity in tests)
-    await registerAuthPlugin(app, TEST_JWT_SECRET);
+
+    // Register auth plugin (decorates request.user)
+    await registerAuthPlugin(app);
   });
 
   afterEach(async () => {
     await app.close();
+    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
-  describe('authenticateRequest', () => {
+  describe('requireAuth', () => {
     it('should accept valid JWT Bearer token', async () => {
       const token = createMockJWT();
 
-      app.get('/test', { preHandler: authenticateRequest }, async (request) => {
+      app.get('/test', { preHandler: requireAuth }, async (request) => {
         return { user: request.user };
       });
 
@@ -44,7 +62,7 @@ describe('Auth Middleware', () => {
     });
 
     it('should reject missing Authorization header', async () => {
-      app.get('/test', { preHandler: authenticateRequest }, async () => {
+      app.get('/test', { preHandler: requireAuth }, async () => {
         return { success: true };
       });
 
@@ -54,13 +72,13 @@ describe('Auth Middleware', () => {
       });
 
       expect(response.statusCode).toBe(401);
-      expect(response.json().error).toContain('No Authorization');
+      expect(response.json().error).toContain('Missing or invalid Authorization header');
     });
 
     it('should reject malformed Authorization header (no Bearer)', async () => {
       const token = createMockJWT();
 
-      app.get('/test', { preHandler: authenticateRequest }, async () => {
+      app.get('/test', { preHandler: requireAuth }, async () => {
         return { success: true };
       });
 
@@ -78,7 +96,7 @@ describe('Auth Middleware', () => {
     it('should reject invalid JWT signature', async () => {
       const token = createInvalidSignatureJWT();
 
-      app.get('/test', { preHandler: authenticateRequest }, async () => {
+      app.get('/test', { preHandler: requireAuth }, async () => {
         return { success: true };
       });
 
@@ -96,7 +114,7 @@ describe('Auth Middleware', () => {
     it('should reject expired JWT token', async () => {
       const token = createExpiredJWT();
 
-      app.get('/test', { preHandler: authenticateRequest }, async () => {
+      app.get('/test', { preHandler: requireAuth }, async () => {
         return { success: true };
       });
 
@@ -109,7 +127,7 @@ describe('Auth Middleware', () => {
       });
 
       expect(response.statusCode).toBe(401);
-      expect(response.json().error).toContain('expired');
+      expect(response.json().error).toContain('Invalid token');
     });
 
     it('should populate request.user with correct claims', async () => {
@@ -119,7 +137,7 @@ describe('Auth Middleware', () => {
         scopes: ['admin:all'],
       });
 
-      app.get('/test', { preHandler: authenticateRequest }, async (request) => {
+      app.get('/test', { preHandler: requireAuth }, async (request) => {
         return { user: request.user };
       });
 
@@ -143,11 +161,15 @@ describe('Auth Middleware', () => {
     it('should allow request with required single scope', async () => {
       const token = createMockJWT({ scopes: ['test:write'] });
 
-      app.get('/test', { 
-        preHandler: [authenticateRequest, requireScopes('test:write')] 
-      }, async () => {
-        return { success: true };
-      });
+      app.get(
+        '/test',
+        {
+          preHandler: [requireAuth, requireScopes('test:write')],
+        },
+        async () => {
+          return { success: true };
+        },
+      );
 
       const response = await app.inject({
         method: 'GET',
@@ -163,11 +185,15 @@ describe('Auth Middleware', () => {
     it('should allow request with multiple required scopes', async () => {
       const token = createMockJWT({ scopes: ['test:read', 'test:write', 'project:admin'] });
 
-      app.get('/test', { 
-        preHandler: [authenticateRequest, requireScopes('test:read', 'test:write')] 
-      }, async () => {
-        return { success: true };
-      });
+      app.get(
+        '/test',
+        {
+          preHandler: [requireAuth, requireScopes('test:read', 'test:write')],
+        },
+        async () => {
+          return { success: true };
+        },
+      );
 
       const response = await app.inject({
         method: 'GET',
@@ -183,11 +209,15 @@ describe('Auth Middleware', () => {
     it('should block request missing required scope', async () => {
       const token = createMockJWT({ scopes: ['test:read'] });
 
-      app.get('/test', { 
-        preHandler: [authenticateRequest, requireScopes('test:write')] 
-      }, async () => {
-        return { success: true };
-      });
+      app.get(
+        '/test',
+        {
+          preHandler: [requireAuth, requireScopes('test:write')],
+        },
+        async () => {
+          return { success: true };
+        },
+      );
 
       const response = await app.inject({
         method: 'GET',
@@ -204,11 +234,15 @@ describe('Auth Middleware', () => {
     it('should block when user has only some required scopes', async () => {
       const token = createMockJWT({ scopes: ['test:read'] });
 
-      app.get('/test', { 
-        preHandler: [authenticateRequest, requireScopes('test:read', 'test:write')] 
-      }, async () => {
-        return { success: true };
-      });
+      app.get(
+        '/test',
+        {
+          preHandler: [requireAuth, requireScopes('test:read', 'test:write')],
+        },
+        async () => {
+          return { success: true };
+        },
+      );
 
       const response = await app.inject({
         method: 'GET',
@@ -226,11 +260,15 @@ describe('Auth Middleware', () => {
     it('should handle empty scopes array in JWT', async () => {
       const token = createMockJWT({ scopes: [] });
 
-      app.get('/test', { 
-        preHandler: [authenticateRequest, requireScopes('test:read')] 
-      }, async () => {
-        return { success: true };
-      });
+      app.get(
+        '/test',
+        {
+          preHandler: [requireAuth, requireScopes('test:read')],
+        },
+        async () => {
+          return { success: true };
+        },
+      );
 
       const response = await app.inject({
         method: 'GET',
