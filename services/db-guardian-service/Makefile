@@ -5,7 +5,7 @@ TAG?=dev
 build:
 	go build -o bin/app ./cmd/$(SVC)
 test:
-	go test ./... -cover || true
+	go test ./... -cover
 verify:
 	@echo "Running go vet..." && go vet ./...
 	@echo "Running unit tests..." && go test ./... -cover
