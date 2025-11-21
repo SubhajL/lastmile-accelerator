@@ -109,8 +109,14 @@ export interface Config {
   queue: QueueRuntimeConfig;
   reliability: ChannelReliabilityConfig;
   features: FeaturesConfig;
+  worker: WorkerConfig;
 }
 
 export interface FeaturesConfig {
   outboxEnqueueDedup: boolean;
+}
+
+export interface WorkerConfig {
+  enabled: boolean;
+  natsSubjects: readonly string[];
 }
