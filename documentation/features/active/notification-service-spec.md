@@ -1,9 +1,9 @@
 # Notification Service — Technical Specification (MVP)
 
 Document Name: Notification Service Implementation Plan
-Date: 2025-11-12
-Version: v0.1 (Active)
-Status: Active
+Date: 2025-11-21
+Version: v0.2 (Reality Check)
+Status: Active — MVP not yet met (see Reality Check)
 
 ## Executive Summary
 Provide event-driven notifications for LMA core flows (Snapshot, Fix List, Fixes Applied, Publish Safely/Undo, Checks, Errors, SLO) with reliable delivery, templating, retries, and observability. MVP focuses on email, webhook, and Slack delivery, wired to NATS events, with strict idempotency and basic rate/circuit protection.
@@ -53,3 +53,32 @@ Hardening (Weeks 13–14)
 - Per‑tenant rate limits and circuit breakers; exponential backoff on retries.
 - Idempotency keys and outbox to prevent duplicate notifications; DLQ for poison messages.
 - JWT/tenant scoping for any admin/test endpoints; audit important actions.
+
+---
+
+## Implementation Reality Check (2025-11-21)
+
+### ✅ Implemented foundations
+- Subject registry + consumers for snapshot/fixes/publish/checks/slo/errors (`src/events/subjects.ts`, `src/consumers/*`).
+- Redis priority queue with backoff and optional PG outbox dedup (`src/notifications/queue.ts`, `src/outbox/pg-outbox.ts`).
+- Channels with timeout/retry/circuit breaker (email, webhook, slack) plus SMS skeleton and in-app publisher (`src/channels/**`).
+- Template store/loader/validator with handlebars bundles for core events (`src/templates/**`).
+- Preference store + routing engine for quiet-hours/defer/block decisions (`src/prefs/store.ts`, `src/routing/engine.ts`).
+- OTel tracing setup and spans in dispatcher/channels (`src/telemetry.ts`, `src/telemetry/tracing.ts`).
+
+### ⚠️ Missing or incomplete vs. spec
+- Worker bootstrap does not start NATS subscriptions or dispatcher loop; service start script only runs `/healthz`/stub `/metrics` (`src/worker.ts`, `src/bootstrap/runtime.ts`, `src/index.ts`).
+- Admin send-test route exists but is never registered; no API for preferences or DLQ redelivery (`src/routes/admin.send-test.ts`, `src/app.ts`).
+- No persistence of `notification_logs`/`delivery_attempts`; DB is only used for outbox dedup.
+- Observability is limited to tracing; no Prom metrics/counters/histograms and `/metrics` returns a placeholder (`src/app.ts`, `src/metrics/otel.ts`).
+- Vault variables are required by config but not used to fetch provider secrets; service cannot boot without Vault env even though secrets remain env-based (`src/config.ts`).
+- Recipient resolution relies solely on payload/userId; no projects-service integration or feature-flagged resolver (`src/recipients/resolvers.ts`).
+- Quiet-hours deferral exists, but no digest scheduler or DLQ redelivery policy; NATS DLQ subject not emitted.
+
+### 🎯 MVP readiness snapshot (vs. spec)
+- Core functionality: ~30% (building blocks present; no event→deliver path running)
+- Reliability patterns: ~30% (channel-level protections without DLQ/redelivery/persistence)
+- Observability: ~15% (tracing only; metrics/alerts absent)
+- Production readiness: ~10% (Vault integration, SLOs/alerts, CI gates outstanding)
+
+**Overall MVP Completion: ~30%** — end-to-end notification flow is not yet runnable; see Graphite plan in `notification-service-progress.md` for steps to close the gaps.

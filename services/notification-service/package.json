@@ -4,8 +4,10 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "dev:worker": "WORKER_MODE=true tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node --enable-source-maps dist/index.js",
+    "worker": "WORKER_MODE=true node --enable-source-maps dist/index.js",
     "test": "vitest",
     "test:coverage": "vitest --coverage",
     "lint": "eslint . --ext .ts,.tsx --max-warnings=0",
