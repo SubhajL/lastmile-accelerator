@@ -1,14 +1,19 @@
-use axum::{extract::Path, http::StatusCode};
-use axum::response::IntoResponse;
-use dep_governance_service::handlers::api::sbom::{create_sbom_handler, get_latest_sbom_handler, SbomCreateRequest};
-use dep_governance_service::db::migrate::test_pool;
 use axum::extract::State;
+use axum::response::IntoResponse;
 use axum::Json;
+use axum::{extract::Path, http::StatusCode};
+use dep_governance_service::db::migrate::test_pool;
+use dep_governance_service::handlers::api::sbom::{
+    create_sbom_handler, get_latest_sbom_handler, SbomCreateRequest,
+};
 use uuid::Uuid;
 
 #[tokio::test]
 async fn test_post_and_get_sbom_happy_path() {
-    let Some(pool) = test_pool().await else { eprintln!("Skipping: TEST_DATABASE_URL not set"); return; };
+    let Some(pool) = test_pool().await else {
+        eprintln!("Skipping: TEST_DATABASE_URL not set");
+        return;
+    };
 
     let snapshot_id = Uuid::new_v4();
     let req = SbomCreateRequest {
@@ -17,18 +22,25 @@ async fn test_post_and_get_sbom_happy_path() {
         file_hash: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef".into(),
     };
 
-    let created = create_sbom_handler(Path(snapshot_id), State(pool.clone()), Json(req)).await.unwrap();
+    let created = create_sbom_handler(Path(snapshot_id), State(pool.clone()), Json(req))
+        .await
+        .unwrap();
     let created_resp = created.into_response();
     assert_eq!(created_resp.status(), StatusCode::CREATED);
 
-    let latest = get_latest_sbom_handler(Path(snapshot_id), State(pool)).await.unwrap();
+    let latest = get_latest_sbom_handler(Path(snapshot_id), State(pool))
+        .await
+        .unwrap();
     let latest_resp = latest.into_response();
     assert_eq!(latest_resp.status(), StatusCode::OK);
 }
 
 #[tokio::test]
 async fn test_post_sbom_validates_input() {
-    let Some(pool) = test_pool().await else { eprintln!("Skipping: TEST_DATABASE_URL not set"); return; };
+    let Some(pool) = test_pool().await else {
+        eprintln!("Skipping: TEST_DATABASE_URL not set");
+        return;
+    };
 
     let snapshot_id = Uuid::new_v4();
     let bad_req = SbomCreateRequest {

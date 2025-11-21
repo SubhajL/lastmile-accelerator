@@ -1,4 +1,7 @@
-use axum::{extract::{Path, Query, State}, Json};
+use axum::{
+    extract::{Path, Query, State},
+    Json,
+};
 use serde::Deserialize;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -15,14 +18,37 @@ mod tests {
     use super::*;
     #[tokio::test]
     async fn test_list_dependencies() {
-        let Some(pool) = crate::db::migrate::test_pool().await else { eprintln!("Skipping: TEST_DATABASE_URL not set"); return; };
+        let Some(pool) = crate::db::migrate::test_pool().await else {
+            eprintln!("Skipping: TEST_DATABASE_URL not set");
+            return;
+        };
 
         let snapshot_id = Uuid::new_v4();
         // seed
-        let d1 = crate::models::Dependency::new(snapshot_id, "a", "1.0.0", crate::models::Ecosystem::Npm, true, None).unwrap();
-        let d2 = crate::models::Dependency::new(snapshot_id, "b", "1.0.0", crate::models::Ecosystem::Npm, false, None).unwrap();
-        let _ = crate::db::dependencies::create_dependency(&pool, &d1).await.unwrap();
-        let _ = crate::db::dependencies::create_dependency(&pool, &d2).await.unwrap();
+        let d1 = crate::models::Dependency::new(
+            snapshot_id,
+            "a",
+            "1.0.0",
+            crate::models::Ecosystem::Npm,
+            true,
+            None,
+        )
+        .unwrap();
+        let d2 = crate::models::Dependency::new(
+            snapshot_id,
+            "b",
+            "1.0.0",
+            crate::models::Ecosystem::Npm,
+            false,
+            None,
+        )
+        .unwrap();
+        let _ = crate::db::dependencies::create_dependency(&pool, &d1)
+            .await
+            .unwrap();
+        let _ = crate::db::dependencies::create_dependency(&pool, &d2)
+            .await
+            .unwrap();
 
         let json = super::list_dependencies_handler(
             axum::extract::Path(snapshot_id),

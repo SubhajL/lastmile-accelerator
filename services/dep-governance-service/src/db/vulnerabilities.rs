@@ -102,7 +102,9 @@ pub async fn get_vulnerabilities_for_dependency(
             cve_id: r.get::<String, _>("c_cve_id"),
             severity: r.get::<String, _>("c_severity"),
             description: r.try_get("c_description").ok(),
-            published_at: r.try_get::<chrono::DateTime<chrono::Utc>, _>("c_published_at").ok(),
+            published_at: r
+                .try_get::<chrono::DateTime<chrono::Utc>, _>("c_published_at")
+                .ok(),
             source: r.try_get("c_source").ok(),
             cvss_score: r.try_get::<f32, _>("c_cvss_score").ok(),
             updated_at: r.get::<chrono::DateTime<chrono::Utc>, _>("c_updated_at"),

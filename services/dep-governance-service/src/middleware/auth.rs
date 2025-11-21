@@ -1,10 +1,10 @@
-use axum::{extract::Request, middleware::Next, response::Response};
-use serde::{Deserialize, Serialize};
 use axum::http::HeaderMap;
 use axum::response::IntoResponse;
+use axum::{extract::Request, middleware::Next, response::Response};
+use serde::{Deserialize, Serialize};
 
 use crate::error::AppError;
-use jsonwebtoken::{self, Algorithm, Validation, decode, decode_header};
+use jsonwebtoken::{self, decode, decode_header, Algorithm, Validation};
 // Scaffold auth context/config and helpers. Full JWT verification comes in later stacks.
 
 #[derive(Debug, Clone)]
@@ -15,7 +15,10 @@ pub struct AuthConfig {
 }
 
 pub trait JwksProvider: Send + Sync {
-    fn get_key<'a>(&'a self, _kid: &'a str) -> futures::future::BoxFuture<'a, Option<std::sync::Arc<jsonwebtoken::DecodingKey>>> {
+    fn get_key<'a>(
+        &'a self,
+        _kid: &'a str,
+    ) -> futures::future::BoxFuture<'a, Option<std::sync::Arc<jsonwebtoken::DecodingKey>>> {
         Box::pin(async { None })
     }
 }
@@ -39,17 +42,26 @@ impl AuthContext {
 
     pub fn for_tests() -> Self {
         Self {
-            config: AuthConfig { jwks_url: None, issuer: None, audience: None },
+            config: AuthConfig {
+                jwks_url: None,
+                issuer: None,
+                audience: None,
+            },
             provider: std::sync::Arc::new(NoopJwksProvider),
         }
     }
 
     pub fn scaffold(config: AuthConfig) -> Self {
-        Self { config, provider: std::sync::Arc::new(NoopJwksProvider) }
+        Self {
+            config,
+            provider: std::sync::Arc::new(NoopJwksProvider),
+        }
     }
 
     #[allow(dead_code)]
-    pub fn provider(&self) -> &dyn JwksProvider { &*self.provider }
+    pub fn provider(&self) -> &dyn JwksProvider {
+        &*self.provider
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -126,7 +138,7 @@ struct RawClaims {
     #[serde(default)]
     user_id: Option<String>,
     #[serde(default)]
-    scopes: Option<Vec<String>>, 
+    scopes: Option<Vec<String>>,
     #[serde(default)]
     exp: Option<usize>,
     #[serde(default)]
@@ -136,12 +148,19 @@ struct RawClaims {
 }
 
 async fn verify_and_extract_claims(token: &str, ctx: &AuthContext) -> Result<Claims, AppError> {
-    let header = decode_header(token).map_err(|e| AppError::Auth(format!("Invalid JWT header: {}", e)))?;
+    let header =
+        decode_header(token).map_err(|e| AppError::Auth(format!("Invalid JWT header: {}", e)))?;
     if header.alg != Algorithm::RS256 {
         return Err(AppError::Auth("Unsupported JWT alg".into()));
     }
-    let kid = header.kid.ok_or_else(|| AppError::Auth("JWT missing kid".into()))?;
-    let key = ctx.provider().get_key(&kid).await.ok_or_else(|| AppError::Auth("Unknown key id".into()))?;
+    let kid = header
+        .kid
+        .ok_or_else(|| AppError::Auth("JWT missing kid".into()))?;
+    let key = ctx
+        .provider()
+        .get_key(&kid)
+        .await
+        .ok_or_else(|| AppError::Auth("Unknown key id".into()))?;
 
     let mut validation = Validation::new(Algorithm::RS256);
     if let Some(ref iss) = ctx.config.issuer {
@@ -167,7 +186,9 @@ async fn verify_and_extract_claims(token: &str, ctx: &AuthContext) -> Result<Cla
 // --- JWKS caching provider ---
 
 #[derive(Debug, Clone, Deserialize)]
-struct Jwks { keys: Vec<Jwk> }
+struct Jwks {
+    keys: Vec<Jwk>,
+}
 
 #[derive(Debug, Clone, Deserialize)]
 struct Jwk {
@@ -191,7 +212,7 @@ pub struct CachingJwksProvider {
     url: String,
     ttl: std::time::Duration,
     client: reqwest::Client,
-    state: std::sync::Arc<tokio::sync::RwLock<CacheState>>, 
+    state: std::sync::Arc<tokio::sync::RwLock<CacheState>>,
 }
 
 impl CachingJwksProvider {
@@ -215,7 +236,11 @@ impl CachingJwksProvider {
         let now = std::time::Instant::now();
         // jitter up to 10%
         let jitter_ns = (ttl.as_nanos() as f64 * 0.1) as u128;
-        let jitter = if jitter_ns == 0 { 0 } else { rand::random::<u64>() as u128 % jitter_ns };
+        let jitter = if jitter_ns == 0 {
+            0
+        } else {
+            rand::random::<u64>() as u128 % jitter_ns
+        };
         let ttl_ns = ttl.as_nanos().saturating_sub(jitter);
         now + std::time::Duration::from_nanos(ttl_ns as u64)
     }
@@ -225,19 +250,32 @@ impl CachingJwksProvider {
             let guard = self.state.read().await;
             std::time::Instant::now() >= guard.expires_at
         };
-        if !expired { return; }
+        if !expired {
+            return;
+        }
 
         let mut guard = self.state.write().await;
-        if std::time::Instant::now() < guard.expires_at { return; }
+        if std::time::Instant::now() < guard.expires_at {
+            return;
+        }
 
-        match self.client.get(&self.url).send().await.and_then(|r| r.error_for_status()) {
+        match self
+            .client
+            .get(&self.url)
+            .send()
+            .await
+            .and_then(|r| r.error_for_status())
+        {
             Ok(resp) => {
                 if let Ok(jwks) = resp.json::<Jwks>().await {
                     let mut newmap = std::collections::HashMap::new();
                     for k in jwks.keys {
                         if let (Some(n), Some(e)) = (k.n.as_ref(), k.e.as_ref()) {
-                            if k.alg.as_deref() == Some("RS256") || (k.alg.is_none() && k.kty == "RSA") {
-                                if let Ok(dk) = jsonwebtoken::DecodingKey::from_rsa_components(n, e) {
+                            if k.alg.as_deref() == Some("RS256")
+                                || (k.alg.is_none() && k.kty == "RSA")
+                            {
+                                if let Ok(dk) = jsonwebtoken::DecodingKey::from_rsa_components(n, e)
+                                {
                                     newmap.insert(k.kid.clone(), std::sync::Arc::new(dk));
                                 }
                             }
@@ -257,7 +295,10 @@ impl CachingJwksProvider {
 }
 
 impl JwksProvider for CachingJwksProvider {
-    fn get_key<'a>(&'a self, kid: &'a str) -> futures::future::BoxFuture<'a, Option<std::sync::Arc<jsonwebtoken::DecodingKey>>> {
+    fn get_key<'a>(
+        &'a self,
+        kid: &'a str,
+    ) -> futures::future::BoxFuture<'a, Option<std::sync::Arc<jsonwebtoken::DecodingKey>>> {
         Box::pin(async move {
             self.refresh_if_needed().await;
             let guard = self.state.read().await;
@@ -269,16 +310,20 @@ impl JwksProvider for CachingJwksProvider {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::{body::Body, http::{Request, StatusCode}, middleware, Router, Extension};
-    use tower::ServiceExt;
-    use wiremock::{MockServer, Mock, ResponseTemplate};
-    use wiremock::matchers::{method, path};
-    use rand::{RngCore, rngs::StdRng, SeedableRng};
+    use axum::{
+        body::Body,
+        http::{Request, StatusCode},
+        middleware, Extension, Router,
+    };
     use base64::engine::general_purpose::URL_SAFE_NO_PAD;
     use base64::Engine;
-    use rsa::{RsaPrivateKey, pkcs1::EncodeRsaPrivateKey, traits::PublicKeyParts};
-    use jsonwebtoken::{Header, Algorithm, EncodingKey, encode};
     use chrono::Utc;
+    use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
+    use rand::{rngs::StdRng, RngCore, SeedableRng};
+    use rsa::{pkcs1::EncodeRsaPrivateKey, traits::PublicKeyParts, RsaPrivateKey};
+    use tower::ServiceExt;
+    use wiremock::matchers::{method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
 
     async fn handler() -> &'static str {
         "ok"
@@ -393,7 +438,10 @@ mod tests {
         let pub_key = rsa::RsaPublicKey::from(&priv_key);
         let n_b64 = URL_SAFE_NO_PAD.encode(pub_key.n().to_bytes_be());
         let e_b64 = URL_SAFE_NO_PAD.encode(pub_key.e().to_bytes_be());
-        let pem = priv_key.to_pkcs1_pem(rsa::pkcs1::LineEnding::LF).unwrap().to_string();
+        let pem = priv_key
+            .to_pkcs1_pem(rsa::pkcs1::LineEnding::LF)
+            .unwrap()
+            .to_string();
         let jwks = serde_json::json!({
             "keys": [{"kty":"RSA","kid":kid,"alg":"RS256","use":"sig","n":n_b64,"e":e_b64}]
         });
@@ -418,19 +466,41 @@ mod tests {
         // warm cache
         assert!(prov.get_key(kid).await.is_some());
         let auth_ctx = AuthContext::new(
-            AuthConfig { jwks_url: Some(url), issuer: Some(iss.clone()), audience: Some(aud.clone()) },
-            std::sync::Arc::new(prov)
+            AuthConfig {
+                jwks_url: Some(url),
+                issuer: Some(iss.clone()),
+                audience: Some(aud.clone()),
+            },
+            std::sync::Arc::new(prov),
         );
 
         #[derive(serde::Serialize)]
-        struct TestClaims { sub: String, tenant_id: String, user_id: String, scopes: Vec<String>, exp: usize, iss: String, aud: String }
+        struct TestClaims {
+            sub: String,
+            tenant_id: String,
+            user_id: String,
+            scopes: Vec<String>,
+            exp: usize,
+            iss: String,
+            aud: String,
+        }
         let claims = TestClaims {
-            sub: "user-1".into(), tenant_id: "t-1".into(), user_id: "u-1".into(), scopes: vec![],
-            exp: (Utc::now().timestamp() as usize) + 3600, iss: iss.clone(), aud: aud.clone()
+            sub: "user-1".into(),
+            tenant_id: "t-1".into(),
+            user_id: "u-1".into(),
+            scopes: vec![],
+            exp: (Utc::now().timestamp() as usize) + 3600,
+            iss: iss.clone(),
+            aud: aud.clone(),
         };
         let mut header = Header::new(Algorithm::RS256);
         header.kid = Some(kid.into());
-        let token = encode(&header, &claims, &EncodingKey::from_rsa_pem(pem.as_bytes()).unwrap()).unwrap();
+        let token = encode(
+            &header,
+            &claims,
+            &EncodingKey::from_rsa_pem(pem.as_bytes()).unwrap(),
+        )
+        .unwrap();
 
         // Sanity: token decodes with same validation
         let mut v = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::RS256);
@@ -438,7 +508,12 @@ mod tests {
         v.set_audience(std::slice::from_ref(&aud));
         let n = jwks["keys"][0]["n"].as_str().unwrap();
         let e = jwks["keys"][0]["e"].as_str().unwrap();
-        let _ = jsonwebtoken::decode::<serde_json::Value>(&token, &jsonwebtoken::DecodingKey::from_rsa_components(n, e).unwrap(), &v).unwrap();
+        let _ = jsonwebtoken::decode::<serde_json::Value>(
+            &token,
+            &jsonwebtoken::DecodingKey::from_rsa_components(n, e).unwrap(),
+            &v,
+        )
+        .unwrap();
 
         // Also ensure our verifier path succeeds
         verify_and_extract_claims(&token, &auth_ctx).await.unwrap();
@@ -470,7 +545,12 @@ mod tests {
             .layer(Extension(auth_ctx));
 
         let res = app
-            .oneshot(Request::builder().uri("/v1/protected").body(Body::empty()).unwrap())
+            .oneshot(
+                Request::builder()
+                    .uri("/v1/protected")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
             .await
             .unwrap();
         assert_eq!(res.status(), StatusCode::UNAUTHORIZED);
@@ -489,19 +569,44 @@ mod tests {
         let iss = "test-iss".to_string();
         let aud = "test-aud".to_string();
         let auth_ctx = AuthContext::new(
-            AuthConfig { jwks_url: Some(format!("{}/jwks.json", server.uri())), issuer: Some(iss.clone()), audience: Some(aud.clone()) },
-            std::sync::Arc::new(CachingJwksProvider::new(format!("{}/jwks.json", server.uri()), std::time::Duration::from_secs(1)))
+            AuthConfig {
+                jwks_url: Some(format!("{}/jwks.json", server.uri())),
+                issuer: Some(iss.clone()),
+                audience: Some(aud.clone()),
+            },
+            std::sync::Arc::new(CachingJwksProvider::new(
+                format!("{}/jwks.json", server.uri()),
+                std::time::Duration::from_secs(1),
+            )),
         );
 
         #[derive(serde::Serialize)]
-        struct TestClaims { sub: String, tenant_id: String, user_id: String, scopes: Vec<String>, exp: usize, iss: String, aud: String }
+        struct TestClaims {
+            sub: String,
+            tenant_id: String,
+            user_id: String,
+            scopes: Vec<String>,
+            exp: usize,
+            iss: String,
+            aud: String,
+        }
         let claims = TestClaims {
-            sub: "user-1".into(), tenant_id: "t-1".into(), user_id: "u-1".into(), scopes: vec![],
-            exp: (Utc::now().timestamp() as usize) - 10, iss: iss.clone(), aud: aud.clone()
+            sub: "user-1".into(),
+            tenant_id: "t-1".into(),
+            user_id: "u-1".into(),
+            scopes: vec![],
+            exp: (Utc::now().timestamp() as usize) - 10,
+            iss: iss.clone(),
+            aud: aud.clone(),
         };
         let mut header = Header::new(Algorithm::RS256);
         header.kid = Some(kid.into());
-        let token = encode(&header, &claims, &EncodingKey::from_rsa_pem(pem.as_bytes()).unwrap()).unwrap();
+        let token = encode(
+            &header,
+            &claims,
+            &EncodingKey::from_rsa_pem(pem.as_bytes()).unwrap(),
+        )
+        .unwrap();
 
         let app = Router::new()
             .route("/v1/protected", axum::routing::get(handler))
