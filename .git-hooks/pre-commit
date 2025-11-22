@@ -1,0 +1,46 @@
+#!/bin/bash
+# pre-commit hook: Blocks git commit and triggers g-stack skill
+# This enforces Graphite workflow instead of direct git operations
+
+echo "❌ Git commit is blocked - using Graphite workflow instead"
+echo ""
+echo "🚀 Launching g-stack skill to determine proper parent branch and create/update branch..."
+echo ""
+
+# Gather current context
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+echo "Current branch: $CURRENT_BRANCH"
+echo ""
+
+# Display Graphite stack status
+echo "📊 Current stack status:"
+gt status || echo "Graphite not available. Please install with: npm install -g @graphite/cli"
+echo ""
+
+# Provide guidance
+cat <<EOF
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔄 GRAPHITE WORKFLOW INSTRUCTIONS:
+
+Instead of 'git commit', use:
+  1. Stage your changes: git add .
+  2. Create/update branch: gt branch create <name> --parent <parent>
+  3. Or if branch exists: gt modify (this commits and amends)
+
+To submit your changes:
+  - gt submit (creates/updates PR)
+  - gt submit --draft (for work in progress)
+
+To view your stack:
+  - gt status
+  - gt log --graph
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚡ ACTION REQUIRED: Use Claude Code's g-stack skill to properly manage your branch.
+   Ask Claude: "use g-stack to create my feature branch and commit these changes"
+
+EOF
+
+# Exit with error to block the commit
+exit 1
