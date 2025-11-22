@@ -1,0 +1,25 @@
+#!/bin/bash
+# commit-msg hook: Secondary block for git commit (in case pre-commit is bypassed)
+# This enforces Graphite workflow even if pre-commit hook is skipped
+
+echo "❌ Git commit is blocked (commit-msg hook) - Graphite workflow required"
+echo ""
+echo "⚠️  Pre-commit hook was bypassed, but commits are still blocked!"
+echo ""
+
+cat <<EOF
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🛡️  SECURITY: Direct git commits are disabled
+
+This repository uses Graphite for stack management.
+All commits must go through the Graphite workflow.
+
+Use:
+  - gt modify          (commits and amends current branch)
+  - gt branch create   (creates new branch with commit)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EOF
+
+# Always exit with error to block commit
+exit 1

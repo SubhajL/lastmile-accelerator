@@ -1,0 +1,73 @@
+#!/bin/bash
+# pre-push hook: Blocks git push and triggers g-stack skill for gt submit
+# This enforces Graphite workflow for submitting changes
+
+echo "❌ Git push is blocked - using Graphite submit instead"
+echo ""
+echo "🚀 Launching g-stack skill to submit via Graphite..."
+echo ""
+
+# Gather current context
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+REMOTE=$1
+URL=$2
+
+echo "Current branch: $CURRENT_BRANCH"
+echo "Remote: $REMOTE ($URL)"
+echo ""
+
+# Check if PR already exists
+echo "📊 Checking PR status..."
+gt pr list 2>/dev/null | grep -E "^$CURRENT_BRANCH" && PR_EXISTS=true || PR_EXISTS=false
+echo ""
+
+# Display current stack
+echo "📚 Current stack:"
+gt status || echo "Graphite not available. Please install with: npm install -g @graphite/cli"
+echo ""
+
+# Provide guidance based on PR existence
+if [ "$PR_EXISTS" = true ]; then
+    cat <<EOF
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔄 PR EXISTS - UPDATE WORKFLOW:
+
+Your branch already has a PR. Instead of 'git push', use:
+  - gt submit --update   (updates existing PR)
+  - gt submit --force    (force updates if needed)
+
+To check PR status:
+  - gt pr list
+  - gt open              (opens PR in browser)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EOF
+else
+    cat <<EOF
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔄 NEW PR WORKFLOW:
+
+Instead of 'git push', use:
+  - gt submit           (creates PR, runs CI)
+  - gt submit --draft   (creates draft PR)
+
+Before submitting, ensure:
+  1. All tests pass: bunx turbo run test
+  2. Type checks pass: bunx turbo run typecheck
+  3. Linting passes: bunx turbo run lint
+
+To manage your stack:
+  - gt status
+  - gt stack submit     (submit entire stack)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EOF
+fi
+
+echo ""
+echo "⚡ ACTION REQUIRED: Use Claude Code's g-stack skill to submit your changes."
+echo "   Ask Claude: \"use g-stack to submit my changes\" or \"use g-submit skill\""
+echo ""
+
+# Exit with error to block the push
+exit 1
