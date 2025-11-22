@@ -32,6 +32,14 @@ const envSchema = z.object({
   K8S_TTL_SECONDS_AFTER_FINISHED: z.string().pipe(z.coerce.number().int().min(0)).default('600'),
   RUNNER_POLL_INTERVAL_MS: z.string().pipe(z.coerce.number().int().positive()).default('3000'),
   ENABLE_EVENT_SUBSCRIBERS: z.string().default('false'),
+  // Redis and rate limiting
+  RATE_LIMIT_REQUESTS_PER_MINUTE: z
+    .string()
+    .pipe(z.coerce.number().int().positive())
+    .default('100'),
+  RATE_LIMIT_WINDOW_MS: z.string().pipe(z.coerce.number().int().positive()).default('60000'),
+  CACHE_DEFAULT_TTL_SEC: z.string().pipe(z.coerce.number().int().positive()).default('300'),
+  REDIS_KEY_PREFIX: z.string().default('test-lab-service:'),
 });
 
 export interface ServerConfig {
@@ -66,6 +74,11 @@ export interface ServerConfig {
   k8sTtlSecondsAfterFinished: number;
   runnerPollIntervalMs: number;
   enableEventSubscribers: boolean;
+  // Redis and rate limiting
+  rateLimitRequestsPerMinute: number;
+  rateLimitWindowMs: number;
+  cacheDefaultTtlSec: number;
+  redisKeyPrefix: string;
 }
 
 /**
@@ -108,6 +121,10 @@ export function loadConfig(): ServerConfig {
       K8S_TTL_SECONDS_AFTER_FINISHED: process.env.K8S_TTL_SECONDS_AFTER_FINISHED || '600',
       RUNNER_POLL_INTERVAL_MS: process.env.RUNNER_POLL_INTERVAL_MS || '3000',
       ENABLE_EVENT_SUBSCRIBERS: process.env.ENABLE_EVENT_SUBSCRIBERS || 'false',
+      RATE_LIMIT_REQUESTS_PER_MINUTE: process.env.RATE_LIMIT_REQUESTS_PER_MINUTE || '100',
+      RATE_LIMIT_WINDOW_MS: process.env.RATE_LIMIT_WINDOW_MS || '60000',
+      CACHE_DEFAULT_TTL_SEC: process.env.CACHE_DEFAULT_TTL_SEC || '300',
+      REDIS_KEY_PREFIX: process.env.REDIS_KEY_PREFIX || 'test-lab-service:',
     });
 
     return {
@@ -141,12 +158,14 @@ export function loadConfig(): ServerConfig {
       k8sTtlSecondsAfterFinished: raw.K8S_TTL_SECONDS_AFTER_FINISHED,
       runnerPollIntervalMs: raw.RUNNER_POLL_INTERVAL_MS,
       enableEventSubscribers: String(raw.ENABLE_EVENT_SUBSCRIBERS).toLowerCase() === 'true',
+      rateLimitRequestsPerMinute: raw.RATE_LIMIT_REQUESTS_PER_MINUTE,
+      rateLimitWindowMs: raw.RATE_LIMIT_WINDOW_MS,
+      cacheDefaultTtlSec: raw.CACHE_DEFAULT_TTL_SEC,
+      redisKeyPrefix: raw.REDIS_KEY_PREFIX,
     };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const missingVars = error.issues
-        .map((issue) => issue.path.join('.'))
-        .join(', ');
+      const missingVars = error.issues.map((issue) => issue.path.join('.')).join(', ');
       throw new Error(`Configuration error: missing or invalid variables: ${missingVars}`);
     }
     throw error;

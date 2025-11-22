@@ -26,6 +26,28 @@ export async function createApp() {
   // Auth plugin (JWKS-based hooks handle verification)
   await registerAuthPlugin(app);
 
+  // Redis client and cache setup
+  const { createRedisClient } = await import('./clients/redis.js');
+  const redis = await createRedisClient(cfg.redisUrl);
+  const { createCacheHelper } = await import('./lib/cache.js');
+  const cache = createCacheHelper(redis, cfg.redisKeyPrefix);
+
+  // Decorate app with redis and cache for use in routes/services
+  app.decorate('redis', redis);
+  app.decorate('cache', cache);
+
+  // Register rate limiting middleware (after auth, before routes)
+  const { createRateLimitMiddleware } = await import('./middleware/rate-limit.js');
+  app.addHook(
+    'preHandler',
+    createRateLimitMiddleware(redis, {
+      requestsPerMinute: cfg.rateLimitRequestsPerMinute,
+      windowMs: cfg.rateLimitWindowMs,
+      exemptRoutes: ['/healthz', '/metrics'],
+      keyPrefix: `${cfg.redisKeyPrefix}rate-limit:`,
+    }),
+  );
+
   // Repos: choose backend from config
   if (cfg.repoBackend === 'pg') {
     const { connectDb } = await import('./repo/pg.js');
@@ -98,7 +120,9 @@ export async function createApp() {
         bucketScreenshots: cfg.s3BucketArtifacts,
         nats,
         browserRunsRepo: app.repos.browserTestRuns!,
-        testFlow: async (driver: any) => { await driver.get('about:blank'); },
+        testFlow: async (driver: any) => {
+          await driver.get('about:blank');
+        },
         retry: { retries: 1, backoffMs: 500 },
       });
       const { wireEventSubscribers } = await import('./events/subscribers.js');
@@ -109,6 +133,11 @@ export async function createApp() {
       });
     }
   }
+
+  // Redis cleanup on app shutdown
+  app.addHook('onClose', async () => {
+    await redis.close();
+  });
 
   return app;
 }
