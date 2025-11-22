@@ -2,7 +2,7 @@
 
 Document Name: test-lab-service Implementation Plan
 
-Date: 2025-11-12
+Date: 2025-11-21
 
 Version: 1.0
 
@@ -10,7 +10,7 @@ Status: Active
 
 ## Executive Summary
 
-Test Lab Service provides automated test scaffolding, ephemeral preview environments, and cross-browser execution at scale. It exposes a REST API on port 7202 (Fastify/Node) and plans a gRPC surface on 50072. Core integrations: Postgres (persistence), Redis (cache/rate limit), NATS JetStream (events), S3 (artifacts), Kubernetes Jobs (isolated runs), Selenium Grid/BrowserStack (browser grid). Observability uses OpenTelemetry (traces) and Prometheus (metrics). SLOs: API p95 ≤ 150ms and 99.9% availability.
+Test Lab Service provides automated test scaffolding, ephemeral preview environments, and cross-browser execution at scale. It exposes a REST API on port 7202 (Fastify/Node) and plans a gRPC surface on 50072. Core integrations: Postgres (persistence), Redis (cache/rate limit), NATS JetStream (events), S3 (artifacts), Kubernetes Jobs (isolated runs), Selenium Grid/BrowserStack (browser grid). Observability uses OpenTelemetry (traces) and Prometheus (metrics). SLOs: API p95 ≤ 150ms and 99.9% availability. Current implementation is skeletal; see Reality Check for gaps against this plan.
 
 ## Architecture Overview
 
@@ -25,23 +25,36 @@ Test Lab Service provides automated test scaffolding, ephemeral preview environm
 
 ## Implementation Phases
 
-1) Foundations: config, logger, error handler, telemetry, metrics.
-2) AuthN/Z: JWT auth + scope checks; tenant access enforcement (planned) and JWKS verification (planned).
-3) Data: migrations + PG repositories for all core tables.
-4) REST APIs: scaffolds, test runs, browser runs, previews.
-5) Runners: K8s job orchestrator, artifacts service.
-6) Browser Grid: selenium-based runner and retries.
-7) Events: contracts, publishers, subscribers (feature-flagged wiring).
-8) gRPC: orchestration surface (planned).
+1) Foundations: Partial — config/logger/error handler present; telemetry initializes globally; /metrics handler currently fails under Bun/vitest with ERR_HTTP_HEADERS_SENT.
+2) AuthN/Z: Partial — JWKS verifier + requireAuth/requireScopes/optionalAuth exist; registerAuthPlugin only decorates request.user; legacy `authenticateRequest` removed; tenant access not started.
+3) Data: Mostly — migrations + PG repositories for scaffolds/test runs/browser runs/preview environments; pg-mem support used in unit tests; memory backend only supports scaffolds.
+4) REST APIs: Partial — routes for scaffolds/test runs/browser runs/previews defined; integration tests currently 500 due to Fastify reply errors and auth mismatch; orchestration triggers absent; test-run/preview routes load only when `REPO_BACKEND=pg`.
+5) Runners: Stub — K8s job manifest helper and orchestrator stub with placeholder command; not wired to routes/events; artifact upload helper failing under Bun tests.
+6) Browser Grid: Stub — Selenium-based runner stub with screenshot upload; not integrated; S3 import issues in tests.
+7) Events: Partial — run/browser subjects defined with publishers; subscribers feature-flagged; wiring not validated end-to-end.
+8) gRPC: Not started — no proto/server implementation.
+
+## Reality Check vs Spec (2025-11-21)
+
+- Tests: `bun test` shows 45/143 failures (Fastify ERR_HTTP_HEADERS_SENT on routes/metrics, auth middleware drift, JWKS fixtures vs jose verify, S3 import errors, telemetry shutdown expectation). `bun run typecheck` passes.
+- Orchestration: creating test runs does not trigger runner/browser flows or publish events; preview lifecycle absent; no rate limiting or tenant access enforcement.
+- Platform/CI: No .github workflows; Makefile `run` points to missing `./bin/server`; Dockerfile unverified.
+- Stability: /metrics and protected routes 500 under Bun/vitest; gRPC surface not started.
+- Config: Requires DB/Redis/NATS even when using memory repos; JWKS cache TTL hardcoded rather than using config value.
 
 ## Testing & Verification
 
-- Unit and integration tests across config, middleware, repos, routes, services, and events (vitest).
-- Metrics exposed via /metrics; use load tests to verify p95 ≤ 150ms.
-- Tracing exported to OTLP collector for end-to-end latency and error analysis.
+- Current automated coverage is unstable (see Reality Check); integration tests for routes/metrics are failing.
+- Metrics intended via /metrics (Prometheus); tracing to OTLP collector.
+- Load and performance validation for SLOs should follow after functional fixes.
 
 ## Security Considerations
 
-- JWT verification should use JWKS (planned) with caching and issuer/audience validation; current implementation uses fastify-jwt secret for tests.
-- Scope-based authorization (requireScopes) enforced per-route; tenant isolation via requireTenantAccess planned.
-- Secrets (S3, grid, NATS) must be sourced from Vault; no secrets in logs. Artifacts sanitized.
+### Implemented (partial)
+- JWKS verification util using jose with default 10 minute TTL, issuer/audience validation, and clock skew tolerance; not yet stable under tests.
+- Scope-based authorization helper (`requireScopes`) and `optionalAuth` available; `requireAuth` populates request.user after JWKS verification.
+
+### Planned / Missing
+- Tenant isolation via requireTenantAccess (projects-service lookup with Redis cache).
+- Secrets for S3/grid/NATS sourced from Vault; rate limiting per route/tenant using Redis.
+- Artifact sanitization and access control (signed URLs).
