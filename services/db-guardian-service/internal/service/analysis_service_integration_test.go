@@ -35,22 +35,24 @@ func (f *fakeInspectorFull) AnalyzeMigration(ctx context.Context, sql string) (*
 	return &analyzer.MigrationAnalysis{SQL: sql, HasBreaking: true, Operations: []analyzer.SQLOperation{{Type: "ALTER", ObjectType: "COLUMN", ObjectName: "users", Details: map[string]string{"operation": "DROP", "is_breaking": "true"}}}}, nil
 }
 
-func TestAnalysisService_RunFullAnalysis_PersistsAndPublishes(t *testing.T) {
+func TestAnalysisServiceIntegration_RunProjectAnalysis(t *testing.T) {
 	// Arrange
 	db, mock, err := sqlmock.New()
 	if err != nil { t.Fatalf("sqlmock: %v", err) }
 	defer db.Close()
 
-	insp := &fakeInspectorFull{}
-	rAnalyzer := analyzer.NewRoleAnalyzer(insp)
-	mGuard := analyzer.NewMigrationGuard(insp)
-	iAdvisor := analyzer.NewIndexAdvisor(insp)
+	// Mock resolver that returns the inspector
+	mockResolver := &MockProjectResolver{
+		ResolveInspectorFunc: func(ctx context.Context, projectID string) (analyzer.DBInspector, func() error, error) {
+			return &fakeInspectorFull{}, func() error { return nil }, nil
+		},
+	}
 
-dummyNats := &nats.Conn{}
-svc := NewAnalysisService(db, dummyNats, rAnalyzer, mGuard, iAdvisor)
-cap := &capturePublisher{}
+	dummyNats := &nats.Conn{}
+	svc := NewAnalysisService(db, dummyNats, mockResolver)
+	cap := &capturePublisher{}
 	// adapt to EventPublisher signature
-svc.SetPublisher(func(ctx context.Context, _ *nats.Conn, subject string, data []byte) error {
+	svc.SetPublisher(func(ctx context.Context, _ *nats.Conn, subject string, data []byte) error {
 		cap.subjects = append(cap.subjects, subject)
 		// validate payload is JSON
 		var tmp any
@@ -70,7 +72,14 @@ svc.SetPublisher(func(ctx context.Context, _ *nats.Conn, subject string, data []
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow("rec-9"))
 
 	// Act
-	report, err := svc.RunFullAnalysis(ctx, "proj-2", "003", "ALTER TABLE users DROP COLUMN email", analyzer.AnalyzeOptions{}, analyzer.ValidationOptions{CheckBreaking: true}, analyzer.IndexAnalysisOptions{MinQueryExecutions: 100, MinTableSize: 1})
+	report, err := svc.RunProjectAnalysis(ctx, ProjectAnalysisRequest{
+		ProjectID:     "proj-2",
+		MigrationName: "003",
+		MigrationSQL:  "ALTER TABLE users DROP COLUMN email",
+		RoleOpts:      analyzer.AnalyzeOptions{},
+		ValOpts:       analyzer.ValidationOptions{CheckBreaking: true},
+		IdxOpts:       analyzer.IndexAnalysisOptions{MinQueryExecutions: 100, MinTableSize: 1},
+	})
 
 	// Assert
 	if err != nil { t.Fatalf("unexpected error: %v", err) }

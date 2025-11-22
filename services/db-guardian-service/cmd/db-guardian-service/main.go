@@ -100,21 +100,20 @@ func run() error {
 		}
 	}
 
-    // Initialize Vault (optional)
-    var vaultClient *secrets.VaultClient
-    if cfg.VaultAddr != "" && cfg.VaultRoleID != "" && cfg.VaultSecretID != "" {
+	// Initialize Vault (optional)
+	var vaultClient *secrets.VaultClient
+	if cfg.VaultAddr != "" && cfg.VaultRoleID != "" && cfg.VaultSecretID != "" {
 		vaultCfg := &secrets.VaultConfig{
 			Address:  cfg.VaultAddr,
 			RoleID:   cfg.VaultRoleID,
 			SecretID: cfg.VaultSecretID,
 		}
-        vc, err := secrets.NewVaultClient(vaultCfg)
+		vaultClient, err = secrets.NewVaultClient(vaultCfg)
 		if err != nil {
 			log.Error("Failed to connect to Vault", logger.Field{Key: "error", Value: err.Error()})
 			// Not fatal - service can start without Vault
 		} else {
 			log.Info("Vault connection established")
-            vaultClient = vc
 		}
 	}
 
@@ -128,13 +127,27 @@ func run() error {
 
 	// Wire analyzers and services (if DB available)
 	if db != nil {
+		// Create project resolver (uses service DB + vault)
+		var resolver *service.ProjectResolver
+		if vaultClient != nil {
+			resolver = service.NewProjectResolver(db, vaultClient)
+			log.Info("Project resolver initialized with Vault")
+		} else {
+			log.Info("Project resolver not available - Vault not configured")
+		}
+
+		// Create analysis service with project resolver
+		if resolver != nil {
+			analysisSvc = service.NewAnalysisService(db, natsConn, resolver)
+		}
+
+		// Additional services - these still use the service DB directly
+		// TODO: Consider if these need project resolution in the future
 		inspector := analyzer.NewPostgresInspector(db)
 		roleAnalyzer := analyzer.NewRoleAnalyzer(inspector)
 		migrationGuard = analyzer.NewMigrationGuard(inspector)
-		indexAdvisor := analyzer.NewIndexAdvisor(inspector)
 
 		connSvc = service.NewConnectionService(db)
-		analysisSvc = service.NewAnalysisService(db, natsConn, roleAnalyzer, migrationGuard, indexAdvisor)
 
 		// Additional services for gRPC v1
 		idxRepo := repository.NewIndexRecommendationsRepository(db)

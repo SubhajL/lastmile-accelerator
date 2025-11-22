@@ -3,6 +3,7 @@ package secrets
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	vault "github.com/hashicorp/vault/api"
 )
@@ -68,7 +69,10 @@ func (vc *VaultClient) Health(ctx context.Context) error {
     return nil
 }
 
-func GetSecret(ctx context.Context, vc *VaultClient, path string) (map[string]string, error) {
+// GetSecret is exported as a variable to allow mocking in tests
+var GetSecret = getSecret
+
+func getSecret(ctx context.Context, vc *VaultClient, path string) (map[string]string, error) {
 	if vc == nil {
 		return nil, fmt.Errorf("Vault client is nil")
 	}
@@ -108,4 +112,41 @@ func GetSecret(ctx context.Context, vc *VaultClient, path string) (map[string]st
 	}
 
 	return result, nil
+}
+
+// GetProjectDSN retrieves a database DSN from Vault for a specific project.
+// The vaultRef must be in the format "vault:secret/projects/{projectID}/db/dsn".
+// Returns the DSN string from the secret's "dsn" key.
+// IMPORTANT: Never logs the actual DSN value, only the Vault path.
+func (vc *VaultClient) GetProjectDSN(ctx context.Context, vaultRef string) (string, error) {
+	// Validate vaultRef format
+	const vaultPrefix = "vault:"
+	if !strings.HasPrefix(vaultRef, vaultPrefix) {
+		return "", fmt.Errorf("invalid vault reference format: must start with 'vault:' prefix")
+	}
+
+	// Extract path by stripping "vault:" prefix
+	path := vaultRef[len(vaultPrefix):]
+	if path == "" {
+		return "", fmt.Errorf("vault path cannot be empty")
+	}
+
+	// Fetch secret from Vault
+	secret, err := GetSecret(ctx, vc, path)
+	if err != nil {
+		// Wrap error with path context but never include DSN
+		return "", fmt.Errorf("failed to fetch project DSN from path %s: %w", path, err)
+	}
+
+	// Extract DSN from secret data
+	dsn, exists := secret["dsn"]
+	if !exists {
+		return "", fmt.Errorf("secret at path %s missing required 'dsn' key", path)
+	}
+
+	if dsn == "" {
+		return "", fmt.Errorf("DSN value at path %s is empty", path)
+	}
+
+	return dsn, nil
 }
