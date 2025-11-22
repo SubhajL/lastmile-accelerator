@@ -5,58 +5,52 @@ import helmet from '@fastify/helmet';
 import type { Config } from './types.js';
 import type { Pool } from 'pg';
 import { healthCheck } from './db/client.js';
+import { createPrometheusRegistry, createNotificationMetrics } from './metrics/prom.js';
+import { registerHttpRoutes, type AppDeps } from './http-routes.js';
+import { buildJwtAuth } from './auth/jwt.js';
 
 export async function createApp(config: Config, dbPool: Pool): Promise<FastifyInstance> {
   const app = Fastify({
     logger: {
-      level: config.env === 'prod' ? 'info' : 'debug'
-    }
+      level: config.env === 'prod' ? 'info' : 'debug',
+    },
   });
 
   // Register security plugins
   await app.register(cors, {
     origin: true,
-    credentials: true
+    credentials: true,
   });
 
   await app.register(helmet, {
-    contentSecurityPolicy: false // Allow customization later
+    contentSecurityPolicy: false, // Allow customization later
   });
 
-  // Register health check endpoint
-  app.get('/healthz', async (_request, reply) => {
-    const isDbHealthy = await healthCheck(dbPool);
-    
-    if (!isDbHealthy) {
-      return reply.code(503).send({
-        status: 'unhealthy',
-        reason: 'database_unavailable',
-        timestamp: new Date().toISOString()
-      });
-    }
+  // Build JWT auth
+  buildJwtAuth(app, config.auth);
 
-    return reply.code(200).send({
-      status: 'ok',
-      timestamp: new Date().toISOString()
-    });
-  });
+  // Create Prometheus registry and metrics
+  const registry = createPrometheusRegistry();
+  createNotificationMetrics(registry); // Metrics will be used later
 
-  // Register metrics endpoint (placeholder for Prometheus metrics)
-  app.get('/metrics', async (_request, reply) => {
-    // In a real implementation, this would export Prometheus metrics
-    // For now, return basic metrics format
-    const metrics = [
-      '# HELP notification_service_up Service uptime',
-      '# TYPE notification_service_up gauge',
-      'notification_service_up 1',
-      ''
-    ].join('\n');
+  // Create app dependencies
+  const appDeps: AppDeps = {
+    queue: {
+      retryNotification: async () => {
+        // TODO: Implement actual retry logic
+        return { success: true };
+      },
+    },
+    enqueue: async () => {
+      // TODO: Implement actual enqueue logic
+      return 'job-id-123';
+    },
+    dbHealthCheck: () => healthCheck(dbPool),
+    config: config,
+  };
 
-    return reply
-      .code(200)
-      .header('Content-Type', 'text/plain; version=0.0.4')
-      .send(metrics);
-  });
+  // Register all HTTP routes
+  registerHttpRoutes(app, appDeps, registry);
 
   return app;
 }

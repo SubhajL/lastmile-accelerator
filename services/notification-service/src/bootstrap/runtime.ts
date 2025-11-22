@@ -91,17 +91,17 @@ export function createRuntime(opts: RuntimeOptions) {
   const router = createEventRouter({
     handlers: {
       // event envelope type keys — centralized constants
-      [Subjects.snapshot.ready]: snapshotConsumer.handle,
-      [Subjects.fixes.created]: fixesConsumer.handleCreated,
-      [Subjects.fixes.applied]: fixesConsumer.handleApplied,
+      [Subjects.snapshot.ready]: (data: unknown) => snapshotConsumer.handle(data as any),
+      [Subjects.fixes.created]: (data: unknown) => fixesConsumer.handleCreated(data as any),
+      [Subjects.fixes.applied]: (data: unknown) => fixesConsumer.handleApplied(data as any),
       // publish events route to a single consumer; the event subtype is in payload.status
-      [Subjects.publish.started]: publishConsumer.handle,
-      [Subjects.publish.healthy]: publishConsumer.handle,
-      [Subjects.publish.rolledback]: publishConsumer.handle,
-      [Subjects.publish.failed]: publishConsumer.handle,
-      [Subjects.checks.failed]: checksConsumer.handle,
-      [Subjects.slo.budget_exhausted]: sloConsumer.handle,
-      [Subjects.errors.critical]: errorsConsumer.handle,
+      [Subjects.publish.started]: (data: unknown) => publishConsumer.handle(data as any),
+      [Subjects.publish.healthy]: (data: unknown) => publishConsumer.handle(data as any),
+      [Subjects.publish.rolledback]: (data: unknown) => publishConsumer.handle(data as any),
+      [Subjects.publish.failed]: (data: unknown) => publishConsumer.handle(data as any),
+      [Subjects.checks.failed]: (data: unknown) => checksConsumer.handle(data as any),
+      [Subjects.slo.budget_exhausted]: (data: unknown) => sloConsumer.handle(data as any),
+      [Subjects.errors.critical]: (data: unknown) => errorsConsumer.handle(data as any),
     },
   });
 

@@ -13,8 +13,8 @@ export interface AdminDeps {
   }) => Promise<string>;
 }
 
-export function registerAdminRoutes(app: FastifyInstance, deps: AdminDeps) {
-  app.post('/admin/send-test', {
+export function adminSendTestRoute(app: FastifyInstance, deps: AdminDeps) {
+  app.post('/send-test', {
     preHandler: requireRoleGuard('admin')
   }, async (req, reply) => {
     const body = req.body as Partial<{
@@ -43,3 +43,5 @@ export function registerAdminRoutes(app: FastifyInstance, deps: AdminDeps) {
     return reply.code(202).send({ ok: true, jobId });
   });
 }
+
+export const registerAdminRoutes = adminSendTestRoute;
