@@ -1,125 +1,81 @@
 # Test Lab Service — Implementation Progress Tracker
 
-Last Updated: 2025-11-12
+Last Updated: 2025-11-22
 
 Specification: ./test-lab-service-spec.md
 
 ## Overview
-
-Foundations, core REST APIs, repositories, observability, and runners are implemented with comprehensive tests. Event subscribers are wired behind a feature flag. gRPC surface and tenant/JWKS hardening remain outstanding. Makefile/Dockerfile need alignment with build output.
+- MVP not reached. The service has a Fastify skeleton (config, JWKS helper, repos, routes, telemetry stubs), but orchestration and stability gaps block usage.
+- Latest local run `bun test` shows 45/143 failures driven by Fastify reply errors (ERR_HTTP_HEADERS_SENT on routes/metrics), missing auth surface (`authenticateRequest` removal), JWKS test fixtures failing jose verification, and Bun failing to resolve `putArtifact` in S3 helper for runner/browser-grid tests.
+- CI workflows for PR and main branch have been added (2025-11-22), including quality gates, security scans, Docker build, SBOM generation, and GHCR push. gRPC surface is absent. Runner/grid/event flows are stubs and not connected to HTTP endpoints.
+- Branch state: on `test-lab/add-github-actions-workflows` with new CI/CD workflows. Working tree has doc edits and .turbo cache artifacts.
 
 ## Phase Completion Summary
+| Phase | Status | Notes |
+| ---- | ---- | ---- |
+| Foundations (config/logger/otel/metrics) | Partial | Zod config + logger + telemetry init exist; /metrics handler fails under Bun tests with ERR_HTTP_HEADERS_SENT. |
+| AuthN/Z (JWT + scopes) | Partial | requireAuth/requireScopes implemented; registerAuthPlugin only decorates request.user; legacy `authenticateRequest` expected by tests is gone; JWKS util not using config cache TTL. |
+| Data layer (PG + migrations) | Mostly | Migrations + pg-mem repos pass unit tests; memory backend only supports scaffolds. |
+| REST: scaffolds/test runs/browser runs/previews | Partial/blocked | Routes defined, but integration tests 500 due to Fastify reply errors and auth mismatch. Test-run and preview routes register only with `REPO_BACKEND=pg`; no orchestration trigger. |
+| Runner (K8s Jobs + S3) | Partial | Job manifest + orchestrator stub; placeholder command and no wiring from HTTP/events; S3 helper resolution failing under Bun. |
+| Browser Grid | Partial | Runner class with screenshot upload stub; not integrated; tests blocked by S3 import error. |
+| Events (NATS) | Partial | Contracts/publishers exist; subscriber wiring behind flag; wiring test currently errors on vi.mock usage. |
+| gRPC surface (50072) | Not started | No proto/server implementation. |
+| Platform (Dockerfile/Makefile) | Partial | Dockerfile unverified; Makefile `run` target points to missing `./bin/server`; CI workflows added (PR: quality+security, Main: Docker+SBOM+CVE scan+GHCR). |
 
-| Phase                          | Status | Completion | Notes |
-|-------------------------------:|:------:|:----------:|-------|
-| Foundations (config/logger/otel/metrics) | ✅ | 100% | Config with Zod, Pino logger, OTel SDK, /metrics, /healthz |
-| AuthN/Z (JWT + scopes)         | ⏳     | 70% | Auth plugin + requireScopes done; JWKS + optionalAuth + tenant enforcement pending |
-| Data layer (PG + migrations)   | ✅     | 100% | Migrations + PG repos for scaffolds, test_runs, browser_test_runs, preview_envs |
-| REST: scaffolds                | ✅     | 100% | CRUD with Zod validation and tests |
-| REST: test runs                | ✅     | 100% | Create/list/get/update-status + tests |
-| REST: browser runs             | ✅     | 100% | Create/list/get/update-status + tests |
-| REST: previews                 | ✅     | 100% | Create/list/get/update/delete + tests |
-| Runner (K8s Jobs + S3)         | ⏳     | 80% | Orchestrator and artifacts service implemented; production config hardening pending |
-| Browser Grid (selenium)        | ⏳     | 70% | Runner implemented with basic flow; finalize suites and retries |
-| Events (NATS)                  | ⏳     | 80% | Contracts + publishers + subscribers; wiring gated by flag |
-| gRPC surface (50072)           | ❌     | 0%  | Not implemented |
-| Platform (Dockerfile/Makefile) | ⏳     | 40% | Makefile points to ./bin/server; Dockerfile needs multi-stage build to dist |
+## Current Implementation Snapshot
+- App wiring: `src/app.ts` sets up telemetry, error handler, JWKS auth hooks, repos, `/healthz` + `/metrics`, REST routes; event subscribers gated by `ENABLE_EVENT_SUBSCRIBERS`.
+- Auth: `requireAuth`/`optionalAuth` call `verifyJwt`; `authenticateRequest` removed but tests/docs still reference it.
+- Data: PG migrations for scaffolds/test runs/browser runs/previews; pg-mem support for tests.
+- Execution: Runner/browser-grid classes exist with stubbed behavior; no linkage from REST routes to orchestrators or to NATS publishers.
+- Observability: telemetry init + metrics helper exist but currently fail under test harness.
+- CI/CD: GitHub Actions workflows added - PR workflow (quality gates + security scans) and Main workflow (Docker build, SBOM generation, CVE scanning, GHCR push); Dockerfile/Makefile not validated.
 
-## Completed Tasks / Phases
+## Build & Test Status (local)
+- `bun run typecheck` ✅ (passes).
+- `bun test` ❌ (45/143 failing). Failures: Fastify reply errors on REST + /metrics; auth plugin API drift (`authenticateRequest` expectations); JWKS jose verification with fixtures; S3 `putArtifact` resolution under Bun; telemetry shutdown expectation.
+- Lint/build not run in this check.
 
-- Config module with Zod validation, getConfig/validateEnv.
-- Logger with redaction, child context; global error handler.
-- OpenTelemetry SDK + auto-instrumentations; Prometheus /metrics.
-- Repos + migrations: scaffolds, test_runs, browser_test_runs, preview_envs.
-- REST endpoints: scaffolds, test runs, browser runs, previews (with Zod schemas, scope guards).
-- K8s runner and artifacts service; selenium grid runner; NATS publishers/subscribers (flagged).
-- App wiring: createApp(), health/metrics, auth, routes, optional event wiring.
+## Blocking Issues (toward MVP)
+1. Fastify replies double-send/ERR_HTTP_HEADERS_SENT on route and metrics handlers under Bun tests; need to debug error handler and route return behavior.
+2. Auth surface drift: registerAuthPlugin only decorates `request.user`; legacy `authenticateRequest` and shared-secret path still in tests; align middleware with JWKS util and update tests/spec.
+3. JWKS util tests failing because jose verify needs deterministic test JWKS plus config-driven cache TTL; optionalAuth path swallows errors differently than tests expect.
+4. S3 helper import resolution (`putArtifact`) failing in Bun for runner/browser-grid tests; likely module format or mocking issue.
+5. Orchestration not wired: test run creation does not enqueue runner/browser jobs or emit NATS events; preview orchestration absent; gRPC surface absent.
+6. ~No CI workflows~ CI workflows added (2025-11-22); still need to validate Docker/Makefile.
 
-## MVP — Remaining Tasks (to move to Complete)
+## Next Steps (proposed)
+1. Fix Fastify response handling for routes and `/metrics` so integration tests pass under Bun/vitest.
+2. Decide and document supported auth middleware (`authenticateRequest` vs `requireAuth`/`optionalAuth`), update code/tests accordingly, and ensure JWKS cache uses config values.
+3. Resolve Bun module resolution for S3 helper and adjust runner/browser-grid tests; add harness-friendly stubs for K8s/S3/NATS.
+4. Wire test-run and browser-run routes to orchestrator/event publish stubs (feature-flagged) and add minimal happy-path integration tests.
+5. ~Add CI workflows for PR/main~ ✅ CI workflows added (2025-11-22) with quality gates and security scans; still need to fix Makefile `run` target and validate Dockerfile build.
+6. Leave gRPC/preview env lifecycle/rate limiting in backlog with explicit deferral in spec.
 
-- [ ] Implement JWKS-based JWT verification with caching (replace shared secret usage in production). Owner: BE-Auth. Sprint: S1
-- [ ] Add optionalAuth and requireTenantAccess hooks with project tenant lookup and Redis cache. Owner: BE-Auth. Sprint: S1
-- [ ] Implement preview environment orchestration (K8s namespaces/services) and lifecycle management. Owner: Infra. Sprint: S2
-- [ ] Implement gRPC server on 50072 for orchestration (CreateTestScaffold, ExecuteTests, GetTestResults, CreatePreview). Owner: BE-Core. Sprint: S3
-- [ ] Enable and configure event subscribers in production (snapshot.ready → smoke runs, fixes.applied → regression). Owner: BE-Core. Sprint: S2
-- [ ] Rate limiting and Redis caching for hotspots; define budgets per route. Owner: Platform. Sprint: S2
-- [ ] Finalize Dockerfile (multi-stage build to dist) and fix Makefile run target. Owner: Platform. Sprint: S1
-- [ ] SLO verification: add load tests and dashboards to ensure API p95 ≤ 150ms and 99.9% availability. Owner: SRE/Obs. Sprint: S3
+## CI/CD Implementation (2025-11-22)
 
-## What needs to be done next
+### GitHub Actions Workflows Added
+1. **PR Workflow** (`.github/workflows/test-lab-service-pr.yml`):
+   - Triggers on PR to main/master/db-guardian-service branches
+   - Runs quality gates: typecheck, lint, test (with Node runner), build
+   - Runs security scans: gitleaks (secrets), hadolint (Dockerfile)
+   - Uses Bun with Turborepo filtering
 
-1) Security hardening: JWKS + tenant enforcement hooks.
-2) Preview orchestration service and wiring to routes.
-3) gRPC server and handlers mapped to existing services.
-4) Enable event subscribers and verify end-to-end flows.
-5) Platform fixes (Dockerfile/Makefile) and performance validation.
+2. **Main Branch Workflow** (`.github/workflows/test-lab-service-main.yml`):
+   - Triggers on push to main/db-guardian-service branches
+   - Builds application with Turborepo
+   - Builds Docker image with caching
+   - Generates SBOM with Anchore
+   - Scans for CVEs with Trivy (fails on CRITICAL/HIGH)
+   - Pushes to GitHub Container Registry (ghcr.io)
+   - Uploads SBOM as artifact (90-day retention)
 
-## Blockers/Issues
+### Key Configurations
+- Path filters include service code, shared packages, and workflow files
+- Concurrency groups prevent duplicate runs
+- Uses Node runner for tests to ensure compatibility
+- Docker tags: `{branch}-{sha}` and `latest` for main branch
+- Caching for Bun dependencies and Docker layers
 
-- JWKS endpoint and issuer/audience details required from auth provider.
-- Kubernetes namespaces/permissions and container image for test runner must be provisioned.
-- Selenium Grid URL and credentials for Safari/Firefox farms if not self-hosted.
-
-## Owner & Sprint Breakdown
-
-Legend Owners: BE-Auth (Auth/Scopes), BE-Core (API/Services), Infra (K8s/S3/NATS), Platform (Build/Runtime), SRE/Obs (SLO/Monitoring)
-
-### Sprint S1
-- [ ] JWKS verification with caching (Owner: BE-Auth)
-- [ ] optionalAuth + requireTenantAccess + Redis cache (Owner: BE-Auth)
-- [ ] Dockerfile (multi-stage) + Makefile run target fix (Owner: Platform)
-- [ ] Bootstrap runs migrations on startup when REPO_BACKEND=pg (Owner: Platform)
-
-### Sprint S2
-- [ ] Preview env orchestration (K8s services/namespace lifecycle) (Owner: Infra)
-- [ ] Enable event subscribers (snapshot.ready/fixes.applied) and E2E verification (Owner: BE-Core)
-- [ ] Route-level rate limiting using Redis (Owner: Platform)
-
-### Sprint S3
-- [ ] gRPC server on 50072 (handlers wired to services) (Owner: BE-Core)
-- [ ] Load tests + dashboards to validate p95 and availability (Owner: SRE/Obs)
-
-## Graphite Stack Plan (staged diffs)
-
-Use small, reviewable stacks (≤3 files, ≤250 LOC) with tests green at every step. Suggested branch names assume `gt` workflow; each bullet is a single stacked diff.
-
-### S1-A — JWT Hardening (Owner: BE-Auth)
-1. feat(config): add JWKS config keys + types; unit tests (files: src/config.ts, src/__tests__/unit/config.test.ts) — Branch: test-lab/jwks-config
-2. feat(auth): add JWKS verifier util and tests (files: src/lib/jwks.ts, src/__tests__/unit/middleware/auth.test.ts) — Branch: test-lab/jwks-util
-3. feat(auth): add optionalAuth hook + tests (files: src/middleware/auth.ts, tests) — Branch: test-lab/optional-auth
-4. feat(auth): integrate registerAuthPlugin to use JWKS util behind env flag; update app wiring; tests (files: src/middleware/auth.ts, src/app.ts) — Branch: test-lab/auth-wire-jwks
-5. chore(auth): default to JWKS in staging/prod, keep secret for tests only (files: src/config.ts) — Branch: test-lab/jwks-default
-
-### S1-B — Tenant Access (Owner: BE-Auth)
-1. feat(client): add projects client with Redis cache + tests (files: src/clients/projects.ts, tests) — Branch: test-lab/projects-client
-2. feat(middleware): implement requireTenantAccess using client; unit tests — Branch: test-lab/tenant-mw
-3. feat(routes): apply requireTenantAccess to scaffolds/runs/previews; integration tests — Branch: test-lab/tenant-wire
-4. perf(auth): cache TTL tuning and error mapping; tests — Branch: test-lab/tenant-tuning
-
-### S1-C — Platform (Owner: Platform)
-1. chore(Dockerfile): multi-stage build to dist; HEALTHCHECK; expose 7202 — Branch: test-lab/docker
-2. chore(Makefile): fix run target to `node dist/index.js`; add migrate target — Branch: test-lab/makefile
-3. feat(app): auto-run migrations on startup when REPO_BACKEND=pg; tests — Branch: test-lab/auto-migrate
-
-### S2-A — Preview Orchestration (Owner: Infra)
-1. feat(k8s): preview manager client + service; unit tests — Branch: test-lab/preview-svc
-2. feat(routes): wire preview service into routes; publish events; integration tests — Branch: test-lab/preview-wire
-3. feat(preview): TTL extend + lifecycle states; tests — Branch: test-lab/preview-ttl
-
-### S2-B — Events Enablement (Owner: BE-Core)
-1. feat(config): feature flag for subscribers; defaults off — Branch: test-lab/events-flag
-2. feat(app): enable subscribers in staging; close hooks; tests — Branch: test-lab/events-wire
-3. test(e2e): inject NATS messages to verify snapshot.ready → smoke run — Branch: test-lab/events-e2e
-
-### S2-C — Rate Limiting (Owner: Platform)
-1. feat(rate): Redis-backed rate limiting middleware; unit tests — Branch: test-lab/rate-limit
-2. chore(routes): apply per-route budgets; integration tests — Branch: test-lab/rate-apply
-
-### S3 — gRPC & SLO (Owners: BE-Core, SRE/Obs)
-1. feat(grpc): proto + server skeleton; unit tests — Branch: test-lab/grpc-proto
-2. feat(grpc): handlers mapped to services; integration-light tests — Branch: test-lab/grpc-handlers
-3. chore(slo): k6 load scripts + dashboards; acceptance thresholds — Branch: test-lab/slo-scripts
-
-### Stretch / Parallel
-- [ ] Tenant cache invalidation and TTL tuning (BE-Auth)
-- [ ] Grid retries flake policy and screenshots/logs enrichment (BE-Core)
+## Legacy Planning Notes
+Prior sprint breakdowns and Graphite stack plan in earlier revisions assumed auth hardening work was already green. Treat them as stale; refer to git history if needed for archival context.

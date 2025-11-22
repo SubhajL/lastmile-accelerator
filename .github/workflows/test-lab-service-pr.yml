@@ -2,7 +2,7 @@ name: Test Lab Service - PR
 
 on:
   pull_request:
-    branches: [main, master, db-guardian-service]
+    branches: [main, master, test-lab-service]
     paths:
       - 'services/test-lab-service/**'
       - 'packages/**'
@@ -38,7 +38,7 @@ jobs:
         with:
           path: |
             ~/.bun/install/cache
-            node_modules
+            .turbo
           key: ${{ runner.os }}-bun-${{ hashFiles('bun.lockb') }}
           restore-keys: |
             ${{ runner.os }}-bun-
