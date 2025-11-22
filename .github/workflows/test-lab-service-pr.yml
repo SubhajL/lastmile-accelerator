@@ -1,0 +1,81 @@
+name: Test Lab Service - PR
+
+on:
+  pull_request:
+    branches: [main, master, db-guardian-service]
+    paths:
+      - 'services/test-lab-service/**'
+      - 'packages/**'
+      - 'package.json'
+      - 'bun.lockb'
+      - 'turbo.json'
+      - '.github/workflows/test-lab-service-*.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  quality:
+    name: Quality Gates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+
+      - name: Cache Dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.bun/install/cache
+            node_modules
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lockb') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        run: bunx turbo run typecheck --filter=test-lab-service
+
+      - name: Lint
+        run: bunx turbo run lint --filter=test-lab-service
+
+      - name: Test (Node Runner)
+        run: NODE_OPTIONS=--experimental-vm-modules bunx turbo run test --filter=test-lab-service
+        env:
+          CI: true
+
+      - name: Build
+        run: bunx turbo run build --filter=test-lab-service
+
+  security:
+    name: Security Scans
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Lint Dockerfile
+        uses: hadolint/hadolint-action@v3
+        with:
+          dockerfile: services/test-lab-service/Dockerfile
+          failure-threshold: warning
