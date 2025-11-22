@@ -2,7 +2,7 @@
 
 - Service path: `services/dep-governance-service`
 - Branch: `auth-validation`
-- Last Updated: 2025-11-20
+- Last Updated: 2025-11-21
 
 ## Status: Infrastructure Complete ✅ | Core Features Not Started ❌
 
@@ -99,18 +99,25 @@
 - ✅ Strong type safety with Rust ownership model
 - ✅ Comprehensive enum types with Display/FromStr traits
 - ✅ SQLx compile-time query verification
+- ✅ Code formatting PASSES: `cargo fmt --check` shows no issues (FIXED since last update)
+- ✅ Clippy PASSES: No warnings in production code (FIXED since last update)
 
 **Issues to Fix:**
-- ⚠️ **1 Clippy warning**: `items_after_test_module` in `src/handlers/api/sbom.rs:18`
-- ⚠️ **Formatting issues**: `cargo fmt --check` shows 15+ files need formatting
+- ⚠️ **6 test failures**: Config validation tests failing (43 tests passing, 6 failing, 1 ignored)
+  - `test_config_defaults_applied_correctly`
+  - `test_config_fails_without_required_vars`
+  - `test_config_loads_from_env`
+  - `test_config_validates_database_url_format`
+  - `test_config_validates_nats_url_format`
+  - `test_config_validates_port_range`
 - ⚠️ **Future incompatibility warnings**: `redis v0.24.0`, `sqlx-postgres v0.7.4` will be rejected by future Rust versions
 
 ### Local vs Remote Sync
 
 **Branch Status:**
 - Current branch: `auth-validation`
-- Ahead of `origin/auth-validation` by **11 commits**
-- Uncommitted changes: `CLAUDE.md` (modified)
+- ✅ **IN SYNC** with `origin/auth-validation` (as of 2025-11-21)
+- Uncommitted changes: `.claude/settings.json` (modified), `.claude/hooks/` (untracked)
 - Remote: `git@github.com:SubhajL/lastmile-accelerator.git`
 
 **Recent Work (last 11 commits):**
@@ -306,12 +313,71 @@ jobs:
 
 ---
 
+## Critical MVP Gap Analysis (2025-11-21)
+
+### Codex Deep Dive Findings
+
+**Infrastructure Status: ✅ 100% Complete**
+- HTTP server with Axum + Tokio runtime
+- JWT authentication with JWKS provider and caching
+- PostgreSQL connection pooling + migrations (sqlx)
+- NATS event bus connection (wired but unused)
+- OpenTelemetry tracing + Prometheus metrics
+- Health/readiness/metrics endpoints
+- Error handling with typed errors
+
+**Business Logic Status: ❌ 0% Complete**
+- **SBOM Generation:** Only metadata CRUD exists. No manifest parsers (package.json, Cargo.toml, etc.), no CycloneDX/SPDX generators, no S3/MinIO client integration.
+- **Vulnerability Scanning:** Manual CVE upsert only. No OSV/NVD/GitHub API clients, no automated CVE matching, no background sync.
+- **Policy Enforcement:** Enum types exist (`LicenseType`, `PolicyScope`) but completely unused. No license validation, no version constraint checks.
+- **Dependency Resolution:** Read-only listing via API. No manifest ingestion, no transitive dependency graphs.
+- **Event-Driven Workflows:** NATS publisher exists but nothing publishes or subscribes. No handlers for `project.created` or `deployment.started`.
+
+**Service Stubs:**
+- `src/services/mod.rs`: Placeholder file with comment "Services will be implemented in Phase 2+"
+- Event handlers: Wired but unused (`main.rs` passes `_nats`, no consumers)
+
+**Test Status:**
+- 43 tests passing (infrastructure, handlers, DB)
+- 6 tests failing (config validation edge cases)
+- 1 test ignored
+- No tests for core business logic (because it doesn't exist)
+
+### MVP Reality Check
+
+**Current Reality:** This is a **beautifully architected shell** with production-ready infrastructure but **zero business value**. It's a REST API that stores SBOM metadata but cannot generate SBOMs, detect vulnerabilities, or enforce policies.
+
+**MVP Requirements NOT Met:**
+1. ❌ Cannot generate SBOMs from repositories
+2. ❌ Cannot scan dependencies for vulnerabilities
+3. ❌ Cannot enforce dependency policies
+4. ❌ Cannot react to project lifecycle events
+5. ❌ Cannot store actual SBOM files (only metadata)
+
+**What Works:**
+- Service starts and responds to health checks
+- JWT tokens are validated correctly
+- SBOM metadata records can be manually created/retrieved
+- CVE records can be manually entered
+- Dependencies can be manually inserted and queried
+
+**Estimated Work to Functional MVP:** 40-60 hours of pure implementation
+- SBOM Generation: 12-16 hours
+- Vulnerability Scanning: 12-16 hours
+- S3 Integration: 6-8 hours
+- Event Workflows: 6-8 hours
+- Policy Engine: 8-10 hours (optional for MVP)
+
+---
+
 **Next Actions:**
-1. ✅ Fix code formatting: `cargo fmt`
-2. ✅ Fix clippy warning in sbom.rs
-3. ✅ Commit current work: `git add -A && git commit`
-4. ✅ Push to remote: `git push origin auth-validation`
-5. ❌ Create CI workflow file
-6. ❌ Implement SBOM generation (start with npm/package.json)
-7. ❌ Implement OSV vulnerability scanner
-8. ❌ Add S3 storage integration
+1. ✅ Fix code formatting: `cargo fmt` (COMPLETED - passes)
+2. ✅ Fix clippy warning in sbom.rs (COMPLETED - passes)
+3. ✅ Commit current work: `git add -A && git commit` (COMPLETED - in sync with remote)
+4. ✅ Push to remote: `git push origin auth-validation` (COMPLETED - in sync)
+5. ❌ Fix 6 failing config tests
+6. ❌ Create CI workflow file (`.github/workflows/ci-dep-governance-service.yml`)
+7. ❌ Implement SBOM generation (start with npm/package.json parser)
+8. ❌ Implement OSV vulnerability scanner API client
+9. ❌ Add S3/MinIO storage integration with aws-sdk-s3
+10. ❌ Wire up event subscriptions and publishers
