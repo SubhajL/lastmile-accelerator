@@ -1,9 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { resetLogger } from '../../logger';
 
 describe('Logger', () => {
   beforeEach(() => {
-    // Clear logger singleton before each test
-    vi.resetModules();
+    // Clear logger singleton and mocks before each test (Bun-compatible)
+    resetLogger();
+    vi.clearAllMocks();
   });
 
   describe('createLogger()', () => {
@@ -40,10 +42,13 @@ describe('Logger', () => {
     });
 
     it('should throw if getLogger called before createLogger', async () => {
-      vi.resetModules();
+      resetLogger();
+      vi.clearAllMocks();
       const { getLogger } = await import('../../logger');
 
-      expect(() => getLogger()).toThrow();
+      expect(() => getLogger()).toThrow(
+        'Logger not initialized. Call createLogger() before getLogger().',
+      );
     });
   });
 
@@ -71,10 +76,7 @@ describe('Logger', () => {
       const logger = createLogger('test-service');
 
       expect(() => {
-        logger.info(
-          { requestId: '123', userId: 'user-456' },
-          'request started'
-        );
+        logger.info({ requestId: '123', userId: 'user-456' }, 'request started');
       }).not.toThrow();
     });
   });
