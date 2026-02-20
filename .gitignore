@@ -22,24 +22,26 @@ __pycache__/
 .idea/
 .vscode/
 
-# Devstack volumes (runtime data)
-lma-devstack-compose-gitea4001/vol/minio/
-lma-devstack-compose-gitea4001/vol/postgres/
-lma-devstack-compose-gitea4001/vol/loki/
-lma-devstack-compose-gitea4001/vol/prometheus/
+# Claude Code configuration (worktree-specific)
+.claude/
+
+# Devstack volumes and generated state (runtime data; may contain keys/dbs)
+lma-devstack-compose-*/vol/**
 
 # Rust build output
 **/target/
 
 # Service temp/build outputs
 services/**/tmp/
-<<<<<<< HEAD
-=======
 
->>>>>>> 455f714 (chore: ignore service tmp/ artifacts and stop tracking)
+# Turbo cache (local runtime artifacts)
+.turbo/
+
 # Env files
 .env
+.env.local
 .env.*.local
+.env.mcp
 
 # Archives
 *.zip
@@ -47,16 +49,6 @@ services/**/tmp/
 # Package manager lockfiles (non-standard for Bun)
 pnpm-lock.yaml
 
-# Local dev environment (contains example endpoints/secrets)
-<<<<<<< HEAD
-dev/.env.local
-=======
+# Local dev environment
+.mcp.json
 dev/
->>>>>>> d7563df0 (chore(repo): ignore dev/ and devstack volumes; untrack committed artifacts (#33))
-
-# Devstack volumes and generated state (may contain keys/dbs)
-lma-devstack-compose-gitea4001/vol/**
-
-# Devstack sensitive scripts/config generated artifacts
-lma-devstack-compose-gitea4001/scripts/vault-setup.sh
-lma-devstack-compose-gitea4001/vol/gitea/gitea/conf/app.ini
