@@ -6,6 +6,7 @@ type JwtOpts = { secret: string };
 
 declare module '@fastify/jwt' {
   interface FastifyJWT {
+    payload: { roles?: string[]; [k: string]: unknown };
     user: { roles?: string[]; [k: string]: unknown };
   }
 }
@@ -13,10 +14,6 @@ declare module '@fastify/jwt' {
 export const jwtPlugin = fp(async function (app: FastifyInstance, opts: JwtOpts) {
   await app.register(fastifyJwt, { secret: opts.secret });
 });
-
-declare module 'fastify' {
-  interface FastifyInstance {}
-}
 
 export function requireRoleGuard(role: string) {
   return async function (req: FastifyRequest, reply: FastifyReply) {
@@ -30,4 +27,14 @@ export function requireRoleGuard(role: string) {
       return reply.code(401).send({ error: 'unauthorized' });
     }
   };
+}
+
+export function buildJwtAuth(
+  app: FastifyInstance,
+  authConfig: { jwtPublicKey?: string; jwtJwksUrl?: string },
+): void {
+  // Use public key if provided, otherwise use a default secret for development
+  const secret = authConfig.jwtPublicKey || process.env.JWT_SECRET || 'development-secret';
+
+  app.register(jwtPlugin, { secret });
 }
