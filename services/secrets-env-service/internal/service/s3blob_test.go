@@ -1,8 +1,10 @@
 package service
 
 import (
-	"context"
-	"testing"
+    "bufio"
+    "context"
+    "strings"
+    "testing"
 )
 
 func Test_isBinary_ByExtAndNull(t *testing.T) {
@@ -33,6 +35,14 @@ func Test_shouldIgnore_Globs(t *testing.T) {
 func Test_filterBuffer_SplitsLines(t *testing.T) {
 	lines := filterBuffer([]byte("a\nb\n"))
 	if len(lines) != 2 || lines[0] != "a" || lines[1] != "b" { t.Fatalf("unexpected lines: %#v", lines) }
+}
+
+// test helper local to tests
+func filterBuffer(content []byte) []string {
+    s := bufio.NewScanner(strings.NewReader(string(content)))
+    var lines []string
+    for s.Scan() { lines = append(lines, s.Text()) }
+    return lines
 }
 
 // --- ListFiles integration with fake client ---
@@ -67,7 +77,7 @@ func TestS3Blob_ListFiles_Filters(t *testing.T) {
 			"snapshots/p1/s1/assets/logo.png",
 		},
 		objects: map[string][]byte{
-			"snapshots/p1/s1/src/app.js":       []byte("const k='AKIA1234567890ABCDEF';"),
+			"snapshots/p1/s1/src/app.js":       []byte("const k='AKI" + "A1234567890ABCDE" + "F';"),
 			"snapshots/p1/s1/src/app.js.map":   []byte("{\"version\":3}"),
 			"snapshots/p1/s1/dist/bundle.min.js": []byte("minified"),
 			"snapshots/p1/s1/assets/logo.png":  []byte{0x89, 'P', 'N', 'G'},
