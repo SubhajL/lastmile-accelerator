@@ -21,12 +21,15 @@ __pycache__/
 .DS_Store
 .idea/
 .vscode/
-
-# Claude Code configuration (worktree-specific)
 .claude/
+.mcp.json
 
-# Devstack volumes and generated state (runtime data; may contain keys/dbs)
+# Devstack volumes (runtime data)
 lma-devstack-compose-*/vol/**
+lma-devstack-compose-gitea4001/vol/minio/
+lma-devstack-compose-gitea4001/vol/postgres/
+lma-devstack-compose-gitea4001/vol/loki/
+lma-devstack-compose-gitea4001/vol/prometheus/
 
 # Rust build output
 **/target/
@@ -34,14 +37,10 @@ lma-devstack-compose-*/vol/**
 # Service temp/build outputs
 services/**/tmp/
 
-# Turbo cache (local runtime artifacts)
-.turbo/
-
 # Env files
 .env
 .env.local
 .env.*.local
-.env.mcp
 
 # Archives
 *.zip
@@ -49,6 +48,5 @@ services/**/tmp/
 # Package manager lockfiles (non-standard for Bun)
 pnpm-lock.yaml
 
-# Local dev environment
-.mcp.json
-dev/
+# Turbo cache (local runtime artifacts)
+.turbo/
