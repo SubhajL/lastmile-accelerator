@@ -16,8 +16,8 @@
 
 ```bash
 # From repo root
-bun install
-bunx turbo run build --filter=authz-matrix-service
+pnpm i
+pnpm --filter authz-matrix-service build
 make run
 ```
 
