@@ -70,7 +70,7 @@ func (r *IndexRecommendationsRepository) ListByProject(ctx context.Context, proj
 	if err != nil {
 		return nil, fmt.Errorf("failed to list index recommendations: %w", err)
 	}
-	defer rows.Close()
+    defer func(){ _ = rows.Close() }()
 
 	var recommendations []models.IndexRecommendation
 	for rows.Next() {

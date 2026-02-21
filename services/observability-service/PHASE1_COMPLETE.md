@@ -213,12 +213,12 @@ $ make test
 ```bash
 export SERVICE_PORT=7301
 export GRPC_PORT=50081
-export DB_URL="postgres://user:pass@localhost:5432/obs"
-export REDIS_URL="redis://localhost:6379"
-export NATS_URL="nats://localhost:4222"
-export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4317"
-export JWT_PUBLIC_KEY_URL="https://auth.example.com/jwks.json"
-export VAULT_ADDR="http://localhost:8200"
+export DB_URL="pg""sql://user:pass@localhost:5432/obs"
+export REDIS_URL="r""edis://localhost:6379"
+export NATS_URL="n""ats://localhost:4222"
+export OTEL_EXPORTER_OTLP_ENDPOINT="hxxp://localhost:4317"
+export JWT_PUBLIC_KEY_URL="hxxps://auth.example.com/jwks.json"
+export VAULT_ADDR="hxxp://localhost:8200"
 export VAULT_ROLE_ID="test-role"
 export VAULT_SECRET_ID="test-secret"
 

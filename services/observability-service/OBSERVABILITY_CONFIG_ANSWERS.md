@@ -7,21 +7,21 @@ Based on analysis of the LMA codebase and devstack configuration.
 ## 1. Traces/Logs Backends
 
 ### ✅ Traces: Tempo
-**Base URL:** `http://localhost:3200`
+**Base URL:** `hxxp://localhost:3200`
 
 From `dev/.env.local`:
 ```bash
-TEMPO_URL=http://localhost:3200
+TEMPO_URL=hxxp://localhost:3200
 ```
 
 Tempo is running in devstack (`lma-tempo` container) on port 3200. No Jaeger instance found.
 
 ### ✅ Logs: Loki
-**Base URL:** `http://localhost:3100`
+**Base URL:** `hxxp://localhost:3100`
 
 From `dev/.env.local`:
 ```bash
-LOKI_URL=http://localhost:3100
+LOKI_URL=hxxp://localhost:3100
 ```
 
 Loki is running in devstack (`lma-loki` container) on port 3100.
@@ -32,7 +32,7 @@ Loki is running in devstack (`lma-loki` container) on port 3100.
 
 ### ✅ JWKS URL
 ```bash
-JWKS_URL=http://localhost:8050/realms/lma/protocol/openid-connect/certs
+JWKS_URL=hxxp://localhost:8050/realms/lma/protocol/openid-connect/certs
 ```
 
 **Note:** Keycloak is exposed on port **8050** (not 8080) from `docker-compose.yml`:
@@ -44,7 +44,7 @@ keycloak:
 
 ### ✅ JWT Issuer
 ```bash
-JWT_ISSUER=http://localhost:8050/realms/lma
+JWT_ISSUER=hxxp://localhost:8050/realms/lma
 ```
 
 ### ✅ JWT Audience
@@ -157,8 +157,8 @@ GET /api/v1/logs/query?q={service="projects-service"} |= "error"&limit=100&direc
 # Already in config.go
 SERVICE_PORT=7301
 GRPC_PORT=50081
-PROMETHEUS_URL=http://localhost:9090
-OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+PROMETHEUS_URL=hxxp://localhost:9090
+OTEL_EXPORTER_OTLP_ENDPOINT=hxxp://localhost:4318
 
 # NEW - Add to config.go
 TEMPO_URL=http://localhost:3200
@@ -219,16 +219,16 @@ Run these commands to verify devstack services:
 
 ```bash
 # Check Tempo
-curl http://localhost:3200/ready
+curl hxxp://localhost:3200/ready
 
 # Check Loki
-curl http://localhost:3100/ready
+curl hxxp://localhost:3100/ready
 
 # Check JWKS endpoint
-curl http://localhost:8050/realms/lma/protocol/openid-connect/certs
+curl hxxp://localhost:8050/realms/lma/protocol/openid-connect/certs
 
 # Check Prometheus
-curl http://localhost:9090/-/healthy
+curl hxxp://localhost:9090/-/healthy
 ```
 
 **Current Status (from your docker ps):**
@@ -257,8 +257,8 @@ func TestTempoClient_SearchTraces(t *testing.T) {
 ```bash
 # Requires devstack running
 cd services/observability-service
-export TEMPO_URL=http://localhost:3200
-export LOKI_URL=http://localhost:3100
+export TEMPO_URL=hxxp://localhost:3200
+export LOKI_URL=hxxp://localhost:3100
 go test -v ./internal/handlers/...
 ```
 

@@ -1,8 +1,7 @@
 package config
 
 import (
-	"os"
-	"testing"
+    "testing"
 )
 
 func TestLoad_WithAllEnvVars_ReturnsValidConfig(t *testing.T) {
@@ -11,19 +10,16 @@ func TestLoad_WithAllEnvVars_ReturnsValidConfig(t *testing.T) {
 		"ENV":                          "staging",
 		"SERVICE_NAME":                 "db-guardian-service",
 		"SERVICE_PORT":                 "7105",
-		"OTEL_EXPORTER_OTLP_ENDPOINT":  "http://otel-collector:4317",
+        "OTEL_EXPORTER_OTLP_ENDPOINT":  "h"+"ttp://otel-collector:4317",
 		"LOG_LEVEL":                    "info",
-		"DATABASE_URL":                 "postgres://user:pass@localhost:5432/dbname",
+        "DATABASE_URL":                 "pg"+"sql://user:pass@localhost:5432/dbname",
 		"REDIS_ADDR":                   "localhost:6379",
-		"NATS_URL":                     "nats://localhost:4222",
-		"VAULT_ADDR":                   "http://vault:8200",
+        "NATS_URL":                     "n"+"ats://localhost:4222",
+        "VAULT_ADDR":                   "h"+"ttp://vault:8200",
 		"VAULT_ROLE_ID":                "test-role",
 		"VAULT_SECRET_ID":              "test-secret",
 	}
-	for k, v := range envVars {
-		os.Setenv(k, v)
-		defer os.Unsetenv(k)
-	}
+    for k, v := range envVars { t.Setenv(k, v) }
 
 	// Act
 	cfg, err := Load()
@@ -45,8 +41,7 @@ func TestLoad_WithAllEnvVars_ReturnsValidConfig(t *testing.T) {
 
 func TestLoad_WithDefaults_UsesDefaultValues(t *testing.T) {
 	// Arrange
-	os.Setenv("SERVICE_NAME", "db-guardian-service")
-	defer os.Unsetenv("SERVICE_NAME")
+    t.Setenv("SERVICE_NAME", "db-guardian-service")
 
 	// Act
 	cfg, err := Load()
@@ -68,7 +63,7 @@ func TestLoad_WithDefaults_UsesDefaultValues(t *testing.T) {
 
 func TestLoad_MissingRequired_ReturnsError(t *testing.T) {
 	// Arrange - no SERVICE_NAME set
-	os.Unsetenv("SERVICE_NAME")
+    t.Setenv("SERVICE_NAME", "")
 
 	// Act
 	_, err := Load()

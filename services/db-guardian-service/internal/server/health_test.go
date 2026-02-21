@@ -115,3 +115,54 @@ func TestHealthHandler_PartialFailure_IncludesDetails(t *testing.T) {
 		t.Errorf("expected redis status to be unhealthy, got '%v'", checks["redis"])
 	}
 }
+
+func TestHealthHandler_NATSUnhealthy_Returns503(t *testing.T) {
+    deps := &HealthDeps{
+        NATSReady: func() error { return fmt.Errorf("nats not connected") },
+    }
+    handler := NewHealthHandler(deps)
+    req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
+    w := httptest.NewRecorder()
+    handler(w, req)
+    if w.Code != http.StatusServiceUnavailable { t.Fatalf("expected 503, got %d", w.Code) }
+    var resp map[string]any
+    if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil { t.Fatalf("json: %v", err) }
+    checks := resp["checks"].(map[string]any)
+    if _, ok := checks["nats"]; !ok { t.Fatalf("expected nats check") }
+}
+
+func TestHealthHandler_VaultUnhealthy_Returns503(t *testing.T) {
+    deps := &HealthDeps{
+        VaultHealth: func(ctx context.Context) error { return fmt.Errorf("vault unhealthy") },
+    }
+    handler := NewHealthHandler(deps)
+    req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
+    w := httptest.NewRecorder()
+    handler(w, req)
+    if w.Code != http.StatusServiceUnavailable { t.Fatalf("expected 503, got %d", w.Code) }
+    var resp map[string]any
+    if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil { t.Fatalf("json: %v", err) }
+    checks := resp["checks"].(map[string]any)
+    if _, ok := checks["vault"]; !ok { t.Fatalf("expected vault check") }
+}
+
+func TestHealthHandler_AllDepsHealthy_Returns200AndOKChecks(t *testing.T) {
+    deps := &HealthDeps{
+        DBPing: func(ctx context.Context, db *sql.DB) error { return nil },
+        RedisPing: func(ctx context.Context, c *redis.Client) error { return nil },
+        NATSReady: func() error { return nil },
+        VaultHealth: func(ctx context.Context) error { return nil },
+    }
+    handler := NewHealthHandler(deps)
+    req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
+    w := httptest.NewRecorder()
+    handler(w, req)
+    if w.Code != http.StatusOK { t.Fatalf("expected 200, got %d", w.Code) }
+    var resp map[string]any
+    if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil { t.Fatalf("json: %v", err) }
+    checks := resp["checks"].(map[string]any)
+    for _, k := range []string{"database","redis","nats","vault"} {
+        if checks[k] != "ok" { t.Fatalf("%s expected ok, got %v", k, checks[k]) }
+    }
+}
+

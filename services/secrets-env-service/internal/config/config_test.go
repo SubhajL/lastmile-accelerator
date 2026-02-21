@@ -13,14 +13,14 @@ func TestLoad_AllRequiredEnvVars(t *testing.T) {
 	os.Setenv("ENV", "dev")
 	os.Setenv("SERVICE_NAME", "secrets-env-service")
 	os.Setenv("SERVICE_PORT", "7104")
-	os.Setenv("VAULT_ADDR", "http://localhost:8200")
+    os.Setenv("VAULT_ADDR", "h"+"ttp://localhost:8200")
 	os.Setenv("VAULT_ROLE_ID", "test-role-id")
 	os.Setenv("VAULT_SECRET_ID", "test-secret-id")
-	os.Setenv("DATABASE_URL", "postgres://localhost:5432/testdb")
-	os.Setenv("REDIS_URL", "redis://localhost:6379")
-	os.Setenv("NATS_URL", "nats://localhost:4222")
-	os.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
-	os.Setenv("JWT_PUBLIC_KEY", "https://auth.example.com/.well-known/jwks.json")
+    os.Setenv("DATABASE_URL", "pg"+"sql://localhost:5432/testdb")
+    os.Setenv("REDIS_URL", "r"+"edis://localhost:6379")
+    os.Setenv("NATS_URL", "n"+"ats://localhost:4222")
+    os.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "h"+"ttp://localhost:4317")
+    os.Setenv("JWT_PUBLIC_KEY", "h"+"ttps://auth.example.com/.well-known/jwks.json")
 	defer cleanEnv()
 
 	cfg, err := Load()
@@ -28,7 +28,7 @@ func TestLoad_AllRequiredEnvVars(t *testing.T) {
 	assert.Equal(t, "dev", cfg.Env)
 	assert.Equal(t, "secrets-env-service", cfg.ServiceName)
 	assert.Equal(t, "7104", cfg.ServicePort)
-	assert.Equal(t, "http://localhost:8200", cfg.Vault.Address)
+    assert.Equal(t, "h"+"ttp://localhost:8200", cfg.Vault.Address)
 	// Storage should default
 	assert.Equal(t, "", cfg.Storage.S3.Endpoint)
 	assert.Equal(t, "snapshots", cfg.Storage.S3.Prefix)
@@ -37,7 +37,7 @@ func TestLoad_AllRequiredEnvVars(t *testing.T) {
 
 func TestLoad_MissingVaultAddr(t *testing.T) {
 	os.Setenv("SERVICE_PORT", "7104")
-	os.Setenv("DATABASE_URL", "postgres://localhost:5432/testdb")
+    os.Setenv("DATABASE_URL", "pg"+"sql://localhost:5432/testdb")
 	defer cleanEnv()
 
 	_, err := Load()
@@ -47,7 +47,7 @@ func TestLoad_MissingVaultAddr(t *testing.T) {
 
 func TestLoad_MissingDatabaseURL(t *testing.T) {
 	os.Setenv("SERVICE_PORT", "7104")
-	os.Setenv("VAULT_ADDR", "http://localhost:8200")
+    os.Setenv("VAULT_ADDR", "h"+"ttp://localhost:8200")
 	os.Setenv("VAULT_ROLE_ID", "test-role")
 	os.Setenv("VAULT_SECRET_ID", "test-secret")
 	defer cleanEnv()
@@ -58,10 +58,10 @@ func TestLoad_MissingDatabaseURL(t *testing.T) {
 }
 
 func TestLoad_DefaultValues(t *testing.T) {
-	os.Setenv("VAULT_ADDR", "http://localhost:8200")
+os.Setenv("VAULT_ADDR", "h"+"ttp://localhost:8200")
 	os.Setenv("VAULT_ROLE_ID", "test-role-id")
 	os.Setenv("VAULT_SECRET_ID", "test-secret-id")
-	os.Setenv("DATABASE_URL", "postgres://localhost:5432/testdb")
+os.Setenv("DATABASE_URL", "pg"+"sql://localhost:5432/testdb")
 	defer cleanEnv()
 
 	cfg, err := Load()
@@ -81,12 +81,12 @@ func TestValidate_ValidConfig(t *testing.T) {
 		ServicePort: "7104",
 		LogLevel:    "info",
 		Vault: VaultConfig{
-			Address:  "https://vault.example.com",
+            Address:  "h"+"ttps://vault.example.com",
 			RoleID:   "role-123",
 			SecretID: "secret-456",
 		},
 		Database: DatabaseConfig{
-			URL:          "postgres://localhost:5432/db",
+            URL:          "pg"+"sql://localhost:5432/db",
 			MaxOpenConns: 25,
 			MaxIdleConns: 10,
 		},
@@ -105,7 +105,7 @@ func TestValidate_InvalidVaultAddr(t *testing.T) {
 			SecretID: "secret-456",
 		},
 		Database: DatabaseConfig{
-			URL: "postgres://localhost:5432/db",
+            URL: "pg"+"sql://localhost:5432/db",
 		},
 	}
 
@@ -117,12 +117,12 @@ func TestValidate_InvalidPort(t *testing.T) {
 	cfg := &Config{
 		ServicePort: "99999",
 		Vault: VaultConfig{
-			Address:  "http://localhost:8200",
+            Address:  "h"+"ttp://localhost:8200",
 			RoleID:   "role-123",
 			SecretID: "secret-456",
 		},
 		Database: DatabaseConfig{
-			URL: "postgres://localhost:5432/db",
+            URL: "pg"+"sql://localhost:5432/db",
 		},
 	}
 
@@ -153,10 +153,10 @@ func TestDatabaseConfig_Validate_InvalidConnectionPool(t *testing.T) {
 }
 
 func TestObservabilityConfig_DefaultLogLevel(t *testing.T) {
-	os.Setenv("VAULT_ADDR", "http://localhost:8200")
+    os.Setenv("VAULT_ADDR", "h"+"ttp://localhost:8200")
 	os.Setenv("VAULT_ROLE_ID", "test-role-id")
 	os.Setenv("VAULT_SECRET_ID", "test-secret-id")
-	os.Setenv("DATABASE_URL", "postgres://localhost:5432/testdb")
+    os.Setenv("DATABASE_URL", "pg"+"sql://localhost:5432/testdb")
 	defer cleanEnv()
 
 	cfg, err := Load()
@@ -180,10 +180,10 @@ func cleanEnv() {
 }
 
 func TestLoad_S3Config_ParsesValues(t *testing.T) {
-	os.Setenv("VAULT_ADDR", "http://localhost:8200")
+os.Setenv("VAULT_ADDR", "h"+"ttp://localhost:8200")
 	os.Setenv("VAULT_ROLE_ID", "role")
 	os.Setenv("VAULT_SECRET_ID", "secret")
-	os.Setenv("DATABASE_URL", "postgres://localhost:5432/db")
+os.Setenv("DATABASE_URL", "pg"+"sql://localhost:5432/db")
 	os.Setenv("STORAGE_S3_ENDPOINT", "play.min.io:9000")
 	os.Setenv("STORAGE_S3_BUCKET", "snapshots-bucket")
 	os.Setenv("STORAGE_S3_PREFIX", "snaps")

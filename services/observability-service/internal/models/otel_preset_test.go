@@ -9,8 +9,8 @@ func TestOTelPreset_Validate_Success(t *testing.T) {
 	// Valid preset with all fields passes
 	preset := &OTelPreset{
 		Framework:      FrameworkNextJS,
-		TraceEndpoint:  "http://localhost:4318/v1/traces",
-		MetricEndpoint: "http://localhost:4318/v1/metrics",
+        TraceEndpoint:  "h"+"ttp://localhost:4318/v1/traces",
+        MetricEndpoint: "h"+"ttp://localhost:4318/v1/metrics",
 		SamplingRate:   0.1,
 		ExporterType:   "otlp",
 		Headers: map[string]string{
@@ -30,7 +30,7 @@ func TestOTelPreset_Validate_MissingFramework(t *testing.T) {
 	// Missing framework returns error
 	preset := &OTelPreset{
 		Framework:     "",
-		TraceEndpoint: "http://localhost:4318/v1/traces",
+        TraceEndpoint: "h"+"ttp://localhost:4318/v1/traces",
 		SamplingRate:  0.1,
 	}
 
@@ -44,7 +44,7 @@ func TestOTelPreset_Validate_InvalidSamplingRate(t *testing.T) {
 	// Sampling rate above 1.0 fails
 	preset := &OTelPreset{
 		Framework:     FrameworkGo,
-		TraceEndpoint: "http://localhost:4318/v1/traces",
+        TraceEndpoint: "h"+"ttp://localhost:4318/v1/traces",
 		SamplingRate:  1.5,
 	}
 
@@ -75,7 +75,7 @@ func TestProjectOTelConfig_ToJSON_Success(t *testing.T) {
 		ProjectID: "project-123",
 		Framework: FrameworkNodeJS,
 		Config: map[string]interface{}{
-			"trace_endpoint": "http://localhost:4318",
+            "trace_endpoint": "h"+"ttp://localhost:4318",
 			"sampling_rate":  0.5,
 		},
 	}

@@ -3,6 +3,9 @@ image:
   tag: dev
 service:
   port: 7105
+grpc:
+  enabled: true
+  port: 50065
 env:
   ENV: dev
   SERVICE_PORT: '7105'

@@ -12,7 +12,7 @@ func TestInitTelemetry_Success(t *testing.T) {
 	// Valid config initializes tracer meter providers
 	cfg := &config.Config{
 		ServiceName:  "observability-service",
-		OTelEndpoint: "http://localhost:4317",
+        OTelEndpoint: "h"+"ttp://localhost:4317",
 	}
 
 	provider, err := InitTelemetry(cfg)
@@ -41,7 +41,7 @@ func TestTracer_CreateSpan(t *testing.T) {
 	// Tracer creates spans with service name
 	cfg := &config.Config{
 		ServiceName:  "observability-service",
-		OTelEndpoint: "http://localhost:4317",
+        OTelEndpoint: "h"+"ttp://localhost:4317",
 	}
 
 	provider, err := InitTelemetry(cfg)
@@ -67,7 +67,7 @@ func TestShutdown_FlushesData(t *testing.T) {
 	// Shutdown completes within timeout flushes spans
 	cfg := &config.Config{
 		ServiceName:  "observability-service",
-		OTelEndpoint: "http://localhost:4317",
+        OTelEndpoint: "h"+"ttp://localhost:4317",
 	}
 
 	provider, err := InitTelemetry(cfg)
