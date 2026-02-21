@@ -25,7 +25,6 @@ jobs:
         with:
           version: latest
           working-directory: services/db-guardian-service
-          args: -c .golangci.yml
       - name: Unit tests (db-guardian-service)
         working-directory: services/db-guardian-service
         run: go test ./... -cover
