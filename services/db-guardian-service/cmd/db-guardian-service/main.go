@@ -170,7 +170,6 @@ func run() error {
         deps.Authenticator = auth.NewSimpleAuthenticator()
         log.Info("Simple authentication enabled (dev)")
     }
-
     // If Vault client was successfully created above, attach health function now
     if vaultClient != nil {
         deps.VaultHealth = func(ctx context.Context) error { return vaultClient.Health(ctx) }

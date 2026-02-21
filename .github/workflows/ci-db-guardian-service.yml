@@ -1,5 +1,13 @@
 name: ci-db-guardian-service
 on:
+<<<<<<< HEAD
+  push:
+    branches: [ main ]
+    paths:
+      - 'services/db-guardian-service/**'
+      - 'packages/contracts/**'
+=======
+>>>>>>> bb3eb14b (ci(db-guardian-service): simplify PR workflow to direct tests; keep push-build via reusable workflow on main only)
   pull_request:
     paths:
       - 'services/db-guardian-service/**'
@@ -8,6 +16,7 @@ on:
     paths:
       - 'services/db-guardian-service/**'
 jobs:
+<<<<<<< HEAD
   push-lint:
     if: github.event_name == 'push'
     runs-on: ubuntu-22.04
@@ -33,6 +42,8 @@ jobs:
         run: |
           make grpc-codegen
           git --no-pager diff --exit-code -- dbguardian/v1 || (echo "Run 'make grpc-codegen' and commit generated code" && exit 1)
+=======
+>>>>>>> bb3eb14b (ci(db-guardian-service): simplify PR workflow to direct tests; keep push-build via reusable workflow on main only)
   pr-tests:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-22.04
@@ -43,6 +54,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.24'
+<<<<<<< HEAD
       - name: Setup protoc
         uses: arduino/setup-protoc@v3
         with: { version: '27.1' }
@@ -67,6 +79,14 @@ jobs:
   push-build:
     if: github.event_name == 'push'
     needs: [push-lint]
+=======
+      - name: Unit tests (go)
+        working-directory: services/db-guardian-service
+        run: go test ./... -cover
+
+  push-build:
+    if: github.event_name == 'push'
+>>>>>>> bb3eb14b (ci(db-guardian-service): simplify PR workflow to direct tests; keep push-build via reusable workflow on main only)
     uses: ./.github/workflows/_service-ci.yml
     with:
       lang: go

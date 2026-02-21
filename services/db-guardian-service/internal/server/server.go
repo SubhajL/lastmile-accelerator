@@ -58,7 +58,7 @@ type Dependencies struct {
 }
 
 func New(cfg *config.Config, deps *Dependencies) *Server {
-	mux := http.NewServeMux()
+    mux := http.NewServeMux()
 
     // Register health check endpoint (expanded later)
     var dbRef *sql.DB
