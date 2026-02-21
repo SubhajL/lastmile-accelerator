@@ -1,13 +1,13 @@
 export interface InAppPublisherOptions {
-  redis: { publish: (channel: string, payload: string) => Promise<any> };
+  redis: { publish: (channel: string, payload: string) => Promise<unknown> };
   channelPrefix: string;
-  repo: { save: (userId: string, payload: any) => Promise<string> };
+  repo: { save: (userId: string, payload: Record<string, unknown>) => Promise<string> };
   metrics: { increment: (name: string, labels?: Record<string, string | number>) => void };
 }
 
 export function createInAppPublisher(opts: InAppPublisherOptions) {
   return {
-    async publish(userId: string, payload: any) {
+    async publish(userId: string, payload: Record<string, unknown>) {
       const id = await opts.repo.save(userId, payload);
       await opts.redis.publish(`${opts.channelPrefix}:${userId}`, JSON.stringify({ id, ...payload }));
       opts.metrics.increment('notify_sent', { channel: 'in-app' });

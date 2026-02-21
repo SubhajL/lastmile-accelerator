@@ -76,6 +76,24 @@ export interface QueueRuntimeConfig {
   defaultMaxAttempts: number;
 }
 
+export interface ChannelRetryConfig {
+  max: number;
+  baseMs: number;
+  jitterPct: number; // 0..1
+}
+
+export interface ChannelBreakerConfig {
+  failureThreshold: number;
+  windowSize: number;
+  halfOpenAfterMs: number;
+}
+
+export interface ChannelReliabilityConfig {
+  timeoutMs: number;
+  retry: ChannelRetryConfig;
+  breaker: ChannelBreakerConfig;
+}
+
 export interface Config {
   env: Environment;
   service: ServiceConfig;
@@ -89,4 +107,16 @@ export interface Config {
   channels: ChannelProvidersConfig;
   templates: TemplatesConfig;
   queue: QueueRuntimeConfig;
+  reliability: ChannelReliabilityConfig;
+  features: FeaturesConfig;
+  worker: WorkerConfig;
+}
+
+export interface FeaturesConfig {
+  outboxEnqueueDedup: boolean;
+}
+
+export interface WorkerConfig {
+  enabled: boolean;
+  natsSubjects: readonly string[];
 }

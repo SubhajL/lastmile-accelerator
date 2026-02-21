@@ -1,7 +1,7 @@
 import type { NotificationJob } from '../consumers/types.js';
 
 export interface ResendChannelOptions {
-  http: (url: string, init: RequestInit) => Promise<{ ok: boolean; status: number; json: () => Promise<any> }>;
+  http: (url: string, init: RequestInit) => Promise<{ ok: boolean; status: number; json: () => Promise<unknown> }>;
   apiKey: string;
   from: string;
   resolveTo: (job: NotificationJob) => Promise<string>;

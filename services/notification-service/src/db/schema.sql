@@ -83,3 +83,12 @@ CREATE TRIGGER update_notification_preferences_updated_at
   BEFORE UPDATE ON notification_preferences
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
+
+-- notification_outbox_messages: Inert outbox storage for deduplication
+CREATE TABLE IF NOT EXISTS notification_outbox_messages (
+    dedup_key TEXT PRIMARY KEY,
+    status TEXT NOT NULL CHECK (status IN ('pending','sent','failed')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_outbox_created_at ON notification_outbox_messages(created_at);

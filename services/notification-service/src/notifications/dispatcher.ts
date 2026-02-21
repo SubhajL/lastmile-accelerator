@@ -1,4 +1,5 @@
 import type { NotificationJob } from '../consumers/types.js';
+import { withSpan } from '../telemetry/tracing.js';
 
 export interface Metrics {
   increment(name: string, labels?: Record<string, string | number>): void;
@@ -31,37 +32,39 @@ export interface DispatchSummary {
 
 export function createDispatcher(opts: DispatcherOptions) {
   async function processJob(job: NotificationJob): Promise<'ok' | 'failed'> {
-    if (opts.routing) {
-      const decision = await opts.routing.evaluate(job);
-      if (decision.status === 'block') {
+    return withSpan('dispatch.processJob', { jobId: job.id, channel: job.channel, template: job.templateName }, async () => {
+      if (opts.routing) {
+        const decision = await opts.routing.evaluate(job);
+        if (decision.status === 'block') {
+          await opts.queue.ack(job.id);
+          opts.metrics.increment('notify_blocked', { channel: job.channel, reason: decision.reason });
+          return 'ok';
+        }
+        if (decision.status === 'defer') {
+          await opts.queue.nack(job.id, `deferred:${decision.reason}`, true);
+          opts.metrics.increment('notify_deferred', { channel: job.channel, reason: decision.reason });
+          return 'ok';
+        }
+      }
+
+      const adapter = opts.registry.get(job.channel);
+      if (!adapter) {
+        await opts.queue.nack(job.id, `No adapter for channel ${job.channel}`, false);
+        opts.metrics.increment('notify_failed', { channel: job.channel, reason: 'no_channel' });
+        return 'failed';
+      }
+
+      const res = await adapter.send(job);
+      if (res.ok) {
         await opts.queue.ack(job.id);
-        opts.metrics.increment('notify_blocked', { channel: job.channel, reason: decision.reason });
+        opts.metrics.increment('notify_sent', { channel: job.channel });
         return 'ok';
       }
-      if (decision.status === 'defer') {
-        await opts.queue.nack(job.id, `deferred:${decision.reason}`, true);
-        opts.metrics.increment('notify_deferred', { channel: job.channel, reason: decision.reason });
-        return 'ok';
-      }
-    }
 
-    const adapter = opts.registry.get(job.channel);
-    if (!adapter) {
-      await opts.queue.nack(job.id, `No adapter for channel ${job.channel}`, false);
-      opts.metrics.increment('notify_failed', { channel: job.channel, reason: 'no_channel' });
+      await opts.queue.nack(job.id, res.error, true);
+      opts.metrics.increment('notify_failed', { channel: job.channel, reason: 'adapter_error' });
       return 'failed';
-    }
-
-    const res = await adapter.send(job);
-    if (res.ok) {
-      await opts.queue.ack(job.id);
-      opts.metrics.increment('notify_sent', { channel: job.channel });
-      return 'ok';
-    }
-
-    await opts.queue.nack(job.id, res.error, true);
-    opts.metrics.increment('notify_failed', { channel: job.channel, reason: 'adapter_error' });
-    return 'failed';
+    });
   }
 
   async function processNextBatch(max: number): Promise<DispatchSummary> {
