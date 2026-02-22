@@ -6,7 +6,12 @@ import { registerAdminRoutes } from './admin.send-test.js';
 function makeApp(secret = 'testsecret', enqueue = async () => 'job-1') {
   const app = Fastify();
   app.register(jwtPlugin, { secret });
-  registerAdminRoutes(app as any, { enqueue } as any);
+  app.register(
+    async function (fastify) {
+      registerAdminRoutes(fastify as any, { enqueue } as any);
+    },
+    { prefix: '/admin' },
+  );
   return app;
 }
 
@@ -14,7 +19,11 @@ describe('POST /admin/send-test', () => {
   it('rejects without JWT (401)', async () => {
     const app = makeApp();
     await app.ready();
-    const res = await app.inject({ method: 'POST', url: '/admin/send-test', payload: { tenantId: 't', userId: 'u' } });
+    const res = await app.inject({
+      method: 'POST',
+      url: '/admin/send-test',
+      payload: { tenantId: 't', userId: 'u' },
+    });
     expect(res.statusCode).toBe(401);
   });
 
@@ -22,7 +31,12 @@ describe('POST /admin/send-test', () => {
     const app = makeApp();
     await app.ready();
     const token = (app as any).jwt.sign({ roles: ['user'] });
-    const res = await app.inject({ method: 'POST', url: '/admin/send-test', headers: { authorization: `Bearer ${token}` }, payload: { tenantId: 't', userId: 'u' } });
+    const res = await app.inject({
+      method: 'POST',
+      url: '/admin/send-test',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { tenantId: 't', userId: 'u' },
+    });
     expect(res.statusCode).toBe(403);
   });
 
@@ -31,7 +45,19 @@ describe('POST /admin/send-test', () => {
     const app = makeApp('testsecret', async (job: any) => { seen.push(job); return 'job-xyz'; });
     await app.ready();
     const token = (app as any).jwt.sign({ roles: ['admin'] });
-    const res = await app.inject({ method: 'POST', url: '/admin/send-test', headers: { authorization: `Bearer ${token}` }, payload: { tenantId: 't1', userId: 'u1', channel: 'email', templateName: 'hello', payload: { x: 1 }, priority: 'high' } });
+    const res = await app.inject({
+      method: 'POST',
+      url: '/admin/send-test',
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        tenantId: 't1',
+        userId: 'u1',
+        channel: 'email',
+        templateName: 'hello',
+        payload: { x: 1 },
+        priority: 'high',
+      },
+    });
     expect(res.statusCode).toBe(202);
     const json = res.json();
     expect(json).toEqual({ ok: true, jobId: 'job-xyz' });
