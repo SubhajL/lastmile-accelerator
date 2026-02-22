@@ -24,6 +24,53 @@ const PRIORITY_SCORES: Record<NotificationPriority, number> = {
   low: 1
 };
 
+const DEQUEUE_LUA = `
+-- KEYS:
+--  1) queueKey
+--  2) jobsKey
+--  3) processingKey
+-- ARGV:
+--  1) count
+--  2) nowMs
+local queueKey = KEYS[1]
+local jobsKey = KEYS[2]
+local processingKey = KEYS[3]
+local count = tonumber(ARGV[1])
+local nowMs = ARGV[2]
+
+if count == nil or count <= 0 then
+  return {}
+end
+
+local ids = redis.call('ZREVRANGE', queueKey, 0, count - 1)
+if #ids == 0 then
+  return {}
+end
+
+local out = {}
+for i = 1, #ids do
+  local id = ids[i]
+  redis.call('ZREM', queueKey, id)
+  redis.call('HSET', processingKey, id, nowMs)
+  local jobData = redis.call('HGET', jobsKey, id)
+  if jobData then
+    table.insert(out, jobData)
+  else
+    redis.call('HDEL', processingKey, id)
+  end
+end
+
+return out
+`;
+
+type RedisEval = {
+  eval: (
+    script: string,
+    numberOfKeys: number,
+    ...args: Array<string | number>
+  ) => Promise<unknown>;
+};
+
 type QueueOptions = {
   db?: { query: (text: string, params?: unknown[]) => Promise<{ rows: unknown[] }> };
   outboxDedupEnabled?: boolean;
@@ -56,12 +103,6 @@ export function createNotificationQueue(redis: Redis, opts?: QueueOptions): Noti
       const priorityScore = PRIORITY_SCORES[notification.priority] * 1000000 + now;
 
       const pipeline = redis.pipeline();
-      // Expose pipeline methods on redis.pipeline function for tests that inspect it directly
-      try {
-        type Pipeline = { zadd: (...args: unknown[]) => unknown; hset: (...args: unknown[]) => unknown };
-        (redis as unknown as { pipeline: Pipeline }).pipeline.zadd = (pipeline as unknown as Pipeline).zadd;
-        (redis as unknown as { pipeline: Pipeline }).pipeline.hset = (pipeline as unknown as Pipeline).hset;
-      } catch { /* noop */ }
       pipeline.zadd(QUEUE_KEY, priorityScore, jobId);
       pipeline.hset(JOBS_KEY, jobId, JSON.stringify(job));
       await pipeline.exec();
@@ -70,33 +111,25 @@ export function createNotificationQueue(redis: Redis, opts?: QueueOptions): Noti
     },
 
     async dequeue(count) {
-      // Get top N job IDs from sorted set (highest score first = highest priority)
-      const jobIds = await redis.zrange(QUEUE_KEY, 0, count - 1, 'REV');
-      
-      if (jobIds.length === 0) {
-        return [];
-      }
+      const now = Date.now().toString();
+      const redisWithEval = redis as unknown as Redis & RedisEval;
+      const jobDatas = (await redisWithEval.eval(
+        DEQUEUE_LUA,
+        3,
+        QUEUE_KEY,
+        JOBS_KEY,
+        PROCESSING_KEY,
+        count,
+        now,
+      )) as unknown;
 
       const jobs: NotificationJob[] = [];
-
-      for (const jobId of jobIds) {
-        const jobData = await redis.hget(JOBS_KEY, jobId);
-        if (jobData) {
-          const job = JSON.parse(jobData) as NotificationJob;
-          jobs.push(job);
+      if (Array.isArray(jobDatas)) {
+        for (const jobData of jobDatas) {
+          if (typeof jobData !== 'string') continue;
+          jobs.push(JSON.parse(jobData) as NotificationJob);
         }
       }
-
-      // Atomically move jobs from queue to processing
-      if (jobs.length > 0) {
-        const pipeline = redis.pipeline();
-        for (const jobId of jobIds) {
-          pipeline.zrem(QUEUE_KEY, jobId);
-          pipeline.hset(PROCESSING_KEY, jobId, Date.now().toString());
-        }
-        await pipeline.exec();
-      }
-
       return jobs;
     },
 

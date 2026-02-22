@@ -25,6 +25,7 @@ describe('notifications/queue', () => {
       hget: vi.fn().mockResolvedValue(null),
       hdel: vi.fn().mockResolvedValue(1),
       hlen: vi.fn().mockResolvedValue(0),
+      eval: vi.fn().mockResolvedValue([]),
       pipeline: vi.fn().mockReturnValue({
         zadd: vi.fn().mockReturnThis(),
         hset: vi.fn().mockReturnThis(),
@@ -61,9 +62,8 @@ describe('notifications/queue', () => {
 
       await queue.enqueue(criticalJob);
 
-      const pipeline = mockRedis.pipeline as unknown as {
-        zadd: ReturnType<typeof vi.fn>;
-      };
+      const pipeline = (mockRedis.pipeline as unknown as ReturnType<typeof vi.fn>).mock.results[0]!
+        .value as { zadd: ReturnType<typeof vi.fn> };
       expect(pipeline.zadd).toHaveBeenCalledWith(
         'notifications:queue',
         expect.any(Number),
@@ -81,24 +81,26 @@ describe('notifications/queue', () => {
         attempt: 0
       });
 
-      mockRedis.zrange = vi.fn().mockResolvedValue(['job-1']);
-      mockRedis.hget = vi.fn().mockResolvedValue(jobData);
+      (mockRedis as any).eval = vi.fn().mockResolvedValue([jobData]);
 
       const queue = createNotificationQueue(mockRedis);
       const jobs = await queue.dequeue(1);
 
       expect(jobs).toHaveLength(1);
       expect(jobs[0].id).toBe('job-1');
-      expect(mockRedis.zrange).toHaveBeenCalledWith(
+      expect((mockRedis as any).eval).toHaveBeenCalledWith(
+        expect.any(String),
+        3,
         'notifications:queue',
-        0,
-        0,
-        'REV'
+        'notifications:jobs',
+        'notifications:processing',
+        1,
+        expect.any(String),
       );
     });
 
     it('should return empty array when queue is empty', async () => {
-      mockRedis.zrange = vi.fn().mockResolvedValue([]);
+      (mockRedis as any).eval = vi.fn().mockResolvedValue([]);
 
       const queue = createNotificationQueue(mockRedis);
       const jobs = await queue.dequeue(5);
@@ -114,13 +116,12 @@ describe('notifications/queue', () => {
         attempt: 0
       });
 
-      mockRedis.zrange = vi.fn().mockResolvedValue(['job-1']);
-      mockRedis.hget = vi.fn().mockResolvedValue(jobData);
+      (mockRedis as any).eval = vi.fn().mockResolvedValue([jobData]);
 
       const queue = createNotificationQueue(mockRedis);
       await queue.dequeue(1);
 
-      expect(mockRedis.pipeline).toHaveBeenCalled();
+      expect((mockRedis as any).eval).toHaveBeenCalled();
     });
   });
 

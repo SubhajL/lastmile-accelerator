@@ -8,7 +8,7 @@ import { createFallbackChannel } from './channels/fallback.js';
 import { getRecipientEmailFromJob } from './recipients/resolvers.js';
 import { getRecipientPhoneFromJob } from './recipients/phone.js';
 import { createOtelMetrics } from './metrics/otel.js';
-import { createTwilioSmsChannel } from './channels/sms/twilio.js';
+import { createTwilioSmsChannel, type TwilioClient } from './channels/sms/twilio.js';
 import { createRateLimitedChannel } from './channels/sms/limiter.js';
 import { createInAppRepo } from './channels/inapp/repo.js';
 import { createInAppPublisher } from './channels/inapp/pubsub.js';
@@ -101,8 +101,14 @@ export async function bootstrap() {
 
   // SMS wiring if Twilio configured
   if (cfg.channels.twilioAccountSid && cfg.channels.twilioAuthToken && cfg.channels.twilioFrom) {
+    type TwilioModule = {
+      default?: (accountSid: string, authToken: string) => TwilioClient;
+    } & ((accountSid: string, authToken: string) => TwilioClient);
+    const twilioMod = (await import('twilio')) as unknown as TwilioModule;
+    const createTwilioClient = twilioMod.default ?? twilioMod;
+
     const smsPrimary = createTwilioSmsChannel({
-      client: { messages: { create: async () => ({}) } } as any,
+      client: createTwilioClient(cfg.channels.twilioAccountSid, cfg.channels.twilioAuthToken),
       from: cfg.channels.twilioFrom,
       resolveTo: getRecipientPhoneFromJob,
       renderTemplate,
