@@ -8,6 +8,7 @@ export function healthzRoute(deps: AppDeps) {
     if (!healthy) {
       return reply.code(503).send({
         status: 'unhealthy',
+        reason: 'database_unavailable',
         service: deps.config?.service?.name ?? 'notification-service',
         timestamp: new Date().toISOString(),
       });

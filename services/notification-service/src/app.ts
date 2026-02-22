@@ -31,7 +31,8 @@ export async function createApp(config: Config, dbPool: Pool): Promise<FastifyIn
 
   // Create Prometheus registry and metrics
   const registry = createPrometheusRegistry();
-  createNotificationMetrics(registry); // Metrics will be used later
+  const notificationMetrics = createNotificationMetrics(registry);
+  app.decorate('notificationMetrics', notificationMetrics);
 
   // Create app dependencies
   const appDeps: AppDeps = {

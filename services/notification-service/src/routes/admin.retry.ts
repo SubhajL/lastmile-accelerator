@@ -10,12 +10,12 @@ export function adminRetryRoute(app: FastifyInstance, deps: AppDeps): void {
   app.post<{ Params: RetryParams }>(
     '/retry/:notificationId',
     {
-      preHandler: requireRoleGuard('admin'),
+      preValidation: requireRoleGuard('admin'),
       schema: {
         params: {
           type: 'object',
           properties: {
-            notificationId: { type: 'string' },
+            notificationId: { type: 'string', minLength: 1 },
           },
           required: ['notificationId'],
         },
@@ -23,10 +23,6 @@ export function adminRetryRoute(app: FastifyInstance, deps: AppDeps): void {
     },
     async (request: FastifyRequest<{ Params: RetryParams }>, reply: FastifyReply) => {
       const { notificationId } = request.params;
-
-      if (!notificationId) {
-        return reply.code(400).send({ error: 'notificationId is required' });
-      }
 
       const result = await deps.queue.retryNotification(notificationId);
 

@@ -43,6 +43,15 @@ export function createNotificationMetrics(registry: Registry) {
   };
 }
 
+export type NotificationMetrics = ReturnType<typeof createNotificationMetrics>;
+
+declare module 'fastify' {
+  interface FastifyInstance {
+    metrics: Registry;
+    notificationMetrics: NotificationMetrics;
+  }
+}
+
 export function registerMetricsEndpoint(app: FastifyInstance, registry: Registry): void {
   // Decorate the app with the metrics registry
   app.decorate('metrics', registry);

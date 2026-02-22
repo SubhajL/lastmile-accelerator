@@ -33,8 +33,15 @@ export function buildJwtAuth(
   app: FastifyInstance,
   authConfig: { jwtPublicKey?: string; jwtJwksUrl?: string },
 ): void {
-  // Use public key if provided, otherwise use a default secret for development
-  const secret = authConfig.jwtPublicKey || process.env.JWT_SECRET || 'development-secret';
+  const configuredSecret = authConfig.jwtPublicKey || process.env.JWT_SECRET;
+  if (!configuredSecret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('JWT secret/public key is required in production');
+    }
+  }
+
+  // Development fallback to make local tests and dev servers easy to run.
+  const secret = configuredSecret ?? 'development-secret';
 
   app.register(jwtPlugin, { secret });
 }
