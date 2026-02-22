@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createRuntime } from './runtime.js';
+import { createRuntime, startNatsSubscriptions } from './runtime.js';
 
 function makeSubscribeOnce(processed = 1, failed = 0) {
   return () => ({ once: vi.fn().mockResolvedValue({ processed, failed }) });
@@ -42,5 +42,28 @@ describe('bootstrap/runtime', () => {
     expect(subscribe).toHaveBeenCalled();
     expect(dispatcher.processNextBatch).toHaveBeenCalledWith(10);
     expect(summary).toEqual({ processed: 2, failed: 0 });
+  });
+
+  it('startNatsSubscriptions catches rejections (no unhandledRejection)', async () => {
+    let unhandled = false;
+    const onUnhandled = () => {
+      unhandled = true;
+    };
+
+    process.once('unhandledRejection', onUnhandled);
+
+    const subscribe = vi.fn().mockReturnValue({
+      once: vi.fn().mockRejectedValue(new Error('boom')),
+    });
+
+    const router = { route: vi.fn() };
+    const handle = await startNatsSubscriptions(['a'], subscribe as any, router as any);
+
+    await new Promise((r) => setTimeout(r, 0));
+    await handle.stop();
+    await new Promise((r) => setTimeout(r, 0));
+
+    process.removeListener('unhandledRejection', onUnhandled);
+    expect(unhandled).toBe(false);
   });
 });

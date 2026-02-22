@@ -8,7 +8,8 @@ function job(): any { return { templateName: 'publish-failed', payload: { snapsh
 describe('webhook reliability', () => {
   it('times out slow HTTP and retries configured times', async () => {
     let calls = 0;
-    const http = vi.fn().mockImplementation(async () => {
+    const http = vi.fn().mockImplementation(async (_url: string, init: RequestInit) => {
+      expect((init as any).signal).toBeDefined();
       calls += 1;
       await new Promise((r) => setTimeout(r, 50));
       return { ok: true, status: 200 };
@@ -30,7 +31,10 @@ describe('webhook reliability', () => {
   });
 
   it('opens circuit after consecutive failures; blocks calls', async () => {
-    const http = vi.fn().mockResolvedValue({ ok: false, status: 500 });
+    const http = vi.fn().mockImplementation(async (_url: string, init: RequestInit) => {
+      expect((init as any).signal).toBeDefined();
+      return { ok: false, status: 500 };
+    });
     const breaker = createCircuitBreaker({ failureThreshold: 2, halfOpenAfterMs: 10_000, windowSize: 10, now: () => Date.now() });
     const ch = createWebhookChannel({
       http: http as any,

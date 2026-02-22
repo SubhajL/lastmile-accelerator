@@ -19,7 +19,6 @@ import { createSlackChannel } from './channels/slack/slack.js';
 import { createNatsSubscribe } from './events/nats-subscribe.js';
 import { createNotificationQueue } from './notifications/queue.js';
 import { createDbClient } from './db/client.js';
-import { SubscriptionSubjects } from './events/subjects.js';
 import { createRedisClient } from './redis/client.js';
 import { createTemplateStore } from './templates/store.js';
 import { createTemplateLoader } from './templates/loader.js';
@@ -185,7 +184,7 @@ export async function bootstrap() {
     dispatcherFactory: undefined,
     metrics,
     now: () => Date.now(),
-    subjects: [...SubscriptionSubjects],
+    subjects: [],
     batchSize: cfg.queue.batchSize,
     email: {
       from: cfg.smtp.from,
@@ -217,6 +216,11 @@ export async function bootstrap() {
   async function stop() {
     await runloop.stop();
     await subscriptions.stop();
+    try {
+      await (db as any).end?.();
+    } catch {
+      /* noop */
+    }
     try {
       await (nc as any).close?.();
     } catch {

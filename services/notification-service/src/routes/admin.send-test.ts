@@ -13,9 +13,31 @@ export interface AdminDeps {
   }) => Promise<string>;
 }
 
+const adminSendTestBodySchema = {
+  type: 'object',
+  required: ['tenantId', 'userId'],
+  additionalProperties: false,
+  properties: {
+    tenantId: { type: 'string', minLength: 1 },
+    userId: { type: 'string', minLength: 1 },
+    channel: {
+      type: 'string',
+      enum: ['email', 'sms', 'slack', 'webhook', 'in-app'],
+    },
+    templateName: { type: 'string', minLength: 1 },
+    payload: { type: 'object', additionalProperties: true },
+    priority: {
+      type: 'string',
+      enum: ['critical', 'high', 'normal', 'low'],
+    },
+    maxAttempts: { type: 'integer', minimum: 1, maximum: 10 },
+  },
+} as const;
+
 export function registerAdminRoutes(app: FastifyInstance, deps: AdminDeps) {
   app.post('/admin/send-test', {
-    preHandler: requireRoleGuard('admin')
+    preHandler: requireRoleGuard('admin'),
+    schema: { body: adminSendTestBodySchema },
   }, async (req, reply) => {
     const body = req.body as Partial<{
       tenantId: string;

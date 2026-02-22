@@ -47,6 +47,10 @@ export interface RuntimeOptions {
   };
 }
 
+function toEventHandler<T>(fn: (evt: T) => Promise<unknown>) {
+  return async (data: unknown) => fn(data as T) as any;
+}
+
 export function createRuntime(opts: RuntimeOptions) {
   const registry = opts.registry ?? createDefaultChannelRegistry({ email: opts.email });
   const dispatcher = (opts.dispatcherFactory ?? createDispatcher)({
@@ -91,17 +95,17 @@ export function createRuntime(opts: RuntimeOptions) {
   const router = createEventRouter({
     handlers: {
       // event envelope type keys — centralized constants
-      [Subjects.snapshot.ready]: snapshotConsumer.handle,
-      [Subjects.fixes.created]: fixesConsumer.handleCreated,
-      [Subjects.fixes.applied]: fixesConsumer.handleApplied,
+      [Subjects.snapshot.ready]: toEventHandler(snapshotConsumer.handle),
+      [Subjects.fixes.created]: toEventHandler(fixesConsumer.handleCreated),
+      [Subjects.fixes.applied]: toEventHandler(fixesConsumer.handleApplied),
       // publish events route to a single consumer; the event subtype is in payload.status
-      [Subjects.publish.started]: publishConsumer.handle,
-      [Subjects.publish.healthy]: publishConsumer.handle,
-      [Subjects.publish.rolledback]: publishConsumer.handle,
-      [Subjects.publish.failed]: publishConsumer.handle,
-      [Subjects.checks.failed]: checksConsumer.handle,
-      [Subjects.slo.budget_exhausted]: sloConsumer.handle,
-      [Subjects.errors.critical]: errorsConsumer.handle,
+      [Subjects.publish.started]: toEventHandler(publishConsumer.handle),
+      [Subjects.publish.healthy]: toEventHandler(publishConsumer.handle),
+      [Subjects.publish.rolledback]: toEventHandler(publishConsumer.handle),
+      [Subjects.publish.failed]: toEventHandler(publishConsumer.handle),
+      [Subjects.checks.failed]: toEventHandler(checksConsumer.handle),
+      [Subjects.slo.budget_exhausted]: toEventHandler(sloConsumer.handle),
+      [Subjects.errors.critical]: toEventHandler(errorsConsumer.handle),
     },
   });
 
@@ -134,11 +138,11 @@ export async function startNatsSubscriptions(
   subscribe: RuntimeOptions['subscribe'],
   router: ReturnType<typeof createEventRouter>,
 ): Promise<SubscriptionHandle> {
-  const subscriptionPromises: Promise<any>[] = [];
+  const subscriptionPromises: Promise<unknown>[] = [];
 
   for (const subject of subjects) {
     const sub = subscribe({ subject, router });
-    const promise = sub.once();
+    const promise = sub.once().catch(() => undefined);
     subscriptionPromises.push(promise);
   }
 
@@ -147,7 +151,7 @@ export async function startNatsSubscriptions(
       // Subscriptions will naturally close when NATS connection closes
       // Wait a moment for any in-flight message processing
       await Promise.race([
-        Promise.all(subscriptionPromises),
+        Promise.allSettled(subscriptionPromises),
         new Promise((resolve) => setTimeout(resolve, 1000)),
       ]);
     },

@@ -28,7 +28,19 @@ export function createSlackChannel(opts: {
       try {
         await opts.breaker.execute(async () =>
           retry(async () => {
-            const res = await withTimeout(() => opts.http(opts.webhookUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) } as RequestInit), opts.reliability.timeoutMs);
+            const res = await withTimeout(
+              (signal) =>
+                opts.http(
+                  opts.webhookUrl,
+                  {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text }),
+                    signal,
+                  } as RequestInit,
+                ),
+              opts.reliability.timeoutMs,
+            );
             if (!res.ok) {
               const err = new Error(`HTTP ${res.status}`) as Error & { retryable?: boolean };
               err.retryable = res.status >= 500;

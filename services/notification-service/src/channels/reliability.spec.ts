@@ -6,20 +6,26 @@ function sleep(ms: number) { return new Promise((r) => setTimeout(r, ms)); }
 
 describe('reliability helpers', () => {
   test('withTimeout returns result under budget', async () => {
-    const res = await withTimeout(async () => {
+    vi.useFakeTimers();
+    const p = withTimeout(async () => {
       await sleep(5);
       return 42;
     }, 50);
-    expect(res).toEqual(42);
+    await vi.advanceTimersByTimeAsync(5);
+    await expect(p).resolves.toEqual(42);
+    vi.useRealTimers();
   });
 
   test('withTimeout rejects TimeoutError after ms', async () => {
-    const start = Date.now();
-    await expect(withTimeout(async () => {
+    vi.useFakeTimers();
+    const p = withTimeout(async () => {
       await sleep(50);
       return 'x';
-    }, 5)).rejects.toBeInstanceOf(TimeoutError);
-    expect(Date.now() - start).toBeGreaterThanOrEqual(5);
+    }, 5);
+    const assertion = expect(p).rejects.toBeInstanceOf(TimeoutError);
+    await vi.advanceTimersByTimeAsync(5);
+    await assertion;
+    vi.useRealTimers();
   });
 
   test('retry stops on success before max', async () => {

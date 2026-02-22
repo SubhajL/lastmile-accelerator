@@ -37,4 +37,60 @@ describe('POST /admin/send-test', () => {
     expect(json).toEqual({ ok: true, jobId: 'job-xyz' });
     expect(seen[0]).toEqual({ tenantId: 't1', userId: 'u1', channel: 'email', templateName: 'hello', payload: { x: 1 }, priority: 'high', maxAttempts: 3 });
   });
+
+  it('rejects invalid priority (400)', async () => {
+    const enqueue = async () => 'job-1';
+    const app = makeApp('testsecret', enqueue);
+    await app.ready();
+    const token = (app as any).jwt.sign({ roles: ['admin'] });
+    const res = await app.inject({
+      method: 'POST',
+      url: '/admin/send-test',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { tenantId: 't1', userId: 'u1', priority: 'urgent' },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('rejects invalid channel (400)', async () => {
+    const enqueue = async () => 'job-1';
+    const app = makeApp('testsecret', enqueue);
+    await app.ready();
+    const token = (app as any).jwt.sign({ roles: ['admin'] });
+    const res = await app.inject({
+      method: 'POST',
+      url: '/admin/send-test',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { tenantId: 't1', userId: 'u1', channel: 'fax' },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('rejects invalid maxAttempts (400)', async () => {
+    const enqueue = async () => 'job-1';
+    const app = makeApp('testsecret', enqueue);
+    await app.ready();
+    const token = (app as any).jwt.sign({ roles: ['admin'] });
+    const res = await app.inject({
+      method: 'POST',
+      url: '/admin/send-test',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { tenantId: 't1', userId: 'u1', maxAttempts: 0 },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('rejects non-object payload (400)', async () => {
+    const enqueue = async () => 'job-1';
+    const app = makeApp('testsecret', enqueue);
+    await app.ready();
+    const token = (app as any).jwt.sign({ roles: ['admin'] });
+    const res = await app.inject({
+      method: 'POST',
+      url: '/admin/send-test',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { tenantId: 't1', userId: 'u1', payload: 'nope' },
+    });
+    expect(res.statusCode).toBe(400);
+  });
 });

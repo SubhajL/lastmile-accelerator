@@ -33,16 +33,24 @@ export function createEmailChannel(opts: EmailChannelOptions): EmailChannel {
         const to = await opts.resolveTo(job);
         span.setAttributes({ channel: 'email', to });
         const { subject, html, text } = await opts.renderTemplate(job.templateName, job.payload);
-        const retry = opts.reliability && createRetry<void>({
-          max: opts.reliability.retry.max,
-          baseMs: opts.reliability.retry.baseMs,
-          jitterPct: opts.reliability.retry.jitterPct,
+        const reliability = opts.reliability;
+        const retry = reliability && createRetry<void>({
+          max: reliability.retry.max,
+          baseMs: reliability.retry.baseMs,
+          jitterPct: reliability.retry.jitterPct,
           shouldRetry: (e) => e instanceof TimeoutError,
-          sleep: opts.reliability.sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms)))
+          sleep: reliability.sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms)))
         });
-        const sendOnce = async () => opts.transporter.sendMail({ from: opts.from, to, subject, html, text });
-        if (opts.reliability) {
-          await retry!(async () => withTimeout(() => sendOnce(), opts.reliability!.timeoutMs));
+        const sendOnce = async () => {
+          await opts.transporter.sendMail({ from: opts.from, to, subject, html, text });
+        };
+        if (reliability) {
+          await retry!(async () =>
+            withTimeout((signal) => {
+              if (signal.aborted) throw new TimeoutError();
+              return sendOnce();
+            }, reliability.timeoutMs),
+          );
         } else {
           await sendOnce();
         }

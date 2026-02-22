@@ -1,6 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { bootstrap } from './worker.js';
 
+var dbEnd: ReturnType<typeof vi.fn>;
+var capturedRuntimeArgs: any[];
+
 vi.mock('./config.js', () => ({
   loadConfig: vi.fn().mockReturnValue({
     env: 'dev',
@@ -47,14 +50,30 @@ vi.mock('./config.js', () => ({
   }),
 }));
 
-vi.mock('./bootstrap/runtime.js', () => ({
-  createRuntime: vi.fn().mockImplementation(({ registry, metrics }) => ({
+vi.mock('./db/client.js', () => ({
+  createDbClient: vi.fn().mockImplementation(() => {
+    dbEnd = vi.fn().mockResolvedValue(undefined);
+    return { end: dbEnd };
+  }),
+  healthCheck: vi.fn(),
+}));
+
+vi.mock('./bootstrap/runtime.js', () => {
+  capturedRuntimeArgs = [];
+  return {
+    createRuntime: vi.fn().mockImplementation((args) => {
+      capturedRuntimeArgs.push(args);
+      return {
     startOnce: vi.fn().mockResolvedValue({ processed: 0, failed: 0 }),
     router: { route: vi.fn().mockResolvedValue({ ok: true }) },
     processNextBatch: vi.fn().mockResolvedValue({ dispatched: 0 }),
-  })),
-  startNatsSubscriptions: vi.fn().mockResolvedValue({ stop: vi.fn().mockResolvedValue(undefined) }),
-}));
+      };
+    }),
+    startNatsSubscriptions: vi.fn().mockResolvedValue({
+      stop: vi.fn().mockResolvedValue(undefined),
+    }),
+  };
+});
 
 vi.mock('./bootstrap/runloop.js', () => ({
   createRunLoop: vi.fn().mockReturnValue({ start: vi.fn(), stop: vi.fn() }),
@@ -119,5 +138,7 @@ describe('worker/fallback+metrics wiring', () => {
     const ctl = await bootstrap();
     expect(ctl).toBeDefined();
     await ctl.stop();
+    expect(dbEnd).toHaveBeenCalledTimes(1);
+    expect(capturedRuntimeArgs[0]?.subjects).toEqual([]);
   });
 });

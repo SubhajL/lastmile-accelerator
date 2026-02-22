@@ -4,9 +4,9 @@ import fastifyJwt from '@fastify/jwt';
 
 type JwtOpts = { secret: string };
 
-declare module 'fastify' {
-  interface FastifyRequest {
-    user?: { roles?: string[]; [k: string]: unknown };
+declare module '@fastify/jwt' {
+  interface FastifyJWT {
+    user: { roles?: string[]; [k: string]: unknown };
   }
 }
 
@@ -22,7 +22,6 @@ export function requireRoleGuard(role: string) {
   return async function (req: FastifyRequest, reply: FastifyReply) {
     try {
       const decoded = await req.jwtVerify<{ roles?: string[] }>();
-      req.user = decoded as { roles?: string[] };
       const roles = Array.isArray(decoded?.roles) ? decoded!.roles! : [];
       if (!roles.includes(role)) {
         return reply.code(403).send({ error: 'forbidden' });

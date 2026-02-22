@@ -10,6 +10,11 @@ vi.mock('./channels/circuitbreaker.js', () => ({
   }),
 }));
 
+vi.mock('./db/client.js', () => ({
+  createDbClient: vi.fn().mockReturnValue({ end: vi.fn().mockResolvedValue(undefined) }),
+  healthCheck: vi.fn(),
+}));
+
 vi.mock('./config.js', () => ({
   loadConfig: vi.fn().mockReturnValue({
     env: 'dev',

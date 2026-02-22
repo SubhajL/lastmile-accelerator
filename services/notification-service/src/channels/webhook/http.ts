@@ -36,7 +36,19 @@ export function createWebhookChannel(opts: {
       try {
         await opts.breaker.execute(async () =>
           retry(async () => {
-            const res = await withTimeout(() => opts.http(opts.url, { method: 'POST', headers, body: payload } as RequestInit), opts.reliability.timeoutMs);
+            const res = await withTimeout(
+              (signal) =>
+                opts.http(
+                  opts.url,
+                  {
+                    method: 'POST',
+                    headers,
+                    body: payload,
+                    signal,
+                  } as RequestInit,
+                ),
+              opts.reliability.timeoutMs,
+            );
             if (!res.ok) {
               const err = new Error(`HTTP ${res.status}`) as Error & { retryable?: boolean };
               err.retryable = res.status >= 500;
