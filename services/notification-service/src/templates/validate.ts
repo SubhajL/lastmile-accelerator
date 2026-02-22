@@ -6,7 +6,7 @@ export interface ValidateOptions {
 
 export function validateTemplateBundle(bundle: TemplateBundle | null | undefined, opts: ValidateOptions = {}): asserts bundle is Required<Pick<TemplateBundle, 'subject' | 'html'>> & Pick<TemplateBundle, 'text'> {
   if (!bundle) throw new Error('template not found');
-  const { subject, html, text } = bundle as any;
+  const { subject, html, text } = bundle as TemplateBundle;
   if (typeof subject !== 'string' || subject.trim() === '') throw new Error('invalid template: missing subject');
   if (typeof html !== 'string' || html.trim() === '') throw new Error('invalid template: missing html');
   if (!opts.allowMissingText) {

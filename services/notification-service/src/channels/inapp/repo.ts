@@ -2,10 +2,10 @@ import { randomUUID } from 'crypto';
 
 export interface InAppRepoOptions {
   redis: {
-    hset: (key: string, field: string, value: string) => Promise<any>;
+    hset: (key: string, field: string, value: string) => Promise<unknown>;
     hgetall: (key: string) => Promise<Record<string,string>>;
-    sadd: (key: string, member: string) => Promise<any>;
-    srem: (key: string, member: string) => Promise<any>;
+    sadd: (key: string, member: string) => Promise<unknown>;
+    srem: (key: string, member: string) => Promise<unknown>;
     scard: (key: string) => Promise<number>;
   };
   namespace: string;
@@ -26,7 +26,7 @@ export function createInAppRepo(opts: InAppRepoOptions) {
   return {
     async save(userId: string, payload: Omit<InAppNotification,'id'|'createdAt'> & Partial<Pick<InAppNotification,'createdAt'>>) {
       const id = randomUUID();
-      const notif: InAppNotification = { id, createdAt: new Date().toISOString(), ...payload } as any;
+      const notif: InAppNotification = { id, createdAt: new Date().toISOString(), ...payload };
       await opts.redis.hset(keyN(userId), id, JSON.stringify(notif));
       await opts.redis.sadd(keyU(userId), id);
       return id;

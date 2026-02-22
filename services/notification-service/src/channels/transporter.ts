@@ -1,6 +1,8 @@
 import type { SmtpConfig } from '../types.js';
 
-export function createSmtpTransporter(config: SmtpConfig, deps: { nodemailer: { createTransporter: (opts: any) => any } }) {
+type TransportOptions = { host: string; port: number; secure: boolean; auth: { user: string; pass: string } };
+
+export function createSmtpTransporter(config: SmtpConfig, deps: { nodemailer: { createTransporter: (opts: TransportOptions) => unknown } }) {
   const secure = config.port === 465 ? true : config.secure;
   const transportOptions = {
     host: config.host,

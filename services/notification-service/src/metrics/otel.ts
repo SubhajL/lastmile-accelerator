@@ -1,9 +1,10 @@
-export function createOtelMetrics({ meter, serviceName }: { meter: { createCounter: (name: string, opts?: any) => { add: (n: number, attrs?: Record<string, any>) => void } }, serviceName: string }) {
-  const counters = new Map<string, { add: (n: number, attrs?: Record<string, any>) => void }>();
+export function createOtelMetrics({ meter, serviceName }: { meter: unknown; serviceName: string }) {
+  const counters = new Map<string, { add: (n: number, attrs?: Record<string, unknown>) => void }>();
 
   function counter(name: string) {
     if (!counters.has(name)) {
-      counters.set(name, meter.createCounter(name, { description: `${serviceName}:${name}` }));
+      const m = meter as { createCounter: (n: string, opts?: { description?: string }) => { add: (n: number, attrs?: Record<string, unknown>) => void } };
+      counters.set(name, m.createCounter(name, { description: `${serviceName}:${name}` }));
     }
     return counters.get(name)!;
   }

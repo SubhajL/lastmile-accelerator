@@ -4,15 +4,20 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "dev:worker": "WORKER_MODE=true tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node --enable-source-maps dist/index.js",
+    "worker": "WORKER_MODE=true node --enable-source-maps dist/index.js",
     "test": "vitest",
     "test:coverage": "vitest --coverage",
     "lint": "eslint . --ext .ts,.tsx --max-warnings=0",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:typecheck": "tsc -p tsconfig.spec.json --noEmit",
+    "quality:check": "bun run typecheck && bun run lint && bun run test:typecheck"
   },
   "dependencies": {
     "fastify": "4.27.0",
+    "fastify-plugin": "^4.5.1",
     "@fastify/cors": "^9.0.1",
     "@fastify/helmet": "^11.1.1",
     "@fastify/jwt": "^7.2.4",
@@ -28,7 +33,8 @@
     "pg": "^8.11.3",
     "nodemailer": "^6.9.7",
     "handlebars": "^4.7.8",
-    "node-vault": "^0.10.2"
+    "node-vault": "^0.10.2",
+    "twilio": "^5.9.1"
   },
   "devDependencies": {
     "tsx": "4.19.2",
