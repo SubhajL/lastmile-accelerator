@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if command -v bunx >/dev/null 2>&1; then
+  RUNNER="bunx"
+else
+  RUNNER="npx"
+fi
+
+echo "[pre-push] running lint-staged on staged files"
+$RUNNER lint-staged
+
+DEFAULT_BRANCH=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^origin/||' || true)
+if [[ -z "${DEFAULT_BRANCH:-}" ]]; then
+  DEFAULT_BRANCH="main"
+fi
+
+echo "[pre-push] running turbo typecheck+lint for changes since origin/${DEFAULT_BRANCH}"
+$RUNNER turbo run typecheck lint --continue --filter="...[origin/${DEFAULT_BRANCH}]"

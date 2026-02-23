@@ -1,0 +1,6 @@
+{
+  "services/projects-service": {
+    "srcDir": "services/projects-service/src",
+    "maxAnyCount": 80
+  }
+}
