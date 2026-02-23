@@ -11,6 +11,8 @@ pub struct AppConfig {
     pub nats_url: Option<String>,
     pub otel_endpoint: Option<String>,
     pub jwt_public_key_url: Option<String>,
+    pub jwt_issuer: Option<String>,
+    pub jwt_audience: Option<String>,
     pub vault_addr: Option<String>,
     pub vault_role_id: Option<String>,
     pub vault_secret_id: Option<String>,
@@ -34,6 +36,8 @@ impl AppConfig {
         let nats_url = env::var("NATS_URL").ok();
         let otel_endpoint = env::var("OTEL_EXPORTER_OTLP_ENDPOINT").ok();
         let jwt_public_key_url = env::var("JWT_PUBLIC_KEY_URL").ok();
+        let jwt_issuer = env::var("JWT_ISSUER").ok();
+        let jwt_audience = env::var("JWT_AUDIENCE").ok();
         let vault_addr = env::var("VAULT_ADDR").ok();
         let vault_role_id = env::var("VAULT_ROLE_ID").ok();
         let vault_secret_id = env::var("VAULT_SECRET_ID").ok();
@@ -48,6 +52,8 @@ impl AppConfig {
             nats_url,
             otel_endpoint,
             jwt_public_key_url,
+            jwt_issuer,
+            jwt_audience,
             vault_addr,
             vault_role_id,
             vault_secret_id,
@@ -112,6 +118,8 @@ mod tests {
         env::remove_var("NATS_URL");
         env::remove_var("OTEL_EXPORTER_OTLP_ENDPOINT");
         env::remove_var("JWT_PUBLIC_KEY_URL");
+        env::remove_var("JWT_ISSUER");
+        env::remove_var("JWT_AUDIENCE");
         env::remove_var("LOG_LEVEL");
     }
 

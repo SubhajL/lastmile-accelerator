@@ -1,10 +1,10 @@
-use axum::{middleware, Router};
+use axum::{middleware, Router, Extension};
 use dep_governance_service::{
     config::AppConfig,
     db::{create_db_pool, migrate::run_migrations},
     events::NatsPublisher,
     handlers::{self, healthz, metrics, readyz},
-    middleware::{init_telemetry, jwt_auth_middleware, shutdown_telemetry, trace_layer},
+    middleware::{init_telemetry, jwt_auth_middleware, shutdown_telemetry, trace_layer, AuthContext, AuthConfig},
 };
 use std::net::SocketAddr;
 use tokio::signal;
@@ -44,7 +44,13 @@ async fn main() -> anyhow::Result<()> {
     };
 
     // Build router
-    let app = build_router(pool, nats);
+    let auth_ctx = AuthContext::scaffold(AuthConfig {
+        jwks_url: config.jwt_public_key_url.clone(),
+        issuer: config.jwt_issuer.clone(),
+        audience: config.jwt_audience.clone(),
+    });
+
+    let app = build_router(pool, nats, auth_ctx);
 
     // Bind to address
     let addr = SocketAddr::from(([0, 0, 0, 0], config.service_port));
@@ -64,7 +70,7 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn build_router(pool: sqlx::PgPool, _nats: Option<NatsPublisher>) -> Router {
+fn build_router(pool: sqlx::PgPool, _nats: Option<NatsPublisher>, auth_ctx: AuthContext) -> Router {
     Router::new()
         // Health endpoints (no auth)
         .route("/healthz", axum::routing::get(healthz))
@@ -72,6 +78,7 @@ fn build_router(pool: sqlx::PgPool, _nats: Option<NatsPublisher>) -> Router {
         .route("/metrics", axum::routing::get(metrics))
         // v1 API
         .nest("/v1", handlers::api::router(pool.clone()))
+        .layer(Extension(auth_ctx))
         .layer(middleware::from_fn(jwt_auth_middleware))
         .layer(trace_layer())
         .with_state(pool)
