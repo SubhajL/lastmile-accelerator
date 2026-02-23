@@ -25,7 +25,10 @@ pub async fn create_dependency(pool: &PgPool, dep: &Dependency) -> Result<Depend
     Ok(row)
 }
 
-pub async fn get_dependency_by_id(pool: &PgPool, id: Uuid) -> Result<Option<Dependency>, sqlx::Error> {
+pub async fn get_dependency_by_id(
+    pool: &PgPool,
+    id: Uuid,
+) -> Result<Option<Dependency>, sqlx::Error> {
     let row = sqlx::query_as::<_, Dependency>(
         r#"
         SELECT id, snapshot_id, name, version, ecosystem, is_direct, parent_id, created_at
@@ -109,7 +112,10 @@ mod tests {
         let created = create_dependency(&pool, &dep).await.unwrap();
         assert_eq!(created.name, dep.name);
 
-        let fetched = get_dependency_by_id(&pool, created.id).await.unwrap().unwrap();
+        let fetched = get_dependency_by_id(&pool, created.id)
+            .await
+            .unwrap()
+            .unwrap();
         assert_eq!(fetched.id, created.id);
     }
 
@@ -128,7 +134,9 @@ mod tests {
         let _ = create_dependency(&pool, &dep1).await.unwrap();
         let _ = create_dependency(&pool, &dep2).await.unwrap();
 
-        let list = list_dependencies_for_snapshot(&pool, snapshot_id).await.unwrap();
+        let list = list_dependencies_for_snapshot(&pool, snapshot_id)
+            .await
+            .unwrap();
         assert_eq!(list.len(), 2);
         assert!(list[0].is_direct);
     }

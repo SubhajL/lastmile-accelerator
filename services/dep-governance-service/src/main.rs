@@ -1,14 +1,19 @@
-use axum::{middleware, Router, Extension};
+use axum::{middleware, Extension, Router};
+use dep_governance_service::middleware::auth::{
+    CachingJwksProvider, JwksProvider, NoopJwksProvider,
+};
 use dep_governance_service::{
     config::AppConfig,
     db::{create_db_pool, migrate::run_migrations},
     events::NatsPublisher,
     handlers::{self, healthz, metrics, readyz},
-    middleware::{init_telemetry, jwt_auth_middleware, shutdown_telemetry, trace_layer, AuthContext, AuthConfig},
+    middleware::{
+        init_telemetry, jwt_auth_middleware, shutdown_telemetry, trace_layer, AuthConfig,
+        AuthContext,
+    },
 };
-use dep_governance_service::middleware::auth::{CachingJwksProvider, JwksProvider, NoopJwksProvider};
-use std::sync::Arc;
 use std::net::SocketAddr;
+use std::sync::Arc;
 use tokio::signal;
 
 #[tokio::main]
@@ -47,7 +52,10 @@ async fn main() -> anyhow::Result<()> {
 
     // Build router
     let provider: Arc<dyn JwksProvider> = match &config.jwt_public_key_url {
-        Some(url) => Arc::new(CachingJwksProvider::new(url.clone(), std::time::Duration::from_secs(300))),
+        Some(url) => Arc::new(CachingJwksProvider::new(
+            url.clone(),
+            std::time::Duration::from_secs(300),
+        )),
         None => Arc::new(NoopJwksProvider),
     };
     let auth_ctx = AuthContext::new(
@@ -86,9 +94,12 @@ fn build_router(pool: sqlx::PgPool, _nats: Option<NatsPublisher>, auth_ctx: Auth
         .route("/readyz", axum::routing::get(readyz))
         .route("/metrics", axum::routing::get(metrics))
         // v1 API
-        .nest("/v1", handlers::api::router(pool.clone()))
-        .layer(Extension(auth_ctx))
-        .layer(middleware::from_fn(jwt_auth_middleware))
+        .nest(
+            "/v1",
+            handlers::api::router(pool.clone())
+                .layer(middleware::from_fn(jwt_auth_middleware))
+                .layer(Extension(auth_ctx)),
+        )
         .layer(trace_layer())
         .with_state(pool)
 }

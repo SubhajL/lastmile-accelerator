@@ -42,7 +42,9 @@ pub fn init_telemetry(service_name: &str, endpoint: Option<&str>) -> anyhow::Res
     Ok(())
 }
 
-pub fn trace_layer() -> TraceLayer<tower_http::classify::SharedClassifier<tower_http::classify::ServerErrorsAsFailures>> {
+pub fn trace_layer(
+) -> TraceLayer<tower_http::classify::SharedClassifier<tower_http::classify::ServerErrorsAsFailures>>
+{
     TraceLayer::new_for_http()
 }
 

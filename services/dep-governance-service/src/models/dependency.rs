@@ -54,27 +54,13 @@ mod tests {
 
     #[test]
     fn test_dependency_creation_validates_name() {
-        let result = Dependency::new(
-            Uuid::new_v4(),
-            " ",
-            "1.0.0",
-            Ecosystem::Npm,
-            true,
-            None,
-        );
+        let result = Dependency::new(Uuid::new_v4(), " ", "1.0.0", Ecosystem::Npm, true, None);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_dependency_creation_validates_version() {
-        let result = Dependency::new(
-            Uuid::new_v4(),
-            "lodash",
-            " ",
-            Ecosystem::Npm,
-            true,
-            None,
-        );
+        let result = Dependency::new(Uuid::new_v4(), "lodash", " ", Ecosystem::Npm, true, None);
         assert!(result.is_err());
     }
 
