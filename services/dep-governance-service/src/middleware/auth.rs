@@ -13,11 +13,13 @@ pub struct AuthConfig {
 }
 
 pub trait JwksProvider: Send + Sync {
-    fn get_key(&self, _kid: &str) -> Option<jsonwebtoken::DecodingKey> { None }
+    fn get_key<'a>(&'a self, _kid: &'a str) -> futures::future::BoxFuture<'a, Option<std::sync::Arc<jsonwebtoken::DecodingKey>>> {
+        Box::pin(async { None })
+    }
 }
 
 #[derive(Debug, Default)]
-struct NoopJwksProvider;
+pub struct NoopJwksProvider;
 
 impl JwksProvider for NoopJwksProvider {}
 
@@ -107,11 +109,118 @@ pub fn parse_and_build_placeholder_claims(token: &str) -> Claims {
     }
 }
 
+// --- JWKS caching provider ---
+
+#[derive(Debug, Clone, Deserialize)]
+struct Jwks { keys: Vec<Jwk> }
+
+#[derive(Debug, Clone, Deserialize)]
+struct Jwk {
+    #[serde(default)]
+    kid: String,
+    #[serde(default)]
+    alg: Option<String>,
+    kty: String,
+    #[serde(default)]
+    n: Option<String>,
+    #[serde(default)]
+    e: Option<String>,
+}
+
+struct CacheState {
+    map: std::collections::HashMap<String, std::sync::Arc<jsonwebtoken::DecodingKey>>,
+    expires_at: std::time::Instant,
+}
+
+pub struct CachingJwksProvider {
+    url: String,
+    ttl: std::time::Duration,
+    client: reqwest::Client,
+    state: std::sync::Arc<tokio::sync::RwLock<CacheState>>, 
+}
+
+impl CachingJwksProvider {
+    pub fn new(url: String, ttl: std::time::Duration) -> Self {
+        let client = reqwest::Client::builder()
+            .user_agent("dep-governance-service-jwks/1.0")
+            .build()
+            .expect("reqwest client");
+        Self {
+            url,
+            ttl,
+            client,
+            state: std::sync::Arc::new(tokio::sync::RwLock::new(CacheState {
+                map: std::collections::HashMap::new(),
+                expires_at: std::time::Instant::now(),
+            })),
+        }
+    }
+
+    fn next_expiry(ttl: std::time::Duration) -> std::time::Instant {
+        let now = std::time::Instant::now();
+        // jitter up to 10%
+        let jitter_ns = (ttl.as_nanos() as f64 * 0.1) as u128;
+        let jitter = if jitter_ns == 0 { 0 } else { rand::random::<u64>() as u128 % jitter_ns };
+        let ttl_ns = ttl.as_nanos().saturating_sub(jitter);
+        now + std::time::Duration::from_nanos(ttl_ns as u64)
+    }
+
+    async fn refresh_if_needed(&self) {
+        let expired = {
+            let guard = self.state.read().await;
+            std::time::Instant::now() >= guard.expires_at
+        };
+        if !expired { return; }
+
+        let mut guard = self.state.write().await;
+        if std::time::Instant::now() < guard.expires_at { return; }
+
+        match self.client.get(&self.url).send().await.and_then(|r| r.error_for_status()) {
+            Ok(resp) => {
+                if let Ok(jwks) = resp.json::<Jwks>().await {
+                    let mut newmap = std::collections::HashMap::new();
+                    for k in jwks.keys {
+                        if let (Some(n), Some(e)) = (k.n.as_ref(), k.e.as_ref()) {
+                            if k.alg.as_deref() == Some("RS256") || (k.alg.is_none() && k.kty == "RSA") {
+                                if let Ok(dk) = jsonwebtoken::DecodingKey::from_rsa_components(n, e) {
+                                    newmap.insert(k.kid.clone(), std::sync::Arc::new(dk));
+                                }
+                            }
+                        }
+                        // ES256 support can be added in later stacks
+                    }
+                    guard.map = newmap;
+                    guard.expires_at = Self::next_expiry(self.ttl);
+                }
+            }
+            Err(err) => {
+                tracing::warn!("JWKS fetch failed: {}", err);
+                guard.expires_at = Self::next_expiry(self.ttl);
+            }
+        }
+    }
+}
+
+impl JwksProvider for CachingJwksProvider {
+    fn get_key<'a>(&'a self, kid: &'a str) -> futures::future::BoxFuture<'a, Option<std::sync::Arc<jsonwebtoken::DecodingKey>>> {
+        Box::pin(async move {
+            self.refresh_if_needed().await;
+            let guard = self.state.read().await;
+            guard.map.get(kid).cloned()
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use axum::{body::Body, http::{Request, StatusCode}, middleware, Router};
     use tower::ServiceExt;
+    use wiremock::{MockServer, Mock, ResponseTemplate};
+    use wiremock::matchers::{method, path};
+    use rand::{RngCore, rngs::StdRng, SeedableRng};
+    use base64::engine::general_purpose::URL_SAFE_NO_PAD;
+    use base64::Engine;
 
     async fn handler() -> &'static str {
         "ok"
@@ -167,5 +276,90 @@ mod tests {
         headers.insert("authorization", "Basic something".parse().unwrap());
         let token = extract_bearer_token(&headers);
         assert!(token.is_none());
+    }
+
+    #[tokio::test]
+    async fn caching_jwks_provider_fetches_and_caches_rs256() {
+        let server = MockServer::start().await;
+
+        // Build a fake RSA modulus (base64url) and exponent AQAB (65537)
+        let mut rng = StdRng::seed_from_u64(42);
+        let mut modulus = vec![0u8; 256];
+        rng.fill_bytes(&mut modulus);
+        let n_b64 = URL_SAFE_NO_PAD.encode(&modulus);
+        let jwks = serde_json::json!({
+            "keys": [
+                {"kty": "RSA", "kid": "kid1", "use": "sig", "alg": "RS256", "n": n_b64, "e": "AQAB"}
+            ]
+        });
+
+        Mock::given(method("GET"))
+            .and(path("/jwks.json"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&jwks))
+            .expect(1)
+            .mount(&server)
+            .await;
+
+        let url = format!("{}/jwks.json", &server.uri());
+        let prov = CachingJwksProvider::new(url, std::time::Duration::from_secs(300));
+
+        // First fetch triggers network
+        let k1 = prov.get_key("kid1").await;
+        assert!(k1.is_some());
+
+        // Second fetch served from cache
+        let k2 = prov.get_key("kid1").await;
+        assert!(k2.is_some());
+    }
+
+    #[tokio::test]
+    async fn caching_jwks_provider_refreshes_on_ttl_expiry() {
+        let server = MockServer::start().await;
+
+        let n1 = URL_SAFE_NO_PAD.encode(vec![1u8; 256]);
+        let jwks1 = serde_json::json!({"keys":[{"kty":"RSA","kid":"kid2","use":"sig","alg":"RS256","n":n1,"e":"AQAB"}]});
+
+        let n2 = URL_SAFE_NO_PAD.encode(vec![2u8; 256]);
+        let jwks2 = serde_json::json!({"keys":[{"kty":"RSA","kid":"kid2","use":"sig","alg":"RS256","n":n2,"e":"AQAB"}]});
+
+        Mock::given(method("GET"))
+            .and(path("/jwks.json"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&jwks1))
+            .mount(&server)
+            .await;
+
+        let url = format!("{}/jwks.json", &server.uri());
+        let prov = CachingJwksProvider::new(url, std::time::Duration::from_millis(50));
+
+        // First call populates cache
+        assert!(prov.get_key("kid2").await.is_some());
+
+        // After TTL, next request should refetch
+        // Mount updated response for next fetch
+        Mock::given(method("GET"))
+            .and(path("/jwks.json"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&jwks2))
+            .mount(&server)
+            .await;
+
+        tokio::time::sleep(std::time::Duration::from_millis(60)).await;
+        assert!(prov.get_key("kid2").await.is_some());
+    }
+
+    #[tokio::test]
+    async fn caching_jwks_provider_ignores_unsupported_alg() {
+        let server = MockServer::start().await;
+        let jwks = serde_json::json!({
+            "keys": [ {"kty": "oct", "kid": "bad", "alg":"HS256", "k":"abcd"} ]
+        });
+        Mock::given(method("GET"))
+            .and(path("/jwks.json"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&jwks))
+            .mount(&server)
+            .await;
+
+        let url = format!("{}/jwks.json", &server.uri());
+        let prov = CachingJwksProvider::new(url, std::time::Duration::from_secs(300));
+        assert!(prov.get_key("bad").await.is_none());
     }
 }
