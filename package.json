@@ -12,7 +12,7 @@
     "test": "turbo run test",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
-    "quality:check": "bunx turbo run quality:check --filter=projects-service",
+    "quality:check": "cd services/projects-service && bun run quality:check",
     "prepare": "husky"
   },
   "devDependencies": {
