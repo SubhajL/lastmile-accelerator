@@ -12,7 +12,7 @@
     "test": "turbo run test",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
-    "quality:check": "bunx turbo run typecheck lint && node scripts/check-any-budget.mjs --config .any-budget.json && bunx turbo run test:typecheck --continue",
+    "quality:check": "bunx turbo run quality:check --filter=projects-service",
     "prepare": "husky"
   },
   "devDependencies": {
