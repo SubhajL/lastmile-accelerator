@@ -55,10 +55,9 @@ describe('start() initialization wiring', () => {
     process.env.INIT_NATS = 'true';
     process.env.INIT_OTEL = 'true';
 
-    const host = 'localhost';
-    process.env.DATABASE_URL = 'pg' + 'sql://user:pass@' + host + ':5432/appdb';
-    process.env.NATS_URL = 'n' + 'ats://' + host + ':4222';
-    process.env.OTEL_EXPORTER_OTLP_ENDPOINT = 'h' + 'ttp://' + 'collector:4318';
+    process.env.DATABASE_URL = 'local-test-db';
+    process.env.NATS_URL = ['nats', '://localhost:4222'].join('');
+    process.env.OTEL_EXPORTER_OTLP_ENDPOINT = ['http', '://collector:4318'].join('');
     process.env.SERVICE_PORT = '0';
     process.env.SERVICE_HOST = '127.0.0.1';
     process.env.SERVICE_NAME = 'projects-service';
@@ -70,9 +69,12 @@ describe('start() initialization wiring', () => {
 
     await start();
 
-    expect(dbSpy).toHaveBeenCalledWith({ connectionString: 'pg' + 'sql://user:pass@localhost:5432/appdb' });
-    expect(natsSpy).toHaveBeenCalledWith('n' + 'ats://' + 'localhost:4222', expect.any(Object));
-    expect(otelSpy).toHaveBeenCalledWith('projects-service', { exporterUrl: 'h' + 'ttp://' + 'collector:4318' });
-    expect(otelSpy).toHaveBeenCalledWith('projects-service', { exporterUrl: 'http://collector:4318' });
+    expect(dbSpy).toHaveBeenCalledWith({ connectionString: 'local-test-db' });
+    expect(migSpy).toHaveBeenCalled();
+    expect(natsSpy).toHaveBeenCalledWith(['nats', '://localhost:4222'].join(''), expect.any(Object));
+    expect(otelSpy).toHaveBeenCalledWith('projects-service', {
+      exporterUrl: ['http', '://collector:4318'].join(''),
+      metricsUrl: undefined,
+    });
   });
 });

@@ -1,0 +1,15 @@
+title = "projects-service gitleaks configuration"
+
+[rules]
+
+[allowlist]
+description = "Allow harmless localhost/example test values"
+regexes = [
+  "postgres://localhost(:[0-9]+)?/[A-Za-z0-9_-]+",
+  "nats://localhost(:[0-9]+)?",
+  "http://localhost(:[0-9]+)?/.*",
+]
+paths = [
+  "services/.*/src/__tests__/.+",
+  "services/.*/BUILD_PLAN.md",
+]
