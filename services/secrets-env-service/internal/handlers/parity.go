@@ -15,9 +15,9 @@ type parityServicePort interface {
 	GetCheckHistory(ctx any, projectID string, limit int) ([]*domain.EnvParityCheck, error)
 }
 
-type ParityHandler struct { svc parityServicePort }
+type ParityHandler struct { svc parityServicePort; envAllowlist EnvAllowlist }
 
-func NewParityHandler(svc parityServicePort) *ParityHandler { return &ParityHandler{svc: svc} }
+func NewParityHandler(svc parityServicePort, envAllowlist EnvAllowlist) *ParityHandler { return &ParityHandler{svc: svc, envAllowlist: envAllowlist} }
 
 type parityReq struct { BaseEnv string `json:"baseEnv"`; CompareEnv string `json:"compareEnv"` }
 
@@ -27,6 +27,7 @@ func (h *ParityHandler) CheckParity(w http.ResponseWriter, r *http.Request) {
 	dec := json.NewDecoder(r.Body); dec.DisallowUnknownFields()
 	if err := dec.Decode(&req); err != nil { Error(w, http.StatusBadRequest, "invalid json", err); return }
 	if req.BaseEnv == "" || req.CompareEnv == "" { ValidationError(w, map[string]string{"baseEnv":"required","compareEnv":"required"}); return }
+	if !h.envAllowlist.Allows(req.BaseEnv) || !h.envAllowlist.Allows(req.CompareEnv) { ValidationError(w, map[string]string{"baseEnv":"not allowed","compareEnv":"not allowed"}); return }
 	res, err := h.svc.CheckParity(r.Context(), projectID, req.BaseEnv, req.CompareEnv)
 	if err != nil { Error(w, http.StatusInternalServerError, "failed parity", err); return }
 	Success(w, http.StatusOK, res)

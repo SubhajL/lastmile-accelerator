@@ -21,10 +21,11 @@ type secretsServicePort interface {
 
 type SecretsHandler struct {
 	svc secretsServicePort
+	envAllowlist EnvAllowlist
 }
 
-func NewSecretsHandler(svc secretsServicePort) *SecretsHandler {
-	return &SecretsHandler{svc: svc}
+func NewSecretsHandler(svc secretsServicePort, envAllowlist EnvAllowlist) *SecretsHandler {
+	return &SecretsHandler{svc: svc, envAllowlist: envAllowlist}
 }
 
 type createSecretRequest struct {
@@ -56,6 +57,7 @@ func (h *SecretsHandler) CreateSecret(w http.ResponseWriter, r *http.Request) {
 	// key format validation
 	var re = regexp.MustCompile(`^[A-Za-z0-9._-]{1,128}$`)
 	if req.Key != "" && !re.MatchString(req.Key) { fields["key"] = "invalid format" }
+	if req.Environment != "" && !h.envAllowlist.Allows(req.Environment) { fields["environment"] = "not allowed" }
 	if len(fields) > 0 { ValidationError(w, fields); return }
 
 	id := uuid.New().String()
@@ -82,6 +84,7 @@ func (h *SecretsHandler) GetSecret(w http.ResponseWriter, r *http.Request) {
 	projectID := chi.URLParam(r, "projectID")
 	key := chi.URLParam(r, "key")
 	env := r.URL.Query().Get("env")
+	if !h.envAllowlist.AllowsOptional(env) { ValidationError(w, map[string]string{"env":"not allowed"}); return }
 	claims, _ := ClaimsFromContext(r.Context())
 	secret, _, err := h.svc.GetSecret(r.Context(), claims.TenantID, projectID, key, env)
 	if err != nil {
@@ -95,6 +98,7 @@ func (h *SecretsHandler) DeleteSecret(w http.ResponseWriter, r *http.Request) {
 	projectID := chi.URLParam(r, "projectID")
 	key := chi.URLParam(r, "key")
 	env := r.URL.Query().Get("env")
+	if !h.envAllowlist.AllowsOptional(env) { ValidationError(w, map[string]string{"env":"not allowed"}); return }
 	claims, _ := ClaimsFromContext(r.Context())
 	if err := h.svc.DeleteSecret(r.Context(), claims.TenantID, projectID, key, env); err != nil {
 		Error(w, http.StatusNotFound, "secret not found", err)
@@ -106,6 +110,7 @@ func (h *SecretsHandler) DeleteSecret(w http.ResponseWriter, r *http.Request) {
 func (h *SecretsHandler) ListSecrets(w http.ResponseWriter, r *http.Request) {
 	projectID := chi.URLParam(r, "projectID")
 	env := r.URL.Query().Get("env")
+	if !h.envAllowlist.AllowsOptional(env) { ValidationError(w, map[string]string{"env":"not allowed"}); return }
 	limitStr := r.URL.Query().Get("limit")
 	cursor := r.URL.Query().Get("cursor")
 	limit := 50

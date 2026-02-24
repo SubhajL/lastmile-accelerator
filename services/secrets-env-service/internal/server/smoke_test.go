@@ -53,7 +53,7 @@ func buildSecretsStack(t *testing.T, ver *smokeFakeVerifier) (http.Handler, *smo
 	v.SetTestMode(true)
 	cap := &smokeCapturePublisher{}
 svc := service.NewSecretsService(v, secretsRepo, nil, cap)
-	h := handlers.NewSecretsHandler(smokeSecretsAdapter{s: svc})
+	h := handlers.NewSecretsHandler(smokeSecretsAdapter{s: svc}, handlers.EnvAllowlist{})
 	r := SetupRoutes(h, nil, nil, handlers.PanicRecovery(log), handlers.RequestLogger(log), handlers.JWTAuth(ver))
 	return r, cap
 }

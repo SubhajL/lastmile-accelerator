@@ -80,13 +80,14 @@ type server struct {
 	pb.UnimplementedSecretsEnvServiceServer
 	secrets *service.SecretsService
 	parity  *service.ParityService
+	envAllowlist handlers.EnvAllowlist
 	log     zerolog.Logger
 }
 
 // StartGRPCServer starts the gRPC server on addr and blocks until ctx is canceled.
-func StartGRPCServer(ctx context.Context, addr string, secrets *service.SecretsService, parity *service.ParityService, verifier handlers.TokenVerifier, log zerolog.Logger, tlsConfig *tls.Config) error {
+func StartGRPCServer(ctx context.Context, addr string, secrets *service.SecretsService, parity *service.ParityService, allowedEnvironments []string, verifier handlers.TokenVerifier, log zerolog.Logger, tlsConfig *tls.Config) error {
 	// Interceptor chain: recovery -> logging -> auth -> scope enforcement
-	svc := &server{secrets: secrets, parity: parity, log: log}
+	svc := &server{secrets: secrets, parity: parity, envAllowlist: handlers.NewEnvAllowlist(allowedEnvironments), log: log}
 
 	requiredScopes := map[string][]string{
 		"/lma.secretsenv.v1.SecretsEnvService/GetSecret":      {"secrets:read"},
@@ -133,6 +134,9 @@ func (s *server) GetSecret(ctx context.Context, in *pb.GetSecretRequest) (*pb.Ge
 	if !ok {
 		return nil, status.Error(codes.Unauthenticated, "missing claims")
 	}
+	if !s.envAllowlist.AllowsOptional(in.Environment) {
+		return nil, status.Error(codes.InvalidArgument, "environment not allowed")
+	}
 	sec, val, err := s.secrets.GetSecret(ctx, claims.TenantID, in.ProjectId, in.Key, in.Environment)
 	if err != nil {
 		if strings.Contains(strings.ToLower(err.Error()), "not found") {
@@ -144,6 +148,9 @@ func (s *server) GetSecret(ctx context.Context, in *pb.GetSecretRequest) (*pb.Ge
 }
 
 func (s *server) ListSecrets(ctx context.Context, in *pb.ListSecretsRequest) (*pb.ListSecretsResponse, error) {
+	if !s.envAllowlist.AllowsOptional(in.Environment) {
+		return nil, status.Error(codes.InvalidArgument, "environment not allowed")
+	}
 	limit := int(in.PageSize)
 	if limit <= 0 {
 		limit = 50
@@ -160,6 +167,9 @@ func (s *server) ListSecrets(ctx context.Context, in *pb.ListSecretsRequest) (*p
 }
 
 func (s *server) CheckEnvParity(ctx context.Context, in *pb.CheckEnvParityRequest) (*pb.CheckEnvParityResponse, error) {
+	if !s.envAllowlist.Allows(in.BaseEnv) || !s.envAllowlist.Allows(in.CompareEnv) {
+		return nil, status.Error(codes.InvalidArgument, "environment not allowed")
+	}
 	res, err := s.parity.CheckParity(ctx, in.ProjectId, in.BaseEnv, in.CompareEnv)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
