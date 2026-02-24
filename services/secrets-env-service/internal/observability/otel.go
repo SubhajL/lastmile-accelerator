@@ -60,22 +60,24 @@ func Init(ctx context.Context, cfg config.ObservabilityConfig, serviceName strin
 			return nil, err
 		}
 
-		expOpts := []otlptracegrpc.Option{
-			otlptracegrpc.WithEndpoint(endpoint),
-		}
-		if cfg.OTELInsecure {
-			expOpts = append(expOpts, otlptracegrpc.WithInsecure())
-		}
-		if len(cfg.OTELHeaders) > 0 {
-			expOpts = append(expOpts, otlptracegrpc.WithHeaders(cfg.OTELHeaders))
-		}
+		if endpoint != "" {
+			expOpts := []otlptracegrpc.Option{
+				otlptracegrpc.WithEndpoint(endpoint),
+			}
+			if cfg.OTELInsecure {
+				expOpts = append(expOpts, otlptracegrpc.WithInsecure())
+			}
+			if len(cfg.OTELHeaders) > 0 {
+				expOpts = append(expOpts, otlptracegrpc.WithHeaders(cfg.OTELHeaders))
+			}
 
-		exporter, err := otlptracegrpc.New(ctx, expOpts...)
-		if err != nil {
-			return nil, err
-		}
+			exporter, err := otlptracegrpc.New(ctx, expOpts...)
+			if err != nil {
+				return nil, err
+			}
 
-		opts = append(opts, sdktrace.WithBatcher(exporter))
+			opts = append(opts, sdktrace.WithBatcher(exporter))
+		}
 	}
 
 	tp := sdktrace.NewTracerProvider(opts...)

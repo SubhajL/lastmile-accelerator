@@ -30,13 +30,19 @@ import (
 
 func main() {
 	cfg, err := config.Load()
-	if err != nil { panic(err) }
+	if err != nil {
+		panic(err)
+	}
 
 	log := logger.New(cfg.ServiceName, cfg.LogLevel, os.Stdout)
 
 	// OpenTelemetry init (best-effort)
 	ctx := context.Background()
-	shutdownOTel, _ := observability.Init(ctx, cfg.Observability, cfg.ServiceName)
+	shutdownOTel, err := observability.Init(ctx, cfg.Observability, cfg.ServiceName)
+	if err != nil {
+		logger.SafeLogError(log, err, "OpenTelemetry init failed")
+		shutdownOTel = func(context.Context) error { return nil }
+	}
 	defer func() { _ = shutdownOTel(context.Background()) }()
 
 	// Repositories
@@ -48,7 +54,9 @@ func main() {
 	)
 	if cfg.Database.UsePGRepos {
 		db, err := sql.Open("pgx", cfg.Database.URL)
-		if err != nil { panic(err) }
+		if err != nil {
+			panic(err)
+		}
 		db.SetMaxOpenConns(cfg.Database.MaxOpenConns)
 		db.SetMaxIdleConns(cfg.Database.MaxIdleConns)
 		db.SetConnMaxLifetime(time.Duration(cfg.Database.ConnMaxLifetimeS) * time.Second)
@@ -136,7 +144,9 @@ func main() {
 
 	// TLS (mTLS) optional
 	tlsCfg, err := security.LoadServerTLS(cfg.TLS)
-	if err != nil { log.Error().Err(err).Msg("failed to load TLS config") }
+	if err != nil {
+		log.Error().Err(err).Msg("failed to load TLS config")
+	}
 
 	// Context for shutdown
 	appCtx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
@@ -145,7 +155,10 @@ func main() {
 	go func() {
 		if tlsCfg != nil {
 			ln, err := net.Listen("tcp", h.Addr)
-			if err != nil { _ = err; return }
+			if err != nil {
+				_ = err
+				return
+			}
 			tlsLn := tls.NewListener(ln, tlsCfg)
 			_ = h.Serve(tlsLn)
 			return
@@ -164,7 +177,9 @@ func main() {
 
 type denyAllVerifier struct{}
 
-func (d *denyAllVerifier) Verify(ctx context.Context, token string) (*handlers.Claims, error) { return nil, context.Canceled }
+func (d *denyAllVerifier) Verify(ctx context.Context, token string) (*handlers.Claims, error) {
+	return nil, context.Canceled
+}
 
 type secretsServiceAdapter struct{ s *service.SecretsService }
 
@@ -204,4 +219,3 @@ func (a leakScanServiceAdapter) GetScanResults(ctx any, projectID, snapshotID, s
 func (a leakScanServiceAdapter) MarkAsFixed(ctx any, scanID string) error {
 	return a.s.MarkAsFixed(ctx.(context.Context), scanID)
 }
-
