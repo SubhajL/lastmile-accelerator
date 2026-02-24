@@ -1,14 +1,19 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createLogger, getLogger, resetLogger } from '../../logger';
 
 describe('Logger', () => {
+  let originalNodeEnv: string | undefined;
+
   beforeEach(() => {
-    if (process.env.NODE_ENV === undefined) {
-      process.env.NODE_ENV = 'test';
-    }
+    originalNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'test';
 
     resetLogger();
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    process.env.NODE_ENV = originalNodeEnv;
   });
 
   describe('createLogger()', () => {
@@ -28,6 +33,14 @@ describe('Logger', () => {
       // Logger should have pino methods
       expect(typeof logger.info).toBe('function');
       expect(logger).toHaveProperty('level');
+    });
+  });
+
+  describe('resetLogger()', () => {
+    it('should throw if called outside test environment', () => {
+      process.env.NODE_ENV = 'production';
+
+      expect(() => resetLogger()).toThrow('resetLogger() can only be called in test environment');
     });
   });
 
