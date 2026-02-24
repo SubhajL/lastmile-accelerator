@@ -4,12 +4,16 @@ on:
   push:
     branches:
       - main
-      - secrets-env-service
   pull_request:
+    paths-ignore:
+      - '**/*.md'
+      - 'coding-logs/**'
+      - '.codex/**'
+      - 'documentation/**'
 
 jobs:
   ci:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -19,7 +23,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: '1'
 
       - name: Install Node deps
         run: bun install
@@ -32,11 +36,9 @@ jobs:
         env:
           MAX_FILES: '25'
           MAX_LOC: '500'
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
           set -euo pipefail
-          BASE_SHA="${{ github.event.pull_request.base.sha }}"
-          if [ -z "$BASE_SHA" ]; then BASE_SHA="origin/${{ github.base_ref }}"; fi
-          git fetch origin "${{ github.base_ref }}:${{ github.base_ref }}" || true
           FILES=$(git diff --name-only "$BASE_SHA"...HEAD | wc -l | tr -d ' ')
           ADDED=$(git diff --numstat "$BASE_SHA"...HEAD | awk '{a+=$1} END{print a+0}')
           DELETED=$(git diff --numstat "$BASE_SHA"...HEAD | awk '{d+=$2} END{print d+0}')
