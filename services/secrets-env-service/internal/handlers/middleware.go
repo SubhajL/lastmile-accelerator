@@ -11,6 +11,7 @@ import (
 	"example.com/lma/secrets-env-service/internal/events"
 	"example.com/lma/secrets-env-service/internal/logger"
 	"github.com/go-chi/chi/v5"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -67,7 +68,9 @@ func TraceContext() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			tp := r.Header.Get("traceparent")
-			if tp == "" { tp = events.TraceparentFromContext(r.Context()) }
+			if tp == "" {
+				tp = events.TraceparentFromContext(r.Context())
+			}
 			ctx := events.WithTraceparent(r.Context(), tp)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
@@ -157,7 +160,9 @@ func RequireScopes(required ...string) func(http.Handler) http.Handler {
 				return
 			}
 			scopeSet := map[string]struct{}{}
-			for _, s := range claims.Scopes { scopeSet[s] = struct{}{} }
+			for _, s := range claims.Scopes {
+				scopeSet[s] = struct{}{}
+			}
 			for _, req := range required {
 				if _, ok := scopeSet[req]; !ok {
 					Error(w, http.StatusForbidden, "insufficient scope", nil)
@@ -181,9 +186,13 @@ func RBACAugment() func(http.Handler) http.Handler {
 			}
 			rolesHeader := r.Header.Get("X-Roles")
 			roles := []string{}
-			if rolesHeader != "" { roles = strings.Split(rolesHeader, ",") }
+			if rolesHeader != "" {
+				roles = strings.Split(rolesHeader, ",")
+			}
 			aug := claims.Scopes
-			for i := range roles { roles[i] = strings.TrimSpace(strings.ToLower(roles[i])) }
+			for i := range roles {
+				roles[i] = strings.TrimSpace(strings.ToLower(roles[i]))
+			}
 			for _, role := range roles {
 				switch role {
 				case "admin":
@@ -205,8 +214,15 @@ func RBACAugment() func(http.Handler) http.Handler {
 
 func mergeScopes(base, extra []string) []string {
 	set := map[string]struct{}{}
-	for _, s := range base { set[s] = struct{}{} }
-	for _, s := range extra { if _, ok := set[s]; !ok { base = append(base, s); set[s] = struct{}{} } }
+	for _, s := range base {
+		set[s] = struct{}{}
+	}
+	for _, s := range extra {
+		if _, ok := set[s]; !ok {
+			base = append(base, s)
+			set[s] = struct{}{}
+		}
+	}
 	return base
 }
 
@@ -263,6 +279,59 @@ func TenantIsolation() func(http.Handler) http.Handler {
 				return
 			}
 			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// routePattern returns the chi route pattern for the current request, if available.
+func routePattern(r *http.Request) string {
+	if r == nil {
+		return ""
+	}
+	if rctx := chi.RouteContext(r.Context()); rctx != nil {
+		if p := rctx.RoutePattern(); p != "" {
+			return p
+		}
+	}
+	return r.URL.Path
+}
+
+// HttpMetrics records HTTP request metrics: counter and latency histogram by method/route/status.
+func HttpMetrics(reg prometheus.Registerer) func(http.Handler) http.Handler {
+	if reg == nil {
+		reg = prometheus.DefaultRegisterer
+	}
+
+	requests := prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "http_requests_total",
+			Help: "Total number of HTTP requests by method, route, status.",
+		},
+		[]string{"method", "route", "status"},
+	)
+	durations := prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "http_request_duration_seconds",
+			Help:    "HTTP request duration by method, route, status.",
+			Buckets: prometheus.DefBuckets,
+		},
+		[]string{"method", "route", "status"},
+	)
+	reg.MustRegister(requests, durations)
+
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			start := time.Now()
+			method := r.Method
+
+			rw := &statusWriter{ResponseWriter: w, status: 200}
+			next.ServeHTTP(rw, r)
+
+			status := fmt.Sprintf("%d", rw.status)
+			route := routePattern(r)
+
+			requests.WithLabelValues(method, route, status).Inc()
+			durations.WithLabelValues(method, route, status).Observe(time.Since(start).Seconds())
 		})
 	}
 }
