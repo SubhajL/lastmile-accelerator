@@ -4,25 +4,27 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"fmt"
 	"net"
 	"strings"
 	"time"
 
 	"example.com/lma/secrets-env-service/internal/domain"
+	"example.com/lma/secrets-env-service/internal/events"
 	pb "example.com/lma/secrets-env-service/internal/grpc/gen/secretsenvv1"
 	"example.com/lma/secrets-env-service/internal/handlers"
 	"example.com/lma/secrets-env-service/internal/logger"
 	"example.com/lma/secrets-env-service/internal/security"
 	"example.com/lma/secrets-env-service/internal/service"
-	"example.com/lma/secrets-env-service/internal/events"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 )
 
 // RPC request/response types (JSON-encoded via jsonCodec)
@@ -42,8 +44,8 @@ type SecretMeta struct {
 }
 
 type GetSecretResponse struct {
-	Meta  SecretMeta            `json:"meta"`
-	Value map[string]any        `json:"value"`
+	Meta  SecretMeta     `json:"meta"`
+	Value map[string]any `json:"value"`
 }
 
 type ListSecretsRequest struct {
@@ -55,12 +57,12 @@ type ListSecretsRequest struct {
 
 type ListSecretsResponse struct {
 	Items         []SecretMeta `json:"items"`
-	NextPageToken string      `json:"next_page_token"`
+	NextPageToken string       `json:"next_page_token"`
 }
 
 type CheckEnvParityRequest struct {
-	ProjectID string `json:"project_id"`
-	BaseEnv   string `json:"base_env"`
+	ProjectID  string `json:"project_id"`
+	BaseEnv    string `json:"base_env"`
 	CompareEnv string `json:"compare_env"`
 }
 
@@ -87,13 +89,14 @@ func StartGRPCServer(ctx context.Context, addr string, secrets *service.SecretsS
 	svc := &server{secrets: secrets, parity: parity, log: log}
 
 	requiredScopes := map[string][]string{
-		"/lma.secretsenv.v1.SecretsEnvService/GetSecret":   {"secrets:read"},
-		"/lma.secretsenv.v1.SecretsEnvService/ListSecrets":  {"secrets:read"},
+		"/lma.secretsenv.v1.SecretsEnvService/GetSecret":      {"secrets:read"},
+		"/lma.secretsenv.v1.SecretsEnvService/ListSecrets":    {"secrets:read"},
 		"/lma.secretsenv.v1.SecretsEnvService/CheckEnvParity": {"parity:compute"},
 	}
 
-chain := grpc.ChainUnaryInterceptor(
+	chain := grpc.ChainUnaryInterceptor(
 		unaryPanicRecovery(log),
+		unaryGRPCMetrics(prometheus.DefaultRegisterer),
 		unaryTraceContext(),
 		unaryOtelTracing(),
 		unaryRequestLogger(log),
@@ -102,16 +105,19 @@ chain := grpc.ChainUnaryInterceptor(
 		unaryRateLimit(security.NewRateLimiter(20, 40)),
 		unaryRequireScopes(requiredScopes),
 	)
-var opts []grpc.ServerOption
-opts = append(opts, chain)
-if tlsConfig != nil {
-	opts = append(opts, grpc.Creds(credentials.NewTLS(tlsConfig)))
-}
-gs := grpc.NewServer(opts...)
-pb.RegisterSecretsEnvServiceServer(gs, svc)
+
+	var opts []grpc.ServerOption
+	opts = append(opts, chain)
+	if tlsConfig != nil {
+		opts = append(opts, grpc.Creds(credentials.NewTLS(tlsConfig)))
+	}
+	gs := grpc.NewServer(opts...)
+	pb.RegisterSecretsEnvServiceServer(gs, svc)
 
 	lis, err := net.Listen("tcp", addr)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 	go func() {
 		<-ctx.Done()
 		gs.GracefulStop()
@@ -124,10 +130,14 @@ pb.RegisterSecretsEnvServiceServer(gs, svc)
 
 func (s *server) GetSecret(ctx context.Context, in *pb.GetSecretRequest) (*pb.GetSecretResponse, error) {
 	claims, ok := handlers.ClaimsFromContext(ctx)
-	if !ok { return nil, status.Error(codes.Unauthenticated, "missing claims") }
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "missing claims")
+	}
 	sec, val, err := s.secrets.GetSecret(ctx, claims.TenantID, in.ProjectId, in.Key, in.Environment)
 	if err != nil {
-		if strings.Contains(strings.ToLower(err.Error()), "not found") { return nil, status.Error(codes.NotFound, "not found") }
+		if strings.Contains(strings.ToLower(err.Error()), "not found") {
+			return nil, status.Error(codes.NotFound, "not found")
+		}
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	return &pb.GetSecretResponse{Meta: toPBSecretMeta(sec), Value: val}, nil
@@ -135,25 +145,32 @@ func (s *server) GetSecret(ctx context.Context, in *pb.GetSecretRequest) (*pb.Ge
 
 func (s *server) ListSecrets(ctx context.Context, in *pb.ListSecretsRequest) (*pb.ListSecretsResponse, error) {
 	limit := int(in.PageSize)
-	if limit <= 0 { limit = 50 }
+	if limit <= 0 {
+		limit = 50
+	}
 	items, next, err := s.secrets.ListSecrets(ctx, in.ProjectId, in.Environment, limit, in.PageToken)
-	if err != nil { return nil, status.Error(codes.Internal, err.Error()) }
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
 	out := make([]*pb.SecretMeta, 0, len(items))
-	for _, it := range items { out = append(out, toPBSecretMeta(it)) }
+	for _, it := range items {
+		out = append(out, toPBSecretMeta(it))
+	}
 	return &pb.ListSecretsResponse{Items: out, NextPageToken: next}, nil
 }
 
 func (s *server) CheckEnvParity(ctx context.Context, in *pb.CheckEnvParityRequest) (*pb.CheckEnvParityResponse, error) {
 	res, err := s.parity.CheckParity(ctx, in.ProjectId, in.BaseEnv, in.CompareEnv)
-	if err != nil { return nil, status.Error(codes.Internal, err.Error()) }
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
 	return &pb.CheckEnvParityResponse{
-		ProjectId:     res.ProjectID,
-		MissingKeys:   res.MissingKeys,
-		ExtraKeys:     res.ExtraKeys,
-		HasDrift:      res.HasDrift(),
+		ProjectId:   res.ProjectID,
+		MissingKeys: res.MissingKeys,
+		ExtraKeys:   res.ExtraKeys,
+		HasDrift:    res.HasDrift(),
 	}, nil
 }
-
 
 func toPBSecretMeta(s *domain.Secret) *pb.SecretMeta {
 	return &pb.SecretMeta{Id: s.ID, Key: s.Key, Environment: s.Environment}
@@ -167,7 +184,9 @@ func unaryTraceContext() grpc.UnaryServerInterceptor {
 		tp := ""
 		if md != nil {
 			vals := md.Get("traceparent")
-			if len(vals) > 0 { tp = vals[0] }
+			if len(vals) > 0 {
+				tp = vals[0]
+			}
 		}
 		ctx = events.WithTraceparent(ctx, tp)
 		return handler(ctx, req)
@@ -207,10 +226,73 @@ func unaryRequestLogger(log zerolog.Logger) grpc.UnaryServerInterceptor {
 		resp, err := handler(ctx, req)
 		dur := time.Since(start)
 		code := codes.OK
-		if st, ok := status.FromError(err); ok { code = st.Code() }
+		if st, ok := status.FromError(err); ok {
+			code = st.Code()
+		}
 		log.Info().Str("method", info.FullMethod).Str("grpc_code", code.String()).Dur("duration_ms", dur).Msg("grpc")
 		return resp, err
 	}
+}
+
+func unaryGRPCMetrics(reg prometheus.Registerer) grpc.UnaryServerInterceptor {
+	if reg == nil {
+		reg = prometheus.DefaultRegisterer
+	}
+
+	requests := registerOrGetCounterVec(reg, prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "grpc_requests_total",
+			Help: "Total number of gRPC requests by method and status.",
+		},
+		[]string{"method", "status"},
+	))
+	durations := registerOrGetHistogramVec(reg, prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "grpc_request_duration_seconds",
+			Help:    "gRPC request duration by method.",
+			Buckets: prometheus.DefBuckets,
+		},
+		[]string{"method"},
+	))
+
+	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+		start := time.Now()
+		resp, err := handler(ctx, req)
+
+		code := status.Code(err).String()
+		requests.WithLabelValues(info.FullMethod, code).Inc()
+		durations.WithLabelValues(info.FullMethod).Observe(time.Since(start).Seconds())
+
+		return resp, err
+	}
+}
+
+func registerOrGetCounterVec(reg prometheus.Registerer, vec *prometheus.CounterVec) *prometheus.CounterVec {
+	if err := reg.Register(vec); err != nil {
+		var already prometheus.AlreadyRegisteredError
+		if errors.As(err, &already) {
+			if existing, ok := already.ExistingCollector.(*prometheus.CounterVec); ok {
+				return existing
+			}
+			return vec
+		}
+		panic(fmt.Errorf("register counter vec: %w", err))
+	}
+	return vec
+}
+
+func registerOrGetHistogramVec(reg prometheus.Registerer, vec *prometheus.HistogramVec) *prometheus.HistogramVec {
+	if err := reg.Register(vec); err != nil {
+		var already prometheus.AlreadyRegisteredError
+		if errors.As(err, &already) {
+			if existing, ok := already.ExistingCollector.(*prometheus.HistogramVec); ok {
+				return existing
+			}
+			return vec
+		}
+		panic(fmt.Errorf("register histogram vec: %w", err))
+	}
+	return vec
 }
 
 func unaryAuth(verifier handlers.TokenVerifier) grpc.UnaryServerInterceptor {
@@ -223,7 +305,9 @@ func unaryAuth(verifier handlers.TokenVerifier) grpc.UnaryServerInterceptor {
 		tok := strings.TrimPrefix(vals[0], "Bearer ")
 		tok = strings.TrimPrefix(tok, "bearer ")
 		claims, err := verifier.Verify(ctx, tok)
-		if err != nil || claims == nil { return nil, status.Error(codes.Unauthenticated, "invalid token") }
+		if err != nil || claims == nil {
+			return nil, status.Error(codes.Unauthenticated, "invalid token")
+		}
 		ctx = handlers.WithClaims(ctx, *claims)
 		return handler(ctx, req)
 	}
@@ -232,12 +316,22 @@ func unaryAuth(verifier handlers.TokenVerifier) grpc.UnaryServerInterceptor {
 func unaryRequireScopes(required map[string][]string) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 		reqScopes := required[info.FullMethod]
-		if len(reqScopes) == 0 { return handler(ctx, req) }
+		if len(reqScopes) == 0 {
+			return handler(ctx, req)
+		}
 		claims, ok := handlers.ClaimsFromContext(ctx)
-		if !ok { return nil, status.Error(codes.PermissionDenied, "missing claims") }
+		if !ok {
+			return nil, status.Error(codes.PermissionDenied, "missing claims")
+		}
 		set := map[string]struct{}{}
-		for _, s := range claims.Scopes { set[s] = struct{}{} }
-		for _, need := range reqScopes { if _, ok := set[need]; !ok { return nil, status.Error(codes.PermissionDenied, "insufficient scope") } }
+		for _, s := range claims.Scopes {
+			set[s] = struct{}{}
+		}
+		for _, need := range reqScopes {
+			if _, ok := set[need]; !ok {
+				return nil, status.Error(codes.PermissionDenied, "insufficient scope")
+			}
+		}
 		return handler(ctx, req)
 	}
 }
@@ -260,7 +354,9 @@ func unaryRateLimit(l *security.RateLimiter) grpc.UnaryServerInterceptor {
 func unaryRBACAugment() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 		claims, ok := handlers.ClaimsFromContext(ctx)
-		if !ok { return handler(ctx, req) }
+		if !ok {
+			return handler(ctx, req)
+		}
 		md, _ := metadata.FromIncomingContext(ctx)
 		var roles []string
 		if md != nil {
