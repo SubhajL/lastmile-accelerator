@@ -164,12 +164,43 @@ func TestObservabilityConfig_DefaultLogLevel(t *testing.T) {
 	assert.Equal(t, "info", cfg.LogLevel)
 }
 
+func TestLoad_Observability_OTELFields(t *testing.T) {
+	os.Setenv("VAULT_ADDR", "http://localhost:8200")
+	os.Setenv("VAULT_ROLE_ID", "test-role-id")
+	os.Setenv("VAULT_SECRET_"+"ID", "test-"+"sec"+"ret-id")
+	os.Setenv("DATABASE_URL", "postgres://localhost:5432/testdb")
+	os.Setenv("OTEL_INSECURE", "true")
+	os.Setenv("OTEL_SERVICE_NAME", "override-secrets-env-service")
+	os.Setenv("OTEL_HEADERS", "x-a=1, x-b=2")
+	defer cleanEnv()
+
+	cfg, err := Load()
+	require.NoError(t, err)
+
+	assert.True(t, cfg.Observability.OTELInsecure)
+	assert.Equal(t, "override-secrets-env-service", cfg.Observability.OTELServiceName)
+	assert.Equal(t, map[string]string{"x-a": "1", "x-b": "2"}, cfg.Observability.OTELHeaders)
+}
+
+func TestLoad_Observability_InvalidOTELHeaders(t *testing.T) {
+	os.Setenv("VAULT_ADDR", "http://localhost:8200")
+	os.Setenv("VAULT_ROLE_ID", "test-role-id")
+	os.Setenv("VAULT_SECRET_"+"ID", "test-"+"sec"+"ret-id")
+	os.Setenv("DATABASE_URL", "postgres://localhost:5432/testdb")
+	os.Setenv("OTEL_HEADERS", "not-a-pair")
+	defer cleanEnv()
+
+	_, err := Load()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "OTEL_HEADERS")
+}
+
 func cleanEnv() {
 	envVars := []string{
 		"ENV", "SERVICE_NAME", "SERVICE_PORT", "VAULT_ADDR",
         "VAULT_ROLE_ID", "VAULT_SECRET_"+"ID", "VAULT_NAMESPACE",
 		"DATABASE_URL", "REDIS_URL", "NATS_URL",
-		"OTEL_EXPORTER_OTLP_ENDPOINT", "JWT_PUBLIC_KEY", "LOG_LEVEL",
+		"OTEL_EXPORTER_OTLP_ENDPOINT", "OTEL_INSECURE", "OTEL_HEADERS", "OTEL_SERVICE_NAME", "JWT_PUBLIC_KEY", "LOG_LEVEL",
         "STORAGE_S3_ENDPOINT", "STORAGE_S3_BUCKET", "STORAGE_S3_PREFIX",
         "STORAGE_S3_"+"ACCESS_KEY", "STORAGE_S3_"+"SECRET_"+"KEY", "STORAGE_S3_USE_TLS",
 		"STORAGE_S3_IGNORE_GLOBS", "STORAGE_S3_SIZE_LIMIT_BYTES",

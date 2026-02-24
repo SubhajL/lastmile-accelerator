@@ -56,6 +56,9 @@ type NATSConfig struct {
 // ObservabilityConfig holds observability settings
 type ObservabilityConfig struct {
 	OTELEndpoint string
+	OTELInsecure bool
+	OTELHeaders  map[string]string
+	OTELServiceName string
 	MetricsPort  string
 }
 
@@ -101,6 +104,11 @@ type S3Config struct {
 
 // Load reads configuration from environment variables
 func Load() (*Config, error) {
+	otelHeaders, err := parseHeaderMap(os.Getenv("OTEL_HEADERS"))
+	if err != nil {
+		return nil, err
+	}
+
 	cfg := &Config{
 		Env:         getEnvOrDefault("ENV", "dev"),
 		ServiceName: getEnvOrDefault("SERVICE_NAME", "secrets-env-service"),
@@ -128,6 +136,9 @@ func Load() (*Config, error) {
 		},
 		Observability: ObservabilityConfig{
 			OTELEndpoint: getEnvOrDefault("OTEL_EXPORTER_OTLP_ENDPOINT", ""),
+			OTELInsecure: getEnvAsBool("OTEL_INSECURE", false),
+			OTELHeaders:  otelHeaders,
+			OTELServiceName: getEnvOrDefault("OTEL_SERVICE_NAME", ""),
 			MetricsPort:  getEnvOrDefault("METRICS_PORT", "9090"),
 		},
 		Auth: AuthConfig{
@@ -319,4 +330,31 @@ func getEnvAsList(key string, def []string) []string {
 		return parts
 	}
 	return def
+}
+
+// parseHeaderMap parses "k1=v1,k2=v2".
+func parseHeaderMap(value string) (map[string]string, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return map[string]string{}, nil
+	}
+
+	out := map[string]string{}
+	for _, part := range strings.Split(value, ",") {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		kv := strings.SplitN(part, "=", 2)
+		if len(kv) != 2 {
+			return nil, fmt.Errorf("invalid OTEL_HEADERS entry: %q", part)
+		}
+		k := strings.TrimSpace(kv[0])
+		v := strings.TrimSpace(kv[1])
+		if k == "" {
+			return nil, fmt.Errorf("invalid OTEL_HEADERS entry: %q", part)
+		}
+		out[k] = v
+	}
+	return out, nil
 }
