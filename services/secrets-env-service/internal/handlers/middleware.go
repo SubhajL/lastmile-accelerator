@@ -25,6 +25,7 @@ type Claims struct {
 	TenantID  string
 	ProjectID string
 	Scopes    []string
+	Roles     []string
 }
 
 type ctxKeyClaims struct{}
@@ -175,7 +176,7 @@ func RequireScopes(required ...string) func(http.Handler) http.Handler {
 	}
 }
 
-// RBACAugment augments scopes based on caller roles (from header X-Roles or existing claims).
+// RBACAugment augments scopes based on caller roles (from claims).
 // Very simple mapping for demo: admin -> add all write scopes; auditor -> add read scopes.
 func RBACAugment() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
@@ -185,16 +186,9 @@ func RBACAugment() func(http.Handler) http.Handler {
 				next.ServeHTTP(w, r)
 				return
 			}
-			rolesHeader := r.Header.Get("X-Roles")
-			roles := []string{}
-			if rolesHeader != "" {
-				roles = strings.Split(rolesHeader, ",")
-			}
 			aug := claims.Scopes
-			for i := range roles {
-				roles[i] = strings.TrimSpace(strings.ToLower(roles[i]))
-			}
-			for _, role := range roles {
+			for _, role := range claims.Roles {
+				role = strings.TrimSpace(strings.ToLower(role))
 				switch role {
 				case "admin":
 					aug = mergeScopes(aug, []string{"secrets:write", "parity:compute", "leaks:write"})
@@ -207,6 +201,7 @@ func RBACAugment() func(http.Handler) http.Handler {
 				TenantID:  claims.TenantID,
 				ProjectID: claims.ProjectID,
 				Scopes:    aug,
+				Roles:     claims.Roles,
 			})
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
