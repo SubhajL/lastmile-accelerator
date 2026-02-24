@@ -90,7 +90,7 @@ describe('config', () => {
       process.env.SMTP_HOST = 'smtp.example.com';
       process.env.SMTP_PORT = '587';
       process.env.SMTP_USER = 'user@example.com';
-      process.env.SMTP_PASSWORD = ['not', 'a', 'cred'].join('-');
+      process.env.SMTP_PASSWORD = PLACEHOLDER_CRED;
       process.env.SMTP_FROM = 'noreply@example.com';
 
       const config = loadConfig();
@@ -133,7 +133,7 @@ describe('config', () => {
       process.env.PG_PORT = '5433';
       process.env.PG_DATABASE = 'mydb';
       process.env.PG_USER = 'dbuser';
-      process.env.PG_PASSWORD = ['not', 'a', 'cred'].join('-');
+      process.env.PG_PASSWORD = PLACEHOLDER_CRED;
 
       const config = loadConfig();
 
