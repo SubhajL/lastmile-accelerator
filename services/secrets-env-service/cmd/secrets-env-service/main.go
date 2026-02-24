@@ -169,7 +169,7 @@ func main() {
 		_ = grpcapi.StartGRPCServer(appCtx, ":50064", secretsSvc, paritySvc, verifier, log, tlsCfg)
 	}()
 
-	<-ctx.Done()
+	<-appCtx.Done()
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	_ = h.Shutdown(shutdownCtx)
