@@ -265,6 +265,32 @@ func RequireJSONContentType() func(http.Handler) http.Handler {
 	}
 }
 
+// BodySizeLimit applies a best-effort request body size cap.
+// Applies only to POST/PUT/PATCH. If maxBytes <= 0, this is a no-op.
+func BodySizeLimit(maxBytes int64) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if maxBytes <= 0 {
+				next.ServeHTTP(w, r)
+				return
+			}
+			switch r.Method {
+			case http.MethodPost, http.MethodPut, http.MethodPatch:
+			default:
+				next.ServeHTTP(w, r)
+				return
+			}
+			// Fast-path based on Content-Length (may be -1 if unknown).
+			if r.ContentLength > maxBytes {
+				Error(w, http.StatusRequestEntityTooLarge, "request body too large", nil)
+				return
+			}
+			r.Body = http.MaxBytesReader(w, r.Body, maxBytes)
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
 // RateLimitHTTP enforces a token-bucket limiter using the provided Allow func.
 func RateLimitHTTP(allow func(key string) bool) func(http.Handler) http.Handler {
 	tr := otel.Tracer("http-server")
