@@ -1,14 +1,23 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { createLogger, getLogger, resetLogger } from '../../logger';
 
 describe('Logger', () => {
+  let originalNodeEnv: string | undefined;
+
   beforeEach(() => {
-    // Clear logger singleton before each test
-    vi.resetModules();
+    originalNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'test';
+
+    resetLogger();
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    process.env.NODE_ENV = originalNodeEnv;
   });
 
   describe('createLogger()', () => {
-    it('should return logger instance with service.name in context', async () => {
-      const { createLogger } = await import('../../logger');
+    it('should return logger instance with service.name in context', () => {
       const logger = createLogger('test-service');
 
       expect(logger).toBeDefined();
@@ -18,8 +27,7 @@ describe('Logger', () => {
       expect(typeof logger.debug).toBe('function');
     });
 
-    it('should create logger with correct transport (pino)', async () => {
-      const { createLogger } = await import('../../logger');
+    it('should create logger with correct transport (pino)', () => {
       const logger = createLogger('my-service');
 
       // Logger should have pino methods
@@ -28,9 +36,16 @@ describe('Logger', () => {
     });
   });
 
+  describe('resetLogger()', () => {
+    it('should throw if called outside test environment', () => {
+      process.env.NODE_ENV = 'production';
+
+      expect(() => resetLogger()).toThrow('resetLogger() can only be called in test environment');
+    });
+  });
+
   describe('getLogger()', () => {
-    it('should return singleton logger instance', async () => {
-      const { createLogger, getLogger } = await import('../../logger');
+    it('should return singleton logger instance', () => {
       createLogger('singleton-test');
 
       const logger1 = getLogger();
@@ -39,17 +54,15 @@ describe('Logger', () => {
       expect(logger1).toBe(logger2);
     });
 
-    it('should throw if getLogger called before createLogger', async () => {
-      vi.resetModules();
-      const { getLogger } = await import('../../logger');
-
-      expect(() => getLogger()).toThrow();
+    it('should throw if getLogger called before createLogger', () => {
+      expect(() => getLogger()).toThrow(
+        'Logger not initialized. Call createLogger() before getLogger().',
+      );
     });
   });
 
   describe('log methods', () => {
-    it('should log info messages without throwing', async () => {
-      const { createLogger } = await import('../../logger');
+    it('should log info messages without throwing', () => {
       const logger = createLogger('test-service');
 
       expect(() => {
@@ -57,8 +70,7 @@ describe('Logger', () => {
       }).not.toThrow();
     });
 
-    it('should log error messages without throwing', async () => {
-      const { createLogger } = await import('../../logger');
+    it('should log error messages without throwing', () => {
       const logger = createLogger('test-service');
 
       expect(() => {
@@ -66,15 +78,11 @@ describe('Logger', () => {
       }).not.toThrow();
     });
 
-    it('should log with context fields', async () => {
-      const { createLogger } = await import('../../logger');
+    it('should log with context fields', () => {
       const logger = createLogger('test-service');
 
       expect(() => {
-        logger.info(
-          { requestId: '123', userId: 'user-456' },
-          'request started'
-        );
+        logger.info({ requestId: '123', userId: 'user-456' }, 'request started');
       }).not.toThrow();
     });
   });

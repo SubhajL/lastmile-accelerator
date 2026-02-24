@@ -47,9 +47,7 @@ export function createLogger(serviceName: string): Logger {
  */
 export function getLogger(): Logger {
   if (!loggerInstance) {
-    throw new Error(
-      'Logger not initialized. Call createLogger() before getLogger().'
-    );
+    throw new Error('Logger not initialized. Call createLogger() before getLogger().');
   }
   return loggerInstance;
 }
@@ -63,4 +61,19 @@ export function getLogger(): Logger {
  */
 export function getContextLogger(fields: Record<string, unknown>): Logger {
   return getLogger().child(fields);
+}
+
+/**
+ * Reset logger singleton state.
+ * FOR TESTING ONLY - clears the singleton instance to allow fresh logger creation.
+ *
+ * @internal
+ * @throws Error if called in non-test environment
+ */
+export function resetLogger(): void {
+  if (process.env.NODE_ENV !== 'test') {
+    throw new Error('resetLogger() can only be called in test environment');
+  }
+
+  loggerInstance = null;
 }
