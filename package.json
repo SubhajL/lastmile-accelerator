@@ -13,6 +13,7 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "quality:check": "cd services/projects-service && bun run typecheck && bun run test:typecheck",
+    "quality:check:secrets-env-service": "make -C services/secrets-env-service quality",
     "prepare": "husky"
   },
   "devDependencies": {
