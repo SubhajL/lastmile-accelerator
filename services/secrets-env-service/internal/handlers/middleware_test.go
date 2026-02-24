@@ -144,5 +144,22 @@ r := httptest.NewRequest(http.MethodGet, "/v1/projects/p/secrets/valid", nil)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
+func TestRequireJSONContentType_AllowsApplicationJSON(t *testing.T) {
+	next := RequireJSONContentType()(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(204) }))
+	r := httptest.NewRequest(http.MethodPost, "/x", bytes.NewReader([]byte("{}")))
+	r.Header.Set("Content-Type", "application/json; charset=utf-8")
+	w := httptest.NewRecorder()
+	next.ServeHTTP(w, r)
+	assert.Equal(t, 204, w.Code)
+}
+
+func TestRequireJSONContentType_RejectsMissingContentType(t *testing.T) {
+	next := RequireJSONContentType()(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(204) }))
+	r := httptest.NewRequest(http.MethodPost, "/x", bytes.NewReader([]byte("{}")))
+	w := httptest.NewRecorder()
+	next.ServeHTTP(w, r)
+	assert.Equal(t, http.StatusUnsupportedMediaType, w.Code)
+}
+
 // Ensure zerolog imported for compilation in tests
 var _ zerolog.Logger

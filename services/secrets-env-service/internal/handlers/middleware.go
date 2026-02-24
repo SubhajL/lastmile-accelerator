@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"mime"
 	"net/http"
 	"regexp"
 	"strings"
@@ -234,6 +235,29 @@ func ValidateKeyParam() func(http.Handler) http.Handler {
 			key := chi.URLParam(r, "key")
 			if key != "" && !re.MatchString(key) {
 				Error(w, http.StatusBadRequest, "invalid key format", nil)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// RequireJSONContentType rejects non-JSON Content-Type for mutating requests.
+// Applies only to POST/PUT/PATCH.
+func RequireJSONContentType() func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			switch r.Method {
+			case http.MethodPost, http.MethodPut, http.MethodPatch:
+			default:
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			ct := r.Header.Get("Content-Type")
+			mt, _, err := mime.ParseMediaType(ct)
+			if err != nil || mt != "application/json" {
+				Error(w, http.StatusUnsupportedMediaType, "unsupported content type", nil)
 				return
 			}
 			next.ServeHTTP(w, r)
