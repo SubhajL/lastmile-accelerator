@@ -15,6 +15,7 @@ type Config struct {
 	ServicePort   string
 	LogLevel      string
 	AllowedEnvironments []string
+	HTTPMaxBodyBytes int64
 	Vault         VaultConfig
 	Database      DatabaseConfig
 	Redis         RedisConfig
@@ -118,6 +119,7 @@ func Load() (*Config, error) {
 		ServicePort: getEnvOrDefault("SERVICE_PORT", "7104"),
 		LogLevel:    getEnvOrDefault("LOG_LEVEL", "info"),
 		AllowedEnvironments: getEnvAsList("ENV_ALLOWLIST", []string{}),
+		HTTPMaxBodyBytes: getEnvAsInt64("HTTP_MAX_BODY_BYTES", 1<<20), // 1MiB
 		Vault: VaultConfig{
 			Address:   os.Getenv("VAULT_ADDR"),
 			RoleID:    os.Getenv("VAULT_ROLE_ID"),

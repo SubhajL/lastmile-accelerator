@@ -161,5 +161,23 @@ func TestRequireJSONContentType_RejectsMissingContentType(t *testing.T) {
 	assert.Equal(t, http.StatusUnsupportedMediaType, w.Code)
 }
 
+func TestBodySizeLimit_RejectsWhenContentLengthExceedsLimit(t *testing.T) {
+	next := BodySizeLimit(3)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(204) }))
+	r := httptest.NewRequest(http.MethodPost, "/x", bytes.NewReader([]byte("abcd")))
+	r.ContentLength = 4
+	w := httptest.NewRecorder()
+	next.ServeHTTP(w, r)
+	assert.Equal(t, http.StatusRequestEntityTooLarge, w.Code)
+}
+
+func TestBodySizeLimit_AllowsWhenWithinLimit(t *testing.T) {
+	next := BodySizeLimit(10)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(204) }))
+	r := httptest.NewRequest(http.MethodPost, "/x", bytes.NewReader([]byte("abcd")))
+	r.ContentLength = 4
+	w := httptest.NewRecorder()
+	next.ServeHTTP(w, r)
+	assert.Equal(t, 204, w.Code)
+}
+
 // Ensure zerolog imported for compilation in tests
 var _ zerolog.Logger
