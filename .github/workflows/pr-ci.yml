@@ -1,22 +1,63 @@
 name: CI
 on:
-  pull_request_target:
+  pull_request:
     types: [opened, synchronize, reopened]
 permissions:
   contents: read
+  pull-requests: read
 jobs:
   ci:
     runs-on: ubuntu-22.04
     steps:
-      - name: Checkout PR head
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 1
+
+      - name: Change budget (PRs)
+        uses: actions/github-script@v7
+        env:
+          MAX_FILES: '25'
+          MAX_LOC: '500'
+        with:
+          script: |
+            const maxFiles = Number(process.env.MAX_FILES)
+            const maxLoc = Number(process.env.MAX_LOC)
+
+            const prNumber = context.payload.pull_request.number
+            const { owner, repo } = context.repo
+
+            const files = []
+            for (let page = 1; ; page += 1) {
+              const response = await github.rest.pulls.listFiles({
+                owner,
+                repo,
+                pull_number: prNumber,
+                per_page: 100,
+                page,
+              })
+
+              files.push(...response.data)
+              if (response.data.length < 100) break
+            }
+
+            const changedFiles = files.length
+            const added = files.reduce((sum, file) => sum + (file.additions ?? 0), 0)
+            const deleted = files.reduce((sum, file) => sum + (file.deletions ?? 0), 0)
+            const loc = added + deleted
+
+            core.info(
+              `Changed files: ${changedFiles}, LOC delta: ${loc} (added ${added}, deleted ${deleted})`,
+            )
+
+            if (changedFiles > maxFiles || loc > maxLoc) {
+              core.setFailed(
+                `Change budget exceeded: files=${changedFiles} (max ${maxFiles}), loc=${loc} (max ${maxLoc})`,
+              )
+            }
+
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version: '1.23'
       - name: go vet (db-guardian-service)
         working-directory: services/db-guardian-service
         run: go vet ./...
@@ -25,6 +66,7 @@ jobs:
         with:
           version: latest
           working-directory: services/db-guardian-service
+          args: -c .golangci.yml
       - name: Unit tests (db-guardian-service)
         working-directory: services/db-guardian-service
         run: go test ./... -cover
