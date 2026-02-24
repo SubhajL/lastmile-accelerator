@@ -20,6 +20,7 @@ import (
 	grpcapi "example.com/lma/secrets-env-service/internal/grpc"
 	"example.com/lma/secrets-env-service/internal/handlers"
 	"example.com/lma/secrets-env-service/internal/logger"
+	"example.com/lma/secrets-env-service/internal/metrics"
 	"example.com/lma/secrets-env-service/internal/observability"
 	"example.com/lma/secrets-env-service/internal/repository"
 	"example.com/lma/secrets-env-service/internal/security"
@@ -35,6 +36,7 @@ func main() {
 	}
 
 	log := logger.New(cfg.ServiceName, cfg.LogLevel, os.Stdout)
+	metrics.Init(nil)
 
 	// OpenTelemetry init (best-effort)
 	ctx := context.Background()
