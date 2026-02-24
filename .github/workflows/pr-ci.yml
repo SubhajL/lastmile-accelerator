@@ -1,6 +1,6 @@
 name: CI
 on:
-  pull_request_target:
+  pull_request:
     types: [opened, synchronize, reopened]
 permissions:
   contents: read
@@ -9,11 +9,8 @@ jobs:
   ci:
     runs-on: ubuntu-22.04
     steps:
-      - name: Checkout PR head
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 1
 
       - name: Change budget (PRs)
@@ -69,6 +66,7 @@ jobs:
         with:
           version: latest
           working-directory: services/db-guardian-service
+          args: -c .golangci.yml
       - name: Unit tests (db-guardian-service)
         working-directory: services/db-guardian-service
         run: go test ./... -cover
