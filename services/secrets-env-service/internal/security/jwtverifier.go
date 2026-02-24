@@ -104,7 +104,8 @@ func (v *JWKSVerifier) Verify(ctx context.Context, tokenStr string) (*handlers.C
 	projectID, _ := stringField(claims, "project_id")
 	subject, _ := stringField(claims, "sub")
 	scopes := scopesFromClaims(claims)
-	return &handlers.Claims{Subject: subject, TenantID: tenantID, ProjectID: projectID, Scopes: scopes}, nil
+	roles := rolesFromClaims(claims)
+	return &handlers.Claims{Subject: subject, TenantID: tenantID, ProjectID: projectID, Scopes: scopes, Roles: roles}, nil
 }
 
 func (v *JWKSVerifier) getKey(kid string) interface{} {
@@ -171,6 +172,25 @@ func stringField(m jwt.MapClaims, key string) (string, bool) {
 
 func scopesFromClaims(m jwt.MapClaims) []string {
 	v, ok := m["scopes"]
+	if !ok || v == nil { return nil }
+	switch s := v.(type) {
+	case []any:
+		out := make([]string, 0, len(s))
+		for _, x := range s { if str, ok := x.(string); ok { out = append(out, str) } }
+		return out
+	case []string:
+		return s
+	case string:
+		// allow space or comma separated
+		fields := strings.FieldsFunc(s, func(r rune) bool { return r == ' ' || r == ',' })
+		return fields
+	default:
+		return nil
+	}
+}
+
+func rolesFromClaims(m jwt.MapClaims) []string {
+	v, ok := m["roles"]
 	if !ok || v == nil { return nil }
 	switch s := v.(type) {
 	case []any:

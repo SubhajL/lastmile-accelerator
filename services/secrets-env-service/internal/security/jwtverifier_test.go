@@ -37,7 +37,7 @@ func bigEndian(e int) []byte {
 	return b
 }
 
-func makeJWT(t *testing.T, priv *rsa.PrivateKey, kid, iss, aud, sub, tenant, project string, scopes []string, expired bool) string {
+func makeJWT(t *testing.T, priv *rsa.PrivateKey, kid, iss, aud, sub, tenant, project string, scopes []string, roles []string, expired bool) string {
 	now := time.Now()
 	exp := now.Add(1 * time.Hour)
 	if expired { exp = now.Add(-1 * time.Hour) }
@@ -48,6 +48,7 @@ func makeJWT(t *testing.T, priv *rsa.PrivateKey, kid, iss, aud, sub, tenant, pro
 		"tenant_id": tenant,
 		"project_id": project,
 		"scopes": scopes,
+		"roles": roles,
 		"exp": exp.Unix(),
 		"nbf": now.Unix()-10,
 	}
@@ -70,11 +71,12 @@ func TestJWKSVerifier_ValidToken(t *testing.T) {
 	defer ts.Close()
 
 	ver := NewJWKSVerifier(ts.URL, aud, iss, 5*time.Minute)
-	token := makeJWT(t, priv, kid, iss, aud, "subj", "tenant-1", "proj-1", []string{"secrets:read"}, false)
+	token := makeJWT(t, priv, kid, iss, aud, "subj", "tenant-1", "proj-1", []string{"secrets:read"}, []string{"admin"}, false)
 	claims, err := ver.Verify(context.Background(), token)
 	require.NoError(t, err)
 	assert.Equal(t, "tenant-1", claims.TenantID)
 	assert.Contains(t, claims.Scopes, "secrets:read")
+	assert.Equal(t, []string{"admin"}, claims.Roles)
 }
 
 func TestJWKSVerifier_AudienceMismatch(t *testing.T) {
@@ -83,7 +85,7 @@ func TestJWKSVerifier_AudienceMismatch(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { _ = json.NewEncoder(w).Encode(jwks) }))
 	defer ts.Close()
 	ver := NewJWKSVerifier(ts.URL, "otheraud", "https://issuer", time.Minute)
-	token := makeJWT(t, priv, "kid1", "https://issuer", "badaud", "s", "t", "p", nil, false)
+	token := makeJWT(t, priv, "kid1", "https://issuer", "badaud", "s", "t", "p", nil, nil, false)
 	_, err := ver.Verify(context.Background(), token)
 	assert.Error(t, err)
 }
@@ -94,7 +96,7 @@ func TestJWKSVerifier_ExpiredToken(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { _ = json.NewEncoder(w).Encode(jwks) }))
 	defer ts.Close()
 	ver := NewJWKSVerifier(ts.URL, "aud", "iss", time.Minute)
-	token := makeJWT(t, priv, "kid1", "iss", "aud", "s", "t", "p", nil, true)
+	token := makeJWT(t, priv, "kid1", "iss", "aud", "s", "t", "p", nil, nil, true)
 	_, err := ver.Verify(context.Background(), token)
 	assert.Error(t, err)
 }

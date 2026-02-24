@@ -360,28 +360,29 @@ func unaryRateLimit(l *security.RateLimiter) grpc.UnaryServerInterceptor {
 	}
 }
 
-// unaryRBACAugment augments scopes based on roles metadata (x-roles header).
+// unaryRBACAugment augments scopes based on roles (from claims).
 func unaryRBACAugment() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 		claims, ok := handlers.ClaimsFromContext(ctx)
 		if !ok {
 			return handler(ctx, req)
 		}
-		md, _ := metadata.FromIncomingContext(ctx)
-		var roles []string
-		if md != nil {
-			roles = md.Get("x-roles")
-		}
 		aug := claims.Scopes
-		for _, role := range roles {
+		set := map[string]struct{}{}
+		for _, s := range aug { set[s] = struct{}{} }
+		for _, role := range claims.Roles {
 			switch strings.ToLower(strings.TrimSpace(role)) {
 			case "admin":
-				aug = append(aug, "secrets:write", "parity:compute", "leaks:write")
+				for _, s := range []string{"secrets:write", "parity:compute", "leaks:write"} {
+					if _, ok := set[s]; !ok { aug = append(aug, s); set[s] = struct{}{} }
+				}
 			case "auditor":
-				aug = append(aug, "secrets:read", "parity:read", "leaks:read")
+				for _, s := range []string{"secrets:read", "parity:read", "leaks:read"} {
+					if _, ok := set[s]; !ok { aug = append(aug, s); set[s] = struct{}{} }
+				}
 			}
 		}
-		ctx = handlers.WithClaims(ctx, handlers.Claims{Subject: claims.Subject, TenantID: claims.TenantID, ProjectID: claims.ProjectID, Scopes: aug})
+		ctx = handlers.WithClaims(ctx, handlers.Claims{Subject: claims.Subject, TenantID: claims.TenantID, ProjectID: claims.ProjectID, Scopes: aug, Roles: claims.Roles})
 		return handler(ctx, req)
 	}
 }
