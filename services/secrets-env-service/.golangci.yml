@@ -1,0 +1,41 @@
+run:
+  timeout: 3m
+  tests: true
+
+linters:
+  enable:
+    - govet
+    - staticcheck
+    - gosimple
+    - ineffassign
+    - unused
+    - revive
+  disable:
+    - depguard
+    - errcheck
+
+issues:
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  exclude-rules:
+    - path: ^internal/grpc/gen/
+      linters:
+        - govet
+        - errcheck
+        - staticcheck
+        - gosimple
+        - ineffassign
+        - unused
+        - revive
+
+linters-settings:
+  revive:
+    severity: warning
+    rules:
+      - name: var-naming
+      - name: indent-error-flow
+      - name: if-return
+      - name: range-val-address
+  staticcheck:
+    checks: ["all"]
