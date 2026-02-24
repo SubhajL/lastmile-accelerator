@@ -1,15 +1,18 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { resetLogger } from '../../logger';
+import { createLogger, getLogger, resetLogger } from '../../logger';
 
 describe('Logger', () => {
   beforeEach(() => {
+    if (process.env.NODE_ENV === undefined) {
+      process.env.NODE_ENV = 'test';
+    }
+
     resetLogger();
     vi.clearAllMocks();
   });
 
   describe('createLogger()', () => {
-    it('should return logger instance with service.name in context', async () => {
-      const { createLogger } = await import('../../logger');
+    it('should return logger instance with service.name in context', () => {
       const logger = createLogger('test-service');
 
       expect(logger).toBeDefined();
@@ -19,8 +22,7 @@ describe('Logger', () => {
       expect(typeof logger.debug).toBe('function');
     });
 
-    it('should create logger with correct transport (pino)', async () => {
-      const { createLogger } = await import('../../logger');
+    it('should create logger with correct transport (pino)', () => {
       const logger = createLogger('my-service');
 
       // Logger should have pino methods
@@ -30,8 +32,7 @@ describe('Logger', () => {
   });
 
   describe('getLogger()', () => {
-    it('should return singleton logger instance', async () => {
-      const { createLogger, getLogger } = await import('../../logger');
+    it('should return singleton logger instance', () => {
       createLogger('singleton-test');
 
       const logger1 = getLogger();
@@ -40,11 +41,7 @@ describe('Logger', () => {
       expect(logger1).toBe(logger2);
     });
 
-    it('should throw if getLogger called before createLogger', async () => {
-      resetLogger();
-      vi.clearAllMocks();
-      const { getLogger } = await import('../../logger');
-
+    it('should throw if getLogger called before createLogger', () => {
       expect(() => getLogger()).toThrow(
         'Logger not initialized. Call createLogger() before getLogger().',
       );
@@ -52,8 +49,7 @@ describe('Logger', () => {
   });
 
   describe('log methods', () => {
-    it('should log info messages without throwing', async () => {
-      const { createLogger } = await import('../../logger');
+    it('should log info messages without throwing', () => {
       const logger = createLogger('test-service');
 
       expect(() => {
@@ -61,8 +57,7 @@ describe('Logger', () => {
       }).not.toThrow();
     });
 
-    it('should log error messages without throwing', async () => {
-      const { createLogger } = await import('../../logger');
+    it('should log error messages without throwing', () => {
       const logger = createLogger('test-service');
 
       expect(() => {
@@ -70,8 +65,7 @@ describe('Logger', () => {
       }).not.toThrow();
     });
 
-    it('should log with context fields', async () => {
-      const { createLogger } = await import('../../logger');
+    it('should log with context fields', () => {
       const logger = createLogger('test-service');
 
       expect(() => {

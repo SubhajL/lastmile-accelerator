@@ -71,7 +71,7 @@ export function getContextLogger(fields: Record<string, unknown>): Logger {
  * @throws Error if called in non-test environment
  */
 export function resetLogger(): void {
-  if (process.env.NODE_ENV !== 'test' && process.env.NODE_ENV !== undefined) {
+  if (process.env.NODE_ENV !== 'test') {
     throw new Error('resetLogger() can only be called in test environment');
   }
 
