@@ -18,7 +18,7 @@ jobs:
       - name: Setup Go
         if: inputs.lang == 'go'
         uses: actions/setup-go@v5
-        with: { go-version: '1.24' }
+        with: { go-version: '1.23' }
 
       - name: Setup Node
         if: inputs.lang == 'node'
@@ -55,7 +55,7 @@ jobs:
       - name: Unit tests (go)
         if: inputs.lang == 'go'
         working-directory: ${{ inputs.context }}
-        run: go test ./... -cover || true
+        run: go test ./... -cover
 
       - name: Unit tests (node)
         if: inputs.lang == 'node'
