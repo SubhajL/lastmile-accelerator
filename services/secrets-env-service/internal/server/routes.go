@@ -31,6 +31,7 @@ type leakHTTP interface {
 func SetupRoutes(secretsH secretsHTTP, parityH parityHTTP, leakH leakHTTP, middlewares ...func(http.Handler) http.Handler) http.Handler {
 	r := chi.NewRouter()
 	for _, mw := range middlewares { r.Use(mw) }
+	r.Use(handlers.RequireJSONContentType())
 
 	// health
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) { handlers.HealthCheck(w, r) })
