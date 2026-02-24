@@ -214,7 +214,7 @@ func Test_parseHeaderMap_AllowsEqualsInValue(t *testing.T) {
 
 func cleanEnv() {
 	envVars := []string{
-		"ENV", "SERVICE_NAME", "SERVICE_PORT", "ENV_ALLOWLIST", "HTTP_MAX_BODY_BYTES", "VAULT_ADDR",
+		"ENV", "SERVICE_NAME", "SERVICE_PORT", "ENV_ALLOWLIST", "HTTP_MAX_BODY_BYTES", "GRPC_ENABLE_HEALTH", "GRPC_ENABLE_REFLECTION", "VAULT_ADDR",
 		"VAULT_ROLE_ID", "VAULT_SECRET_" + "ID", "VAULT_NAMESPACE",
 		"DATABASE_URL", "REDIS_URL", "NATS_URL",
 		"OTEL_EXPORTER_OTLP_ENDPOINT", "OTEL_INSECURE", "OTEL_HEADERS", "OTEL_SERVICE_NAME", "JWT_PUBLIC_KEY", "LOG_LEVEL",
@@ -251,6 +251,21 @@ func TestLoad_HTTPMaxBodyBytes_ParsesValue(t *testing.T) {
 	cfg, err := Load()
 	require.NoError(t, err)
 	assert.Equal(t, int64(1234), cfg.HTTPMaxBodyBytes)
+}
+
+func TestLoad_GRPC_Toggles_ParseValues(t *testing.T) {
+	os.Setenv("VAULT_ADDR", "http://localhost:8200")
+	os.Setenv("VAULT_ROLE_ID", "role")
+	os.Setenv("VAULT_SECRET_"+"ID", "sec"+"ret")
+	os.Setenv("DATABASE_URL", "postgres://localhost:5432/db")
+	os.Setenv("GRPC_ENABLE_HEALTH", "true")
+	os.Setenv("GRPC_ENABLE_REFLECTION", "true")
+	defer cleanEnv()
+
+	cfg, err := Load()
+	require.NoError(t, err)
+	assert.True(t, cfg.GRPCEnableHealth)
+	assert.True(t, cfg.GRPCEnableReflection)
 }
 
 func TestLoad_S3Config_ParsesValues(t *testing.T) {

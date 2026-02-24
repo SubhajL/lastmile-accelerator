@@ -16,6 +16,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/bufconn"
@@ -35,7 +36,7 @@ func TestGRPC_RateLimit_ResourceExhausted(t *testing.T) {
 	paritySvc := service.NewParityService(repository.NewParityRepository(), repo, nil)
 	ver := &fakeVerifier{allow: true, claims: handlers.Claims{TenantID: "t1", ProjectID: "p", Scopes: []string{"secrets:read"}}}
 	lim := security.NewRateLimiter(1, 1)
-	conn, stop := startBufGRPC(t, secretsSvc, paritySvc, ver, handlers.EnvAllowlist{}, lim)
+	conn, stop := startBufGRPC(t, secretsSvc, paritySvc, ver, handlers.EnvAllowlist{}, false, false, lim)
 	defer stop()
 	md := metadata.Pairs("authorization", "Bearer ok")
 	ctx := metadata.NewOutgoingContext(context.Background(), md)
@@ -47,7 +48,7 @@ func TestGRPC_RateLimit_ResourceExhausted(t *testing.T) {
 	if err == nil { t.Fatalf("expected rate limit error") }
 }
 
-func startBufGRPC(t *testing.T, secrets *service.SecretsService, parity *service.ParityService, ver handlers.TokenVerifier, envAllowlist handlers.EnvAllowlist, limiter *security.RateLimiter) (*grpc.ClientConn, func()) {
+func startBufGRPC(t *testing.T, secrets *service.SecretsService, parity *service.ParityService, ver handlers.TokenVerifier, envAllowlist handlers.EnvAllowlist, enableHealth bool, enableReflection bool, limiter *security.RateLimiter) (*grpc.ClientConn, func()) {
 	t.Helper()
 	log := appLogger.New("test", "info", nil)
 	lis := bufconn.Listen(1 << 20)
@@ -66,13 +67,13 @@ func startBufGRPC(t *testing.T, secrets *service.SecretsService, parity *service
 	}))
 	gs := grpc.NewServer(grpc.ChainUnaryInterceptor(interceptors...))
 	svc := &server{secrets: secrets, parity: parity, envAllowlist: envAllowlist, log: log}
+	registerOptionalServices(gs, enableHealth, enableReflection)
 	pb.RegisterSecretsEnvServiceServer(gs, svc)
 	go func() { _ = gs.Serve(lis) }()
 	dialer := func(ctx context.Context, s string) (net.Conn, error) { return lis.Dial() }
 	conn, err := grpc.DialContext(context.Background(), "bufnet",
 		grpc.WithContextDialer(dialer),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithDefaultCallOptions(grpc.ForceCodec(jsonCodec{})),
 	)
 	if err != nil { t.Fatalf("dial err: %v", err) }
 	stop := func() { gs.GracefulStop(); _ = lis.Close(); _ = conn.Close() }
@@ -90,7 +91,7 @@ secretsSvc := service.NewSecretsService(v, repo, nil, nil)
 
 	paritySvc := service.NewParityService(repository.NewParityRepository(), repo, nil)
 	ver := &fakeVerifier{allow: true, claims: handlers.Claims{TenantID: "t1", ProjectID: "p", Scopes: []string{"secrets:read"}}}
-conn, stop := startBufGRPC(t, secretsSvc, paritySvc, ver, handlers.EnvAllowlist{}, nil)
+conn, stop := startBufGRPC(t, secretsSvc, paritySvc, ver, handlers.EnvAllowlist{}, false, false, nil)
 	defer stop()
 
 	md := metadata.Pairs("authorization", "Bearer ok")
@@ -109,7 +110,7 @@ secretsSvc := service.NewSecretsService(v, repo, nil, nil)
 	paritySvc := service.NewParityService(repository.NewParityRepository(), repo, nil)
 
 	verNo := &fakeVerifier{allow: true, claims: handlers.Claims{TenantID: "t1", ProjectID: "p", Scopes: []string{"secrets:write"}}}
-conn, stop := startBufGRPC(t, secretsSvc, paritySvc, verNo, handlers.EnvAllowlist{}, nil)
+conn, stop := startBufGRPC(t, secretsSvc, paritySvc, verNo, handlers.EnvAllowlist{}, false, false, nil)
 	defer stop()
 	md := metadata.Pairs("authorization", "Bearer ok")
 	ctx := metadata.NewOutgoingContext(context.Background(), md)
@@ -130,7 +131,7 @@ func TestGRPC_CheckEnvParity_Success_ReturnsMissingAndExtra(t *testing.T) {
 	paritySvc := service.NewParityService(repository.NewParityRepository(), repo, nil)
 secretsSvc := service.NewSecretsService(&vault.Client{}, repo, nil, nil)
 	ver := &fakeVerifier{allow: true, claims: handlers.Claims{TenantID: "t1", ProjectID: "p", Scopes: []string{"parity:compute"}}}
-conn, stop := startBufGRPC(t, secretsSvc, paritySvc, ver, handlers.EnvAllowlist{}, nil)
+conn, stop := startBufGRPC(t, secretsSvc, paritySvc, ver, handlers.EnvAllowlist{}, false, false, nil)
 	defer stop()
 	md := metadata.Pairs("authorization", "Bearer ok")
 	ctx := metadata.NewOutgoingContext(context.Background(), md)
@@ -149,7 +150,7 @@ func TestGRPC_GetSecret_RejectsDisallowedEnvironment(t *testing.T) {
 	paritySvc := service.NewParityService(repository.NewParityRepository(), repo, nil)
 	ver := &fakeVerifier{allow: true, claims: handlers.Claims{TenantID: "t1", ProjectID: "p", Scopes: []string{"secrets:read"}}}
 
-	conn, stop := startBufGRPC(t, secretsSvc, paritySvc, ver, handlers.NewEnvAllowlist([]string{"prod"}), nil)
+	conn, stop := startBufGRPC(t, secretsSvc, paritySvc, ver, handlers.NewEnvAllowlist([]string{"prod"}), false, false, nil)
 	defer stop()
 
 	md := metadata.Pairs("authorization", "Bearer ok")
@@ -157,4 +158,30 @@ func TestGRPC_GetSecret_RejectsDisallowedEnvironment(t *testing.T) {
 	client := pb.NewSecretsEnvServiceClient(conn)
 	_, err := client.GetSecret(ctx, &pb.GetSecretRequest{TenantId: "t1", ProjectId: "p", Key: "K", Environment: "dev"}, grpc.ForceCodec(jsonCodec{}))
 	if status.Code(err) != codes.InvalidArgument { t.Fatalf("expected invalid argument, got %v", status.Code(err)) }
+}
+
+func TestGRPC_Health_Enabled_ReturnsServing(t *testing.T) {
+	v := &vault.Client{}; v.SetTestMode(true)
+	repo := repository.NewSecretsRepository(nil)
+	secretsSvc := service.NewSecretsService(v, repo, nil, nil)
+	paritySvc := service.NewParityService(repository.NewParityRepository(), repo, nil)
+	ver := &fakeVerifier{allow: true, claims: handlers.Claims{TenantID: "t1", ProjectID: "p", Scopes: []string{"secrets:read"}}}
+
+	conn, stop := startBufGRPC(t, secretsSvc, paritySvc, ver, handlers.EnvAllowlist{}, true, false, nil)
+	defer stop()
+
+	md := metadata.Pairs("authorization", "Bearer ok")
+	ctx := metadata.NewOutgoingContext(context.Background(), md)
+	client := healthpb.NewHealthClient(conn)
+	resp, err := client.Check(ctx, &healthpb.HealthCheckRequest{Service: ""})
+	if err != nil { t.Fatalf("invoke err: %v", err) }
+	if resp.Status != healthpb.HealthCheckResponse_SERVING { t.Fatalf("expected SERVING, got %v", resp.Status) }
+}
+
+func TestRegisterOptionalServices_Reflection_RegistersService(t *testing.T) {
+	gs := grpc.NewServer()
+	registerOptionalServices(gs, false, true)
+	if _, ok := gs.GetServiceInfo()["grpc.reflection.v1alpha.ServerReflection"]; !ok {
+		t.Fatalf("expected reflection service to be registered")
+	}
 }

@@ -16,6 +16,8 @@ type Config struct {
 	LogLevel      string
 	AllowedEnvironments []string
 	HTTPMaxBodyBytes int64
+	GRPCEnableHealth bool
+	GRPCEnableReflection bool
 	Vault         VaultConfig
 	Database      DatabaseConfig
 	Redis         RedisConfig
@@ -120,6 +122,8 @@ func Load() (*Config, error) {
 		LogLevel:    getEnvOrDefault("LOG_LEVEL", "info"),
 		AllowedEnvironments: getEnvAsList("ENV_ALLOWLIST", []string{}),
 		HTTPMaxBodyBytes: getEnvAsInt64("HTTP_MAX_BODY_BYTES", 1<<20), // 1MiB
+		GRPCEnableHealth: getEnvAsBool("GRPC_ENABLE_HEALTH", false),
+		GRPCEnableReflection: getEnvAsBool("GRPC_ENABLE_REFLECTION", false),
 		Vault: VaultConfig{
 			Address:   os.Getenv("VAULT_ADDR"),
 			RoleID:    os.Getenv("VAULT_ROLE_ID"),
