@@ -31,7 +31,7 @@ func (f *fakeParityService) GetCheckHistory(_ any, projectID string, limit int) 
 
 func TestParityHandler_CheckParity_Valid(t *testing.T) {
 	svc := &fakeParityService{}
-	h := NewParityHandler(svc)
+	h := NewParityHandler(svc, EnvAllowlist{})
 	r := chi.NewRouter()
 	r.Post("/v1/projects/{projectID}/env-parity", h.CheckParity)
 
@@ -46,7 +46,7 @@ func TestParityHandler_CheckParity_Valid(t *testing.T) {
 
 func TestParityHandler_GetLatest_NotFound(t *testing.T) {
 	svc := &fakeParityService{}
-	h := NewParityHandler(svc)
+	h := NewParityHandler(svc, EnvAllowlist{})
 	r := chi.NewRouter()
 	r.Get("/v1/projects/{projectID}/env-parity/latest", h.GetLatestCheck)
 
@@ -58,7 +58,7 @@ func TestParityHandler_GetLatest_NotFound(t *testing.T) {
 
 func TestParityHandler_GetHistory_LimitApplied(t *testing.T) {
 	svc := &fakeParityService{history: []*domain.EnvParityCheck{{ProjectID:"p"},{ProjectID:"p"}}}
-	h := NewParityHandler(svc)
+	h := NewParityHandler(svc, EnvAllowlist{})
 	r := chi.NewRouter()
 	r.Get("/v1/projects/{projectID}/env-parity/history", h.GetCheckHistory)
 
@@ -66,4 +66,20 @@ func TestParityHandler_GetHistory_LimitApplied(t *testing.T) {
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 	require.Equal(t, 200, w.Code)
+}
+
+func TestParityHandler_CheckParity_RejectsDisallowedEnvironments(t *testing.T) {
+	svc := &fakeParityService{}
+	h := NewParityHandler(svc, NewEnvAllowlist([]string{"prod"}))
+	r := chi.NewRouter()
+	r.Post("/v1/projects/{projectID}/env-parity", h.CheckParity)
+
+	body := map[string]any{"baseEnv":"dev","compareEnv":"prod"}
+	b,_ := json.Marshal(body)
+	req := httptest.NewRequest(http.MethodPost, "/v1/projects/proj-1/env-parity", bytes.NewReader(b))
+	req.Header.Set("Content-Type","application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
 }

@@ -38,7 +38,7 @@ func (f *fakeSecretsService) ListSecrets(_ any, _ string, _ string, _ int, _ str
 
 func TestSecretsHandler_Create_ValidRequest(t *testing.T) {
 	svc := &fakeSecretsService{}
-	h := NewSecretsHandler(svc)
+	h := NewSecretsHandler(svc, EnvAllowlist{})
 
 	r := chi.NewRouter()
 	r.Post("/v1/projects/{projectID}/secrets", h.CreateSecret)
@@ -58,7 +58,7 @@ func TestSecretsHandler_Create_ValidRequest(t *testing.T) {
 
 func TestSecretsHandler_GetSecret_Existing(t *testing.T) {
 	svc := &fakeSecretsService{}
-	h := NewSecretsHandler(svc)
+	h := NewSecretsHandler(svc, EnvAllowlist{})
 	r := chi.NewRouter()
 	r.Get("/v1/projects/{projectID}/secrets/{key}", h.GetSecret)
 
@@ -74,7 +74,7 @@ func TestSecretsHandler_GetSecret_Existing(t *testing.T) {
 
 func TestSecretsHandler_Delete_Valid(t *testing.T) {
 	svc := &fakeSecretsService{}
-	h := NewSecretsHandler(svc)
+	h := NewSecretsHandler(svc, EnvAllowlist{})
 	r := chi.NewRouter()
 	r.Delete("/v1/projects/{projectID}/secrets/{key}", h.DeleteSecret)
 
@@ -87,7 +87,7 @@ func TestSecretsHandler_Delete_Valid(t *testing.T) {
 
 func TestSecretsHandler_List_Paginated(t *testing.T) {
 	svc := &fakeSecretsService{}
-	h := NewSecretsHandler(svc)
+	h := NewSecretsHandler(svc, EnvAllowlist{})
 	r := chi.NewRouter()
 	r.Get("/v1/projects/{projectID}/secrets", h.ListSecrets)
 
@@ -96,4 +96,21 @@ func TestSecretsHandler_List_Paginated(t *testing.T) {
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, 200, w.Code)
+}
+
+func TestSecretsHandler_Create_RejectsDisallowedEnvironment(t *testing.T) {
+	svc := &fakeSecretsService{}
+	h := NewSecretsHandler(svc, NewEnvAllowlist([]string{"prod"}))
+
+	r := chi.NewRouter()
+	r.Post("/v1/projects/{projectID}/secrets", h.CreateSecret)
+
+	body := map[string]any{"key":"API_KEY","environment":"dev","value":map[string]any{"api_key":"x"},"createdBy":"user@example.com"}
+	b,_ := json.Marshal(body)
+	req := httptest.NewRequest(http.MethodPost, "/v1/projects/proj-1/secrets", bytes.NewReader(b))
+	req.Header.Set("Content-Type","application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
 }

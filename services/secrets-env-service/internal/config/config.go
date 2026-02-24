@@ -14,6 +14,7 @@ type Config struct {
 	ServiceName   string
 	ServicePort   string
 	LogLevel      string
+	AllowedEnvironments []string
 	Vault         VaultConfig
 	Database      DatabaseConfig
 	Redis         RedisConfig
@@ -116,6 +117,7 @@ func Load() (*Config, error) {
 		ServiceName: getEnvOrDefault("SERVICE_NAME", "secrets-env-service"),
 		ServicePort: getEnvOrDefault("SERVICE_PORT", "7104"),
 		LogLevel:    getEnvOrDefault("LOG_LEVEL", "info"),
+		AllowedEnvironments: getEnvAsList("ENV_ALLOWLIST", []string{}),
 		Vault: VaultConfig{
 			Address:   os.Getenv("VAULT_ADDR"),
 			RoleID:    os.Getenv("VAULT_ROLE_ID"),

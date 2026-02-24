@@ -118,8 +118,9 @@ func main() {
 	}
 	leakSvc := service.NewLeakScanService(leakRepo, blob, publisher)
 
-	secretsH := handlers.NewSecretsHandler(secretsServiceAdapter{s: secretsSvc})
-	parityH := handlers.NewParityHandler(parityServiceAdapter{s: paritySvc})
+	envAllowlist := handlers.NewEnvAllowlist(cfg.AllowedEnvironments)
+	secretsH := handlers.NewSecretsHandler(secretsServiceAdapter{s: secretsSvc}, envAllowlist)
+	parityH := handlers.NewParityHandler(parityServiceAdapter{s: paritySvc}, envAllowlist)
 	leakH := handlers.NewLeakScanHandler(leakScanServiceAdapter{s: leakSvc})
 
 	// Middleware chain: PanicRecovery -> RequestLogger -> JWTAuth
@@ -168,7 +169,7 @@ func main() {
 		_ = h.ListenAndServe()
 	}()
 	go func() {
-		_ = grpcapi.StartGRPCServer(appCtx, ":50064", secretsSvc, paritySvc, verifier, log, tlsCfg)
+		_ = grpcapi.StartGRPCServer(appCtx, ":50064", secretsSvc, paritySvc, cfg.AllowedEnvironments, verifier, log, tlsCfg)
 	}()
 
 	<-appCtx.Done()

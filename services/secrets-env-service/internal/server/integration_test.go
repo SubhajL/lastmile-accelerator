@@ -143,7 +143,7 @@ func TestIntegration_ParityCheck_ScopesAndPublish(t *testing.T) {
 	parityRepo := repository.NewParityRepository()
 	cap := &capturePublisher{}
 	paritySvc := service.NewParityService(parityRepo, secretsRepo, cap)
-	parityH := handlers.NewParityHandler(parityServiceAdapter{s: paritySvc})
+	parityH := handlers.NewParityHandler(parityServiceAdapter{s: paritySvc}, handlers.EnvAllowlist{})
 
 	// verifier missing scope -> 403
 	log := appLogger.New("test","info", new(bytes.Buffer))
@@ -208,4 +208,3 @@ func TestIntegration_LeakScan_ScopesAndPublish(t *testing.T) {
 	for _, tpc := range cap.topics { if tpc == "leak.scan.completed" { found = true; break } }
 	if !found { t.Fatalf("expected leak.scan.completed publish, got %v", cap.topics) }
 }
-
