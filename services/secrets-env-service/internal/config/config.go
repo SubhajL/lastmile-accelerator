@@ -55,11 +55,11 @@ type NATSConfig struct {
 
 // ObservabilityConfig holds observability settings
 type ObservabilityConfig struct {
-	OTELEndpoint string
-	OTELInsecure bool
-	OTELHeaders  map[string]string
+	OTELEndpoint    string
+	OTELInsecure    bool
+	OTELHeaders     map[string]string
 	OTELServiceName string
-	MetricsPort  string
+	MetricsPort     string
 }
 
 // AuthConfig holds authentication settings
@@ -109,6 +109,8 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 
+	otelServiceName := getEnvOrDefault("OTEL_SERVICE_NAME", "")
+
 	cfg := &Config{
 		Env:         getEnvOrDefault("ENV", "dev"),
 		ServiceName: getEnvOrDefault("SERVICE_NAME", "secrets-env-service"),
@@ -135,11 +137,11 @@ func Load() (*Config, error) {
 			URL: getEnvOrDefault("NATS_URL", ""),
 		},
 		Observability: ObservabilityConfig{
-			OTELEndpoint: getEnvOrDefault("OTEL_EXPORTER_OTLP_ENDPOINT", ""),
-			OTELInsecure: getEnvAsBool("OTEL_INSECURE", false),
-			OTELHeaders:  otelHeaders,
-			OTELServiceName: getEnvOrDefault("OTEL_SERVICE_NAME", ""),
-			MetricsPort:  getEnvOrDefault("METRICS_PORT", "9090"),
+			OTELEndpoint:    getEnvOrDefault("OTEL_EXPORTER_OTLP_ENDPOINT", ""),
+			OTELInsecure:    getEnvAsBool("OTEL_INSECURE", false),
+			OTELHeaders:     otelHeaders,
+			OTELServiceName: otelServiceName,
+			MetricsPort:     getEnvOrDefault("METRICS_PORT", "9090"),
 		},
 		Auth: AuthConfig{
 			JWTPublicKey: getEnvOrDefault("JWT_PUBLIC_KEY", ""),
@@ -176,6 +178,10 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 
+	if cfg.Observability.OTELServiceName == "" {
+		cfg.Observability.OTELServiceName = cfg.ServiceName
+	}
+
 	return cfg, nil
 }
 
@@ -192,7 +198,7 @@ func (c *Config) Validate() error {
 		return err
 	}
 
-if err := c.Database.Validate(); err != nil {
+	if err := c.Database.Validate(); err != nil {
 		return err
 	}
 
@@ -259,10 +265,18 @@ func (d *DatabaseConfig) Validate() error {
 func (s *StorageConfig) Validate() error {
 	// S3 is optional. If Endpoint or Bucket is set, require access credentials.
 	if s.S3.Endpoint != "" || s.S3.Bucket != "" {
-		if s.S3.Endpoint == "" { return fmt.Errorf("STORAGE_S3_ENDPOINT is required when S3 is configured") }
-		if s.S3.Bucket == "" { return fmt.Errorf("STORAGE_S3_BUCKET is required when S3 is configured") }
-		if s.S3.AccessKey == "" { return fmt.Errorf("STORAGE_S3_ACCESS_KEY is required when S3 is configured") }
-		if s.S3.SecretKey == "" { return fmt.Errorf("STORAGE_S3_SECRET_KEY is required when S3 is configured") }
+		if s.S3.Endpoint == "" {
+			return fmt.Errorf("STORAGE_S3_ENDPOINT is required when S3 is configured")
+		}
+		if s.S3.Bucket == "" {
+			return fmt.Errorf("STORAGE_S3_BUCKET is required when S3 is configured")
+		}
+		if s.S3.AccessKey == "" {
+			return fmt.Errorf("STORAGE_S3_ACCESS_KEY is required when S3 is configured")
+		}
+		if s.S3.SecretKey == "" {
+			return fmt.Errorf("STORAGE_S3_SECRET_KEY is required when S3 is configured")
+		}
 	}
 	return nil
 }
@@ -325,7 +339,9 @@ func getEnvAsList(key string, def []string) []string {
 		parts := []string{}
 		for _, p := range strings.Split(value, ",") {
 			p = strings.TrimSpace(p)
-			if p != "" { parts = append(parts, p) }
+			if p != "" {
+				parts = append(parts, p)
+			}
 		}
 		return parts
 	}
