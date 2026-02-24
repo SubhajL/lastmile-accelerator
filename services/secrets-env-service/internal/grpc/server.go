@@ -23,7 +23,10 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/health"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
 )
 
@@ -84,8 +87,20 @@ type server struct {
 	log     zerolog.Logger
 }
 
+func registerOptionalServices(gs *grpc.Server, enableHealth bool, enableReflection bool) {
+	if enableHealth {
+		hs := health.NewServer()
+		healthpb.RegisterHealthServer(gs, hs)
+		hs.SetServingStatus("", healthpb.HealthCheckResponse_SERVING)
+		hs.SetServingStatus("lma.secretsenv.v1.SecretsEnvService", healthpb.HealthCheckResponse_SERVING)
+	}
+	if enableReflection {
+		reflection.Register(gs)
+	}
+}
+
 // StartGRPCServer starts the gRPC server on addr and blocks until ctx is canceled.
-func StartGRPCServer(ctx context.Context, addr string, secrets *service.SecretsService, parity *service.ParityService, allowedEnvironments []string, verifier handlers.TokenVerifier, log zerolog.Logger, tlsConfig *tls.Config) error {
+func StartGRPCServer(ctx context.Context, addr string, secrets *service.SecretsService, parity *service.ParityService, allowedEnvironments []string, enableHealth bool, enableReflection bool, verifier handlers.TokenVerifier, log zerolog.Logger, tlsConfig *tls.Config) error {
 	// Interceptor chain: recovery -> logging -> auth -> scope enforcement
 	svc := &server{secrets: secrets, parity: parity, envAllowlist: handlers.NewEnvAllowlist(allowedEnvironments), log: log}
 
@@ -113,6 +128,8 @@ func StartGRPCServer(ctx context.Context, addr string, secrets *service.SecretsS
 		opts = append(opts, grpc.Creds(credentials.NewTLS(tlsConfig)))
 	}
 	gs := grpc.NewServer(opts...)
+	registerOptionalServices(gs, enableHealth, enableReflection)
+
 	pb.RegisterSecretsEnvServiceServer(gs, svc)
 
 	lis, err := net.Listen("tcp", addr)

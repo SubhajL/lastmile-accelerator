@@ -170,7 +170,7 @@ func main() {
 		_ = h.ListenAndServe()
 	}()
 	go func() {
-		_ = grpcapi.StartGRPCServer(appCtx, ":50064", secretsSvc, paritySvc, cfg.AllowedEnvironments, verifier, log, tlsCfg)
+		_ = grpcapi.StartGRPCServer(appCtx, ":50064", secretsSvc, paritySvc, cfg.AllowedEnvironments, cfg.GRPCEnableHealth, cfg.GRPCEnableReflection, verifier, log, tlsCfg)
 	}()
 
 	<-appCtx.Done()
