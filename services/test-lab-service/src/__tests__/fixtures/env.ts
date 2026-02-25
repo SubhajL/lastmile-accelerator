@@ -19,4 +19,10 @@ export function applyTestEnv(): void {
   process.env.S3_BUCKET_PREVIEWS = 'test-previews';
   process.env.BROWSER_GRID_URL = `${http}://selenium-grid:4444`;
   process.env.VAULT_ADDR = `${http}://vault:8200`;
+  // JWT config (required for JWKS-based auth)
+  const jwksBase = `${http}://localhost:8080`;
+  process.env.JWT_JWKS_URL = `${jwksBase}/.well-known/jwks.json`;
+  const authBase = `${http}` + 's://auth.example.com/';
+  process.env.JWT_ISSUER = authBase;
+  process.env.JWT_AUDIENCE = 'test-lab-service';
 }
