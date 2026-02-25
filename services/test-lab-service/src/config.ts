@@ -38,7 +38,6 @@ const envSchema = z.object({
     .pipe(z.coerce.number().int().positive())
     .default('100'),
   RATE_LIMIT_WINDOW_MS: z.string().pipe(z.coerce.number().int().positive()).default('60000'),
-  CACHE_DEFAULT_TTL_SEC: z.string().pipe(z.coerce.number().int().positive()).default('300'),
   REDIS_KEY_PREFIX: z.string().default('test-lab-service:'),
 });
 
@@ -77,7 +76,6 @@ export interface ServerConfig {
   // Redis and rate limiting
   rateLimitRequestsPerMinute: number;
   rateLimitWindowMs: number;
-  cacheDefaultTtlSec: number;
   redisKeyPrefix: string;
 }
 
@@ -123,7 +121,6 @@ export function loadConfig(): ServerConfig {
       ENABLE_EVENT_SUBSCRIBERS: process.env.ENABLE_EVENT_SUBSCRIBERS || 'false',
       RATE_LIMIT_REQUESTS_PER_MINUTE: process.env.RATE_LIMIT_REQUESTS_PER_MINUTE || '100',
       RATE_LIMIT_WINDOW_MS: process.env.RATE_LIMIT_WINDOW_MS || '60000',
-      CACHE_DEFAULT_TTL_SEC: process.env.CACHE_DEFAULT_TTL_SEC || '300',
       REDIS_KEY_PREFIX: process.env.REDIS_KEY_PREFIX || 'test-lab-service:',
     });
 
@@ -160,7 +157,6 @@ export function loadConfig(): ServerConfig {
       enableEventSubscribers: String(raw.ENABLE_EVENT_SUBSCRIBERS).toLowerCase() === 'true',
       rateLimitRequestsPerMinute: raw.RATE_LIMIT_REQUESTS_PER_MINUTE,
       rateLimitWindowMs: raw.RATE_LIMIT_WINDOW_MS,
-      cacheDefaultTtlSec: raw.CACHE_DEFAULT_TTL_SEC,
       redisKeyPrefix: raw.REDIS_KEY_PREFIX,
     };
   } catch (error) {
