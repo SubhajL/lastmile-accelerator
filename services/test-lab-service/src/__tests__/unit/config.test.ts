@@ -33,6 +33,8 @@ describe('Config', () => {
     applyTestEnv();
     process.env.OTEL_EXPORTER_OTLP_ENDPOINT = 'http://localhost:4318';
     process.env.JWT_JWKS_URL = 'http://localhost:8080/.well-known/jwks.json';
+    process.env.JWT_ISSUER = 'https://auth.example.com/';
+    process.env.JWT_AUDIENCE = 'test-lab-service';
   };
 
   describe('loadConfig()', () => {
@@ -44,6 +46,9 @@ describe('Config', () => {
       process.env.MAX_PARALLEL_TESTS = '5';
       process.env.VAULT_ROLE_ID = ['role', '123'].join('_');
       process.env.VAULT_SECRET_ID = ['vk', '_test_456'].join('');
+      process.env.JWKS_CACHE_TTL_MS = '900000';
+      process.env.JWT_ALG = 'RS256';
+      process.env.JWT_CLOCK_SKEW_SEC = '120';
 
       const { loadConfig } = await import('../../config.js');
       const config = loadConfig();
@@ -58,6 +63,11 @@ describe('Config', () => {
       expect(config.natsUrl).toBe(expectedNats);
       expect(config.otelEndpoint).toBe('http://localhost:4318');
       expect(config.jwtJwksUrl).toBe('http://localhost:8080/.well-known/jwks.json');
+      expect(config.jwtIssuer).toBe('https://auth.example.com/');
+      expect(config.jwtAudience).toBe('test-lab-service');
+      expect(config.jwtAlg).toBe('RS256');
+      expect(config.jwksCacheTtlMs).toBe(900000);
+      expect(config.jwtClockSkewSec).toBe(120);
       expect(config.s3BucketPreviews).toBe('test-previews');
       expect(config.browserGridUrl).toBe('http://selenium-grid:4444');
       expect(config.env).toBe('dev');
@@ -66,6 +76,38 @@ describe('Config', () => {
       expect(config.vaultAddr).toBe('http://vault:8200');
       expect(config.vaultRoleId).toBe('role_123');
       expect(config.vaultSecretId).toBe('vk_test_456');
+    });
+
+    it('should default JWKS cache TTL and clock skew, and JWT_ALG', async () => {
+      setRequiredEnvVars();
+      delete process.env.JWKS_CACHE_TTL_MS;
+      delete process.env.JWT_CLOCK_SKEW_SEC;
+      delete process.env.JWT_ALG;
+
+      const { loadConfig } = await import('../../config.js');
+      const config = loadConfig();
+      expect(config.jwksCacheTtlMs).toBe(600000);
+      expect(config.jwtClockSkewSec).toBe(60);
+      expect(config.jwtAlg).toBe('RS256');
+    });
+
+    it('should throw when JWT_ISSUER or JWT_AUDIENCE missing', async () => {
+      setRequiredEnvVars();
+      delete process.env.JWT_ISSUER;
+      const { loadConfig } = await import('../../config.js');
+      expect(() => loadConfig()).toThrow(/JWT_ISSUER/);
+
+      setRequiredEnvVars();
+      delete process.env.JWT_AUDIENCE;
+      const { loadConfig: lc2 } = await import('../../config.js');
+      expect(() => lc2()).toThrow(/JWT_AUDIENCE/);
+    });
+
+    it('should reject negative JWKS_CACHE_TTL_MS', async () => {
+      setRequiredEnvVars();
+      process.env.JWKS_CACHE_TTL_MS = '-1';
+      const { loadConfig } = await import('../../config.js');
+      expect(() => loadConfig()).toThrow(/JWKS_CACHE_TTL_MS/);
     });
 
     it('should throw error when required DATABASE_URL is missing', async () => {

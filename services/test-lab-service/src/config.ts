@@ -9,6 +9,11 @@ const envSchema = z.object({
   NATS_URL: z.string().url(),
   OTEL_EXPORTER_OTLP_ENDPOINT: z.string().url(),
   JWT_JWKS_URL: z.string(),
+  JWT_ISSUER: z.string().url(),
+  JWT_AUDIENCE: z.string().min(1),
+  JWT_ALG: z.enum(['RS256', 'RS384', 'RS512', 'ES256']).default('RS256'),
+  JWKS_CACHE_TTL_MS: z.string().pipe(z.coerce.number().int().positive()).default('600000'),
+  JWT_CLOCK_SKEW_SEC: z.string().pipe(z.coerce.number().int().min(0)).default('60'),
   S3_BUCKET_PREVIEWS: z.string(),
   BROWSER_GRID_URL: z.string().url(),
   VAULT_ADDR: z.string().url(),
@@ -27,6 +32,13 @@ const envSchema = z.object({
   K8S_TTL_SECONDS_AFTER_FINISHED: z.string().pipe(z.coerce.number().int().min(0)).default('600'),
   RUNNER_POLL_INTERVAL_MS: z.string().pipe(z.coerce.number().int().positive()).default('3000'),
   ENABLE_EVENT_SUBSCRIBERS: z.string().default('false'),
+  // Redis and rate limiting
+  RATE_LIMIT_REQUESTS_PER_MINUTE: z
+    .string()
+    .pipe(z.coerce.number().int().positive())
+    .default('100'),
+  RATE_LIMIT_WINDOW_MS: z.string().pipe(z.coerce.number().int().positive()).default('60000'),
+  REDIS_KEY_PREFIX: z.string().default('test-lab-service:'),
 });
 
 export interface ServerConfig {
@@ -39,6 +51,11 @@ export interface ServerConfig {
   repoBackend: 'memory' | 'pg';
   otelEndpoint: string;
   jwtJwksUrl: string;
+  jwtIssuer: string;
+  jwtAudience: string;
+  jwtAlg: 'RS256' | 'RS384' | 'RS512' | 'ES256';
+  jwksCacheTtlMs: number;
+  jwtClockSkewSec: number;
   s3BucketPreviews: string;
   browserGridUrl: string;
   vaultAddr: string;
@@ -56,6 +73,10 @@ export interface ServerConfig {
   k8sTtlSecondsAfterFinished: number;
   runnerPollIntervalMs: number;
   enableEventSubscribers: boolean;
+  // Redis and rate limiting
+  rateLimitRequestsPerMinute: number;
+  rateLimitWindowMs: number;
+  redisKeyPrefix: string;
 }
 
 /**
@@ -76,6 +97,11 @@ export function loadConfig(): ServerConfig {
       NATS_URL: process.env.NATS_URL,
       OTEL_EXPORTER_OTLP_ENDPOINT: process.env.OTEL_EXPORTER_OTLP_ENDPOINT,
       JWT_JWKS_URL: process.env.JWT_JWKS_URL,
+      JWT_ISSUER: process.env.JWT_ISSUER,
+      JWT_AUDIENCE: process.env.JWT_AUDIENCE,
+      JWT_ALG: process.env.JWT_ALG,
+      JWKS_CACHE_TTL_MS: process.env.JWKS_CACHE_TTL_MS || '600000',
+      JWT_CLOCK_SKEW_SEC: process.env.JWT_CLOCK_SKEW_SEC || '60',
       S3_BUCKET_PREVIEWS: process.env.S3_BUCKET_PREVIEWS,
       BROWSER_GRID_URL: process.env.BROWSER_GRID_URL,
       VAULT_ADDR: process.env.VAULT_ADDR,
@@ -93,6 +119,9 @@ export function loadConfig(): ServerConfig {
       K8S_TTL_SECONDS_AFTER_FINISHED: process.env.K8S_TTL_SECONDS_AFTER_FINISHED || '600',
       RUNNER_POLL_INTERVAL_MS: process.env.RUNNER_POLL_INTERVAL_MS || '3000',
       ENABLE_EVENT_SUBSCRIBERS: process.env.ENABLE_EVENT_SUBSCRIBERS || 'false',
+      RATE_LIMIT_REQUESTS_PER_MINUTE: process.env.RATE_LIMIT_REQUESTS_PER_MINUTE || '100',
+      RATE_LIMIT_WINDOW_MS: process.env.RATE_LIMIT_WINDOW_MS || '60000',
+      REDIS_KEY_PREFIX: process.env.REDIS_KEY_PREFIX || 'test-lab-service:',
     });
 
     return {
@@ -104,6 +133,11 @@ export function loadConfig(): ServerConfig {
       natsUrl: raw.NATS_URL,
       otelEndpoint: raw.OTEL_EXPORTER_OTLP_ENDPOINT,
       jwtJwksUrl: raw.JWT_JWKS_URL,
+      jwtIssuer: raw.JWT_ISSUER,
+      jwtAudience: raw.JWT_AUDIENCE,
+      jwtAlg: raw.JWT_ALG,
+      jwksCacheTtlMs: raw.JWKS_CACHE_TTL_MS,
+      jwtClockSkewSec: raw.JWT_CLOCK_SKEW_SEC,
       s3BucketPreviews: raw.S3_BUCKET_PREVIEWS,
       browserGridUrl: raw.BROWSER_GRID_URL,
       vaultAddr: raw.VAULT_ADDR,
@@ -121,12 +155,13 @@ export function loadConfig(): ServerConfig {
       k8sTtlSecondsAfterFinished: raw.K8S_TTL_SECONDS_AFTER_FINISHED,
       runnerPollIntervalMs: raw.RUNNER_POLL_INTERVAL_MS,
       enableEventSubscribers: String(raw.ENABLE_EVENT_SUBSCRIBERS).toLowerCase() === 'true',
+      rateLimitRequestsPerMinute: raw.RATE_LIMIT_REQUESTS_PER_MINUTE,
+      rateLimitWindowMs: raw.RATE_LIMIT_WINDOW_MS,
+      redisKeyPrefix: raw.REDIS_KEY_PREFIX,
     };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const missingVars = error.issues
-        .map((issue) => issue.path.join('.'))
-        .join(', ');
+      const missingVars = error.issues.map((issue) => issue.path.join('.')).join(', ');
       throw new Error(`Configuration error: missing or invalid variables: ${missingVars}`);
     }
     throw error;

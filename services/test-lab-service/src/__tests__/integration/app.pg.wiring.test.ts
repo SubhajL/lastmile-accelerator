@@ -1,15 +1,39 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createApp } from '../../app.js';
 import { createMockJWT, TEST_JWT_SECRET } from '../fixtures/jwt-helpers.js';
+
+// Mock Redis so tests run without a live Redis instance
+vi.mock('../../clients/redis.js', () => ({
+  createRedisClient: vi.fn().mockResolvedValue({
+    get: vi.fn().mockResolvedValue(null),
+    set: vi.fn().mockResolvedValue(undefined),
+    del: vi.fn().mockResolvedValue(undefined),
+    incr: vi.fn().mockResolvedValue(1),
+    incrWithExpire: vi.fn().mockResolvedValue(1),
+    expire: vi.fn().mockResolvedValue(undefined),
+    close: vi.fn().mockResolvedValue(undefined),
+  }),
+}));
+
+// Mock JWKS verifier to decode JWT for testing
+vi.mock('../../lib/jwks.js', () => ({
+  verifyJwt: vi.fn(async (opts: { token: string }) => {
+    const parts = opts.token.split('.');
+    if (parts.length !== 3) throw new Error('Invalid token');
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
+    return payload;
+  }),
+}));
 
 process.env.SERVICE_NAME = 'test-lab-service';
 process.env.SERVICE_PORT = '7202';
 process.env.DATABASE_URL = 'pgmem://scaffolds';
-const host = 'localhost';
-process.env.REDIS_URL = 'r' + 'edis://' + host + ':6379';
-process.env.NATS_URL = 'n' + 'ats://' + host + ':4222';
+process.env.REDIS_URL = 'redis://localhost:6379';
+process.env.NATS_URL = 'nats://localhost:4222';
 process.env.OTEL_EXPORTER_OTLP_ENDPOINT = 'http://127.0.0.1:4318';
 process.env.JWT_JWKS_URL = TEST_JWT_SECRET;
+process.env.JWT_ISSUER = 'https://auth.example.com/';
+process.env.JWT_AUDIENCE = 'test-lab-service';
 process.env.S3_BUCKET_PREVIEWS = 'test-previews';
 process.env.BROWSER_GRID_URL = 'http://selenium-grid:4444';
 process.env.VAULT_ADDR = 'http://vault:8200';
@@ -26,6 +50,8 @@ describe('app with pg repo', () => {
 
   afterEach(async () => {
     await app.close();
+    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   it('persists scaffold via pg backend', async () => {
