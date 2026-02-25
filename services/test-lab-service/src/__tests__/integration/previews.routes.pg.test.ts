@@ -1,15 +1,22 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createApp } from '../../app.js';
 import { createMockJWT, TEST_JWT_SECRET } from '../fixtures/jwt-helpers.js';
 
+vi.mock('../../lib/jwks.js', () => ({
+  verifyJwt: vi.fn(async ({ token }: { token: string }) => {
+    const { verify } = await import('jsonwebtoken');
+    return verify(token, TEST_JWT_SECRET, { algorithms: ['HS256'] });
+  }),
+}));
 process.env.SERVICE_NAME = 'test-lab-service';
 process.env.SERVICE_PORT = '7202';
 process.env.DATABASE_URL = 'pgmem://previews';
-const host = 'localhost';
-process.env.REDIS_URL = 'r' + 'edis://' + host + ':6379';
-process.env.NATS_URL = 'n' + 'ats://' + host + ':4222';
+process.env.REDIS_URL = 'redis://localhost:6379';
+process.env.NATS_URL = 'nats://localhost:4222';
 process.env.OTEL_EXPORTER_OTLP_ENDPOINT = 'http://127.0.0.1:4318';
 process.env.JWT_JWKS_URL = TEST_JWT_SECRET;
+process.env.JWT_ISSUER = 'https://auth.example.com/';
+process.env.JWT_AUDIENCE = 'test-lab-service';
 process.env.S3_BUCKET_PREVIEWS = 'test-previews';
 process.env.BROWSER_GRID_URL = 'http://selenium-grid:4444';
 process.env.VAULT_ADDR = 'http://vault:8200';
@@ -35,7 +42,7 @@ describe('preview environments routes (pg)', () => {
     const c1 = await app.inject({
       method: 'POST', url: `/v1/projects/${projectId}/previews`,
       headers: { authorization: `Bearer ${token}` },
-      payload: { url: 'h' + 'ttps://p1.example' },
+      payload: { url: 'https://p1.example' },
     });
     expect(c1.statusCode).toBe(201);
     const p1 = c1.json();
@@ -43,7 +50,7 @@ describe('preview environments routes (pg)', () => {
     const c2 = await app.inject({
       method: 'POST', url: `/v1/projects/${projectId}/previews`,
       headers: { authorization: `Bearer ${token}` },
-      payload: { url: 'h' + 'ttps://p2.example' },
+      payload: { url: 'https://p2.example' },
     });
     const p2 = c2.json();
 
@@ -72,5 +79,20 @@ describe('preview environments routes (pg)', () => {
     // delete
     const d = await app.inject({ method: 'DELETE', url: `/v1/previews/${p2.id}`, headers: { authorization: `Bearer ${token}` } });
     expect(d.statusCode).toBe(204);
+  });
+
+  it('returns 401 and does not call verifyJwt when Authorization header is missing', async () => {
+    const res = await app.inject({ method: 'GET', url: `/v1/projects/${projectId}/previews` });
+    expect(res.statusCode).toBe(401);
+  });
+
+  it('requires preview:write scope for create', async () => {
+    const readOnlyToken = createMockJWT({ scopes: ['preview:read'] });
+    const denied = await app.inject({
+      method: 'POST', url: `/v1/projects/${projectId}/previews`,
+      headers: { authorization: `Bearer ${readOnlyToken}` },
+      payload: { url: 'https://nope.example' },
+    });
+    expect(denied.statusCode).toBe(403);
   });
 });
