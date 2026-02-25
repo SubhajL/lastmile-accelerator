@@ -1,7 +1,7 @@
 import Fastify from 'fastify';
 import { getConfig } from './config.js';
 import { initTelemetry } from './lib/telemetry.js';
-import { createLogger } from './lib/logger.js';
+import type { RedisWrapper } from './clients/redis.js';
 import { registerErrorHandler } from './middleware/error-handler.js';
 import { registerAuthPlugin } from './middleware/auth.js';
 import { createMetricsRoute } from './lib/metrics.js';
@@ -26,52 +26,55 @@ export async function createApp() {
   // Auth plugin (JWKS-based hooks handle verification)
   await registerAuthPlugin(app);
 
-  // Redis client and cache setup
-  const { createRedisClient } = await import('./clients/redis.js');
-  const redis = await createRedisClient(cfg.redisUrl);
-  const { createCacheHelper } = await import('./lib/cache.js');
-  const cache = createCacheHelper(redis, cfg.redisKeyPrefix);
+  let redis: RedisWrapper | null = null;
 
-  // Decorate app with redis and cache for use in routes/services
-  app.decorate('redis', redis);
-  app.decorate('cache', cache);
+  try {
+    // Redis client and cache setup
+    const { createRedisClient } = await import('./clients/redis.js');
+    redis = await createRedisClient(cfg.redisUrl, { logger: app.log });
+    const { createCacheHelper } = await import('./lib/cache.js');
+    const cache = createCacheHelper(redis, cfg.redisKeyPrefix);
 
-  // Register rate limiting middleware (after auth, before routes)
-  const { createRateLimitMiddleware } = await import('./middleware/rate-limit.js');
-  app.addHook(
-    'preHandler',
-    createRateLimitMiddleware(redis, {
-      requestsPerMinute: cfg.rateLimitRequestsPerMinute,
-      windowMs: cfg.rateLimitWindowMs,
-      exemptRoutes: ['/healthz', '/metrics'],
-      keyPrefix: `${cfg.redisKeyPrefix}rate-limit:`,
-    }),
-  );
+    // Decorate app with redis and cache for use in routes/services
+    app.decorate('redis', redis);
+    app.decorate('cache', cache);
 
-  // Repos: choose backend from config
-  if (cfg.repoBackend === 'pg') {
-    const { connectDb } = await import('./repo/pg.js');
-    const pool = await connectDb(cfg.databaseUrl);
-    const { runMigrations } = await import('./repo/db.js');
-    await runMigrations(pool as any);
-    const { PgScaffoldsRepo } = await import('./repo/scaffolds.pg.repo.js');
-    const { PgTestRunsRepo } = await import('./repo/test-runs.pg.repo.js');
-    const { PgBrowserTestRunsRepo } = await import('./repo/browser-test-runs.pg.repo.js');
-    const { PgPreviewEnvsRepo } = await import('./repo/preview-envs.pg.repo.js');
-    app.decorate('repos', {
-      scaffolds: new PgScaffoldsRepo(pool as any),
-      testRuns: new PgTestRunsRepo(pool as any),
-      browserTestRuns: new PgBrowserTestRunsRepo(pool as any),
-      previewEnvs: new PgPreviewEnvsRepo(pool as any),
-    });
-    app.addHook('onClose', async () => {
-      const { closeDb } = await import('./repo/pg.js');
-      await closeDb(pool as any);
-    });
-  } else {
-    const { InMemoryScaffoldsRepo } = await import('./repo/scaffolds.repo.js');
-    app.decorate('repos', { scaffolds: new InMemoryScaffoldsRepo() });
-  }
+    // Register rate limiting middleware (after auth, before routes)
+    const { createRateLimitMiddleware } = await import('./middleware/rate-limit.js');
+    app.addHook(
+      'preHandler',
+      createRateLimitMiddleware(redis, {
+        requestsPerMinute: cfg.rateLimitRequestsPerMinute,
+        windowMs: cfg.rateLimitWindowMs,
+        exemptRoutes: ['/healthz', '/metrics'],
+        keyPrefix: `${cfg.redisKeyPrefix}rate-limit:`,
+      }),
+    );
+
+    // Repos: choose backend from config
+    if (cfg.repoBackend === 'pg') {
+      const { connectDb } = await import('./repo/pg.js');
+      const pool = await connectDb(cfg.databaseUrl);
+      const { runMigrations } = await import('./repo/db.js');
+      await runMigrations(pool as any);
+      const { PgScaffoldsRepo } = await import('./repo/scaffolds.pg.repo.js');
+      const { PgTestRunsRepo } = await import('./repo/test-runs.pg.repo.js');
+      const { PgBrowserTestRunsRepo } = await import('./repo/browser-test-runs.pg.repo.js');
+      const { PgPreviewEnvsRepo } = await import('./repo/preview-envs.pg.repo.js');
+      app.decorate('repos', {
+        scaffolds: new PgScaffoldsRepo(pool as any),
+        testRuns: new PgTestRunsRepo(pool as any),
+        browserTestRuns: new PgBrowserTestRunsRepo(pool as any),
+        previewEnvs: new PgPreviewEnvsRepo(pool as any),
+      });
+      app.addHook('onClose', async () => {
+        const { closeDb } = await import('./repo/pg.js');
+        await closeDb(pool as any);
+      });
+    } else {
+      const { InMemoryScaffoldsRepo } = await import('./repo/scaffolds.repo.js');
+      app.decorate('repos', { scaffolds: new InMemoryScaffoldsRepo() });
+    }
 
   // Health & metrics
   app.get('/healthz', async () => 'ok');
@@ -136,8 +139,12 @@ export async function createApp() {
 
   // Redis cleanup on app shutdown
   app.addHook('onClose', async () => {
-    await redis.close();
+    await app.redis.close();
   });
 
-  return app;
+    return app;
+  } catch (err) {
+    await redis?.close().catch(() => {});
+    throw err;
+  }
 }
