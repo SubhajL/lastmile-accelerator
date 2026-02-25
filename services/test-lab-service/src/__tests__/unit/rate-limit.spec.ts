@@ -187,7 +187,7 @@ describe('createRateLimitMiddleware', () => {
     }
 
     // Redis incr should never be called for exempt routes
-    expect(mockRedis.incrWithExpire).not.toHaveBeenCalled();
+    expect(mockRedis.incr).not.toHaveBeenCalled();
   });
 
   test('falls back to IP when no tenant claim in JWT', async () => {
