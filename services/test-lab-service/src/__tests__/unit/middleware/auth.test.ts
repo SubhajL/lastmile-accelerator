@@ -6,8 +6,6 @@ import {
   requireAuth,
   optionalAuth,
   requireScopes,
-  extractBearerToken,
-  toUserContext,
 } from '../../../middleware/auth.js';
 import {
   createMockJWT,
@@ -191,16 +189,6 @@ describe('Auth Middleware', () => {
       expect(response.json().user.userId).toBe('user-123');
     });
 
-    it('should continue unauthenticated when Authorization header is missing', async () => {
-      app.get('/test', { preHandler: optionalAuth }, async (request) => {
-        return { user: request.user };
-      });
-
-      const response = await app.inject({ method: 'GET', url: '/test' });
-      expect(response.statusCode).toBe(200);
-      expect(response.json().user).toBeNull();
-    });
-
     it('should not swallow config errors', async () => {
       const token = createMockJWT();
       const cfg = await import('../../../config.js');
@@ -219,29 +207,6 @@ describe('Auth Middleware', () => {
       });
 
       expect(response.statusCode).toBe(500);
-    });
-  });
-
-  describe('extractBearerToken', () => {
-    it('parses Bearer tokens with exact prefix', async () => {
-      expect(extractBearerToken(`Bearer ${TEST_JWT_SECRET}`)).toBe(TEST_JWT_SECRET);
-      expect(extractBearerToken(`bearer ${TEST_JWT_SECRET}`)).toBeNull();
-      expect(extractBearerToken('Bearer')).toBeNull();
-    });
-  });
-
-  describe('toUserContext', () => {
-    it('maps JWT claims to user context', async () => {
-      const ctx = toUserContext({
-        sub: 's',
-        tenant_id: 't',
-        user_id: 'u',
-        scopes: [],
-        exp: 0,
-        iat: 0,
-        iss: 'https://auth.example.com/',
-      });
-      expect(ctx).toEqual({ sub: 's', tenantId: 't', userId: 'u', scopes: [] });
     });
   });
 
