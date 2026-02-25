@@ -5,7 +5,7 @@ TAG?=dev
 build:
 	bun run build
 test:
-	node --experimental-vm-modules ./node_modules/.bin/vitest || true
+	bun run test -- --run
 image:
 	docker build -t ghcr.io/${GITHUB_REPOSITORY}-$(SVC):$(TAG) .
 sbom:
