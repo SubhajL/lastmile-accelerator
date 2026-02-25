@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createApp } from '../../app.js';
 import { createMockJWT, TEST_JWT_SECRET } from '../fixtures/jwt-helpers.js';
 import { applyTestEnv } from '../fixtures/env.js';
@@ -6,6 +6,22 @@ import { applyTestEnv } from '../fixtures/env.js';
 // Minimal env
 applyTestEnv();
 process.env.JWT_JWKS_URL = TEST_JWT_SECRET;
+process.env.JWT_ISSUER = 'https://auth.example.com/';
+process.env.JWT_AUDIENCE = 'test-lab-service';
+
+// Mock JWKS verifier to operate requireAuth without real JWKS
+vi.mock('../../lib/jwks.js', () => ({
+  verifyJwt: vi.fn(async () => ({
+    sub: 'sub-1',
+    tenant_id: 't-1',
+    user_id: 'u-1',
+    scopes: ['scaffold:read', 'scaffold:write'],
+    iss: process.env.JWT_ISSUER,
+    aud: process.env.JWT_AUDIENCE,
+    exp: Math.floor(Date.now() / 1000) + 60,
+    iat: Math.floor(Date.now() / 1000),
+  })),
+}));
 
 describe('scaffolds routes', () => {
   let app: Awaited<ReturnType<typeof createApp>>;
@@ -22,6 +38,7 @@ describe('scaffolds routes', () => {
   });
 
   it('creates and retrieves a scaffold', async () => {
+    const jwks: any = await import('../../lib/jwks.js');
     const create = await app.inject({
       method: 'POST',
       url: `/v1/projects/${projectId}/test-scaffolds`,
@@ -32,6 +49,14 @@ describe('scaffolds routes', () => {
     });
     expect(create.statusCode).toBe(201);
     const created = create.json();
+    // ensure requireAuth path calls verifier with config-driven args
+    expect(jwks.verifyJwt).toHaveBeenCalled();
+    const args = jwks.verifyJwt.mock.calls[0][0];
+    expect(args.token).toBeTypeOf('string');
+    expect(args.issuer).toBe(process.env.JWT_ISSUER);
+    expect(args.audience).toBe(process.env.JWT_AUDIENCE);
+    expect(args.alg).toBe('RS256');
+    expect(args.jwksUrl).toBe(TEST_JWT_SECRET);
 
     const get = await app.inject({
       method: 'GET',
@@ -106,6 +131,13 @@ describe('scaffolds routes', () => {
   });
 
   it('requires scopes for write actions', async () => {
+    const jwks: any = await import('../../lib/jwks.js');
+    jwks.verifyJwt.mockResolvedValueOnce({
+      sub: 'sub-1', tenant_id: 't-1', user_id: 'u-1',
+      scopes: ['scaffold:read'],
+      iss: process.env.JWT_ISSUER, aud: process.env.JWT_AUDIENCE,
+      exp: Math.floor(Date.now() / 1000) + 60, iat: Math.floor(Date.now() / 1000),
+    });
     const readOnlyToken = createMockJWT({ scopes: ['scaffold:read'] });
     const denied = await app.inject({
       method: 'POST',
@@ -114,5 +146,17 @@ describe('scaffolds routes', () => {
       payload: { type: 'unit', framework: 'vitest', language: 'ts', config: {} },
     });
     expect(denied.statusCode).toBe(403);
+  });
+
+  it('returns 401 and does not call verifyJwt when Authorization header is missing', async () => {
+    const jwks: any = await import('../../lib/jwks.js');
+    jwks.verifyJwt.mockClear();
+    const denied = await app.inject({
+      method: 'POST',
+      url: `/v1/projects/${projectId}/test-scaffolds`,
+      payload: { type: 'unit', framework: 'vitest', language: 'ts', config: {} },
+    });
+    expect(denied.statusCode).toBe(401);
+    expect(jwks.verifyJwt).not.toHaveBeenCalled();
   });
 });

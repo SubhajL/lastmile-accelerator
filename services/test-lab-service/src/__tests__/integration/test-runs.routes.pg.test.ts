@@ -1,20 +1,36 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createApp } from '../../app.js';
 import { createMockJWT, TEST_JWT_SECRET } from '../fixtures/jwt-helpers.js';
 
 process.env.SERVICE_NAME = 'test-lab-service';
 process.env.SERVICE_PORT = '7202';
 process.env.DATABASE_URL = 'pgmem://testruns';
-process.env.REDIS_URL = 'r' + 'edis://localhost:6379';
-process.env.NATS_URL = 'n' + 'ats://localhost:4222';
-process.env.OTEL_EXPORTER_OTLP_ENDPOINT = 'h' + 'ttp://127.0.0.1:4318';
+process.env.REDIS_URL = 'redis://localhost:6379';
+process.env.NATS_URL = 'nats://localhost:4222';
+process.env.OTEL_EXPORTER_OTLP_ENDPOINT = 'http://127.0.0.1:4318';
 process.env.JWT_JWKS_URL = TEST_JWT_SECRET;
+process.env.JWT_ISSUER = 'https://auth.example.com/';
+process.env.JWT_AUDIENCE = 'test-lab-service';
 process.env.S3_BUCKET_PREVIEWS = 'test-previews';
-process.env.BROWSER_GRID_URL = 'h' + 'ttp://selenium-grid:4444';
-process.env.VAULT_ADDR = 'h' + 'ttp://vault:8200';
+process.env.BROWSER_GRID_URL = 'http://selenium-grid:4444';
+process.env.VAULT_ADDR = 'http://vault:8200';
 process.env.REPO_BACKEND = 'pg';
 
 const projectId = '11111111-1111-1111-1111-111111111111';
+
+// Mock JWKS verifier so requireAuth can operate without real keys
+vi.mock('../../lib/jwks.js', () => ({
+  verifyJwt: vi.fn(async () => ({
+    sub: 'sub-1',
+    tenant_id: 't-1',
+    user_id: 'u-1',
+    scopes: ['run:read', 'run:write', 'browser-run:read', 'browser-run:write'],
+    iss: process.env.JWT_ISSUER,
+    aud: process.env.JWT_AUDIENCE,
+    exp: Math.floor(Date.now() / 1000) + 60,
+    iat: Math.floor(Date.now() / 1000),
+  })),
+}));
 
 describe('test runs & browser runs routes (pg)', () => {
   let app: Awaited<ReturnType<typeof createApp>>;
@@ -30,6 +46,7 @@ describe('test runs & browser runs routes (pg)', () => {
   });
 
   it('creates a test run, updates status, lists with pagination & status filter; manages browser runs', async () => {
+    const jwks: any = await import('../../lib/jwks.js');
     // Create two runs
     const create1 = await app.inject({
       method: 'POST',
@@ -39,6 +56,14 @@ describe('test runs & browser runs routes (pg)', () => {
     });
     expect(create1.statusCode).toBe(201);
     const r1 = create1.json();
+    // verifyJwt called with config-driven args
+    expect(jwks.verifyJwt).toHaveBeenCalled();
+    const args1 = jwks.verifyJwt.mock.calls[0][0];
+    expect(args1.token).toBeTypeOf('string');
+    expect(args1.issuer).toBe(process.env.JWT_ISSUER);
+    expect(args1.audience).toBe(process.env.JWT_AUDIENCE);
+    expect(args1.alg).toBe('RS256');
+    expect(args1.jwksUrl).toBe(TEST_JWT_SECRET);
 
     const create2 = await app.inject({
       method: 'POST',
@@ -132,5 +157,13 @@ describe('test runs & browser runs routes (pg)', () => {
     });
     expect(bGet.statusCode).toBe(200);
     expect(bGet.json().id).toBe(br2.id);
+  });
+
+  it('returns 401 and does not call verifyJwt when Authorization header missing', async () => {
+    const jwks: any = await import('../../lib/jwks.js');
+    jwks.verifyJwt.mockClear();
+    const res = await app.inject({ method: 'GET', url: `/v1/projects/${projectId}/test-runs` });
+    expect(res.statusCode).toBe(401);
+    expect(jwks.verifyJwt).not.toHaveBeenCalled();
   });
 });
