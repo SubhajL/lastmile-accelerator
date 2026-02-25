@@ -1,7 +1,13 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createApp } from '../../app.js';
 import { createMockJWT, TEST_JWT_SECRET } from '../fixtures/jwt-helpers.js';
 
+vi.mock('../../lib/jwks.js', () => ({
+  verifyJwt: vi.fn(async ({ token }: { token: string }) => {
+    const { verify } = await import('jsonwebtoken');
+    return verify(token, TEST_JWT_SECRET, { algorithms: ['HS256'] });
+  }),
+}));
 process.env.SERVICE_NAME = 'test-lab-service';
 process.env.SERVICE_PORT = '7202';
 process.env.DATABASE_URL = 'pgmem://previews';

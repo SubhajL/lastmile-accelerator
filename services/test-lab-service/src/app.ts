@@ -23,8 +23,8 @@ export async function createApp() {
   // Error handler first
   registerErrorHandler(app);
 
-  // Auth plugin
-  await registerAuthPlugin(app, cfg.jwtJwksUrl);
+  // Auth plugin (JWKS-based hooks handle verification)
+  await registerAuthPlugin(app);
 
   // Repos: choose backend from config
   if (cfg.repoBackend === 'pg') {
@@ -98,7 +98,9 @@ export async function createApp() {
         bucketScreenshots: cfg.s3BucketArtifacts,
         nats,
         browserRunsRepo: app.repos.browserTestRuns!,
-        testFlow: async (driver: any) => { await driver.get('about:blank'); },
+        testFlow: async (driver: any) => {
+          await driver.get('about:blank');
+        },
         retry: { retries: 1, backoffMs: 500 },
       });
       const { wireEventSubscribers } = await import('./events/subscribers.js');
