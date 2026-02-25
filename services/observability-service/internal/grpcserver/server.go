@@ -3,16 +3,13 @@ package grpcserver
 import (
 	"context"
 	"encoding/json"
-	"strings"
 	"time"
 
 	"example.com/lma/observability-service/internal/logs"
-	"example.com/lma/observability-service/internal/middleware"
 	"example.com/lma/observability-service/internal/services"
 	"example.com/lma/observability-service/internal/traces"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -221,45 +218,3 @@ func _Golden_Handler(srv interface{}, ctx context.Context, dec func(interface{})
 	return interceptor(ctx, in, info, h)
 }
 
-// Auth interceptor using JWT Verifier and scope mapping.
-func UnaryAuthInterceptor(verifier middleware.Verifier) grpc.UnaryServerInterceptor {
-	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-		md, ok := metadata.FromIncomingContext(ctx)
-		if !ok { return nil, status.Error(codes.Unauthenticated, "missing metadata") }
-		auths := md.Get("authorization")
-		if len(auths) == 0 { return nil, status.Error(codes.Unauthenticated, "missing authorization") }
-		auth := auths[0]
-		if !strings.HasPrefix(strings.ToLower(auth), "bearer ") {
-			return nil, status.Error(codes.Unauthenticated, "invalid authorization header")
-		}
-		tok := strings.TrimSpace(auth[len("bearer "):])
-		claims, err := verifier.Verify(ctx, tok)
-		if err != nil { return nil, status.Error(codes.Unauthenticated, "invalid token") }
-		need := requiredScopesFor(info.FullMethod)
-		for _, n := range need {
-			if !contains(claims.Scopes, n) {
-				return nil, status.Error(codes.PermissionDenied, "forbidden")
-			}
-		}
-		return handler(ctx, req)
-	}
-}
-
-func requiredScopesFor(fullMethod string) []string {
-	switch fullMethod {
-	case "/"+serviceName+"/GetSLOStatus":
-		return []string{"observability:read"}
-	case "/"+serviceName+"/SearchTraces":
-		return []string{"observability:read"}
-	case "/"+serviceName+"/GetTrace":
-		return []string{"observability:read"}
-	case "/"+serviceName+"/SearchLogs":
-		return []string{"observability:read"}
-	case "/"+serviceName+"/Golden":
-		return []string{"observability:read"}
-	default:
-		return []string{"observability:read"}
-	}
-}
-
-func contains(ss []string, s string) bool { for _, x := range ss { if x==s { return true } } ; return false }
