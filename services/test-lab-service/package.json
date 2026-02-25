@@ -13,6 +13,7 @@
     "lint": "echo \"lint not configured yet\""
   },
   "dependencies": {
+    "jose": "^5.2.3",
     "fastify": "4.27.0",
     "@fastify/helmet": "^11.1.1",
     "@fastify/cors": "^8.4.2",
