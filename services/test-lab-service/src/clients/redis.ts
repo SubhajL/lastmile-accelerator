@@ -55,7 +55,7 @@ export async function createRedisClient(
    * @param ttlSec - Optional TTL in seconds
    */
   async function set(key: string, value: string, ttlSec?: number): Promise<void> {
-    if (ttlSec !== undefined) {
+    if (ttlSec !== undefined && ttlSec > 0) {
       await client.setEx(key, ttlSec, value);
     } else {
       await client.set(key, value);

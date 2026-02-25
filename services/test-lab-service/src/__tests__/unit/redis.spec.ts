@@ -137,6 +137,16 @@ describe('createRedisClient', () => {
     expect(result).toBe(testValue);
   });
 
+  test('set falls back to non-TTL set when ttlSec is 0', async () => {
+    const { createRedisClient } = await import('../../clients/redis.js');
+    const redis = await createRedisClient('redis://localhost:6379');
+
+    await redis.set('test:ttl:zero', 'x', 0);
+
+    expect(mockClient.set).toHaveBeenCalledWith('test:ttl:zero', 'x');
+    expect(mockClient.setEx).not.toHaveBeenCalled();
+  });
+
   test('incr increments counter atomically', async () => {
     const { createRedisClient } = await import('../../clients/redis.js');
     const redis = await createRedisClient('redis://localhost:6379');
