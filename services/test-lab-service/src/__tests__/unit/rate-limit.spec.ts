@@ -25,6 +25,12 @@ describe('createRateLimitMiddleware', () => {
         requestCounter.set(key, newValue);
         return newValue;
       }),
+      incrWithExpire: vi.fn(async (key: string) => {
+        const current = requestCounter.get(key) ?? 0;
+        const newValue = current + 1;
+        requestCounter.set(key, newValue);
+        return newValue;
+      }),
       expire: vi.fn(async () => {}),
       close: vi.fn(async () => {}),
     };
@@ -47,9 +53,7 @@ describe('createRateLimitMiddleware', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/test',
-        headers: {
-          'x-forwarded-for': '192.168.1.100',
-        },
+        remoteAddress: '192.168.1.100',
       });
 
       expect(response.statusCode).toBe(200);
@@ -74,9 +78,7 @@ describe('createRateLimitMiddleware', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/test',
-        headers: {
-          'x-forwarded-for': '192.168.1.100',
-        },
+        remoteAddress: '192.168.1.100',
       });
       expect(response.statusCode).toBe(200);
     }
@@ -85,9 +87,7 @@ describe('createRateLimitMiddleware', () => {
     const blockedResponse = await app.inject({
       method: 'GET',
       url: '/api/test',
-      headers: {
-        'x-forwarded-for': '192.168.1.100',
-      },
+      remoteAddress: '192.168.1.100',
     });
 
     expect(blockedResponse.statusCode).toBe(429);
@@ -116,19 +116,18 @@ describe('createRateLimitMiddleware', () => {
       await app.inject({
         method: 'GET',
         url: '/api/test',
-        headers: { 'x-forwarded-for': '192.168.1.100' },
+        remoteAddress: '192.168.1.100',
       });
     }
 
     const response = await app.inject({
       method: 'GET',
       url: '/api/test',
-      headers: { 'x-forwarded-for': '192.168.1.100' },
+      remoteAddress: '192.168.1.100',
     });
 
     expect(response.statusCode).toBe(429);
-    expect(response.headers['retry-after']).toBeDefined();
-    expect(Number(response.headers['retry-after'])).toBeGreaterThan(0);
+    expect(response.headers['retry-after']).toBe('60');
   });
 
   test('isolates limits per IP address (different IPs have separate quotas)', async () => {
@@ -148,9 +147,7 @@ describe('createRateLimitMiddleware', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/test',
-        headers: {
-          'x-forwarded-for': '192.168.1.1',
-        },
+        remoteAddress: '192.168.1.1',
       });
       expect(response.statusCode).toBe(200);
     }
@@ -159,9 +156,7 @@ describe('createRateLimitMiddleware', () => {
     const ipBResponse = await app.inject({
       method: 'GET',
       url: '/api/test',
-      headers: {
-        'x-forwarded-for': '192.168.1.2',
-      },
+      remoteAddress: '192.168.1.2',
     });
 
     // IP B should not be rate limited (different IP)
@@ -192,7 +187,7 @@ describe('createRateLimitMiddleware', () => {
     }
 
     // Redis incr should never be called for exempt routes
-    expect(mockRedis.incr).not.toHaveBeenCalled();
+    expect(mockRedis.incrWithExpire).not.toHaveBeenCalled();
   });
 
   test('falls back to IP when no tenant claim in JWT', async () => {
@@ -212,16 +207,38 @@ describe('createRateLimitMiddleware', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/test',
-        headers: {
-          'x-forwarded-for': '203.0.113.42',
-        },
+        remoteAddress: '203.0.113.42',
       });
 
       expect(response.statusCode).toBe(200);
     }
 
     // Verify rate limit key uses IP address
-    expect(mockRedis.incr).toHaveBeenCalledWith(expect.stringContaining('203.0.113.42'));
+    expect(mockRedis.incrWithExpire).toHaveBeenCalledWith(expect.stringContaining('203.0.113.42'), expect.any(Number));
+  });
+
+  test('uses JWT tenantId when user context is present', async () => {
+    const rateLimitConfig = {
+      requestsPerMinute: 5,
+      windowMs: 60000,
+      exemptRoutes: [],
+      keyPrefix: 'rate-limit:',
+    };
+
+    app.addHook('preHandler', async (req) => {
+      req.user = { sub: 'u-1', tenantId: 'tenant-123', userId: 'u-1', scopes: [] };
+    });
+    app.addHook('preHandler', createRateLimitMiddleware(mockRedis, rateLimitConfig));
+    app.get('/api/test', async () => ({ success: true }));
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/test',
+      remoteAddress: '203.0.113.42',
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(mockRedis.incrWithExpire).toHaveBeenCalledWith(expect.stringContaining('tenant-123'), expect.any(Number));
   });
 
   test('allows requests when Redis fails (fail-open)', async () => {
@@ -232,6 +249,9 @@ describe('createRateLimitMiddleware', () => {
       set: vi.fn(async () => {}),
       del: vi.fn(async () => {}),
       incr: vi.fn(async () => {
+        throw new Error('Redis connection timeout');
+      }),
+      incrWithExpire: vi.fn(async () => {
         throw new Error('Redis connection timeout');
       }),
       expire: vi.fn(async () => {}),
@@ -253,9 +273,7 @@ describe('createRateLimitMiddleware', () => {
     const response = await app.inject({
       method: 'GET',
       url: '/api/test',
-      headers: {
-        'x-forwarded-for': '192.168.1.100',
-      },
+      remoteAddress: '192.168.1.100',
     });
 
     expect(response.statusCode).toBe(200);

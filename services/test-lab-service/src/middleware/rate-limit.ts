@@ -10,21 +10,12 @@ export interface RateLimitConfig {
 
 /**
  * Extract tenant identifier from request.
- * Uses JWT sub claim if available, otherwise falls back to IP address.
+ * Uses JWT tenantId claim if available, otherwise falls back to IP address.
  */
 function getTenantId(request: FastifyRequest): string {
-  // Try to get tenant ID from JWT claims
-  const user = (request as any).user;
-  if (user && user.sub) {
-    return user.sub as string;
-  }
-
-  // Fall back to IP address from x-forwarded-for header
-  const forwarded = request.headers['x-forwarded-for'];
-  if (forwarded) {
-    // Handle both string and array formats
-    const forwardedIp = Array.isArray(forwarded) ? forwarded[0] : forwarded;
-    return forwardedIp.split(',')[0].trim();
+  const tenantId = request.user?.tenantId;
+  if (tenantId) {
+    return tenantId;
   }
 
   return request.ip;
@@ -49,7 +40,7 @@ function getTenantId(request: FastifyRequest): string {
 export function createRateLimitMiddleware(redis: RedisWrapper, config: RateLimitConfig) {
   return async function rateLimitHandler(request: FastifyRequest, reply: FastifyReply) {
     // Skip rate limiting for exempt routes (use route URL to ignore query strings)
-    const routePath = (request as any).routeOptions?.url || request.url.split('?')[0];
+    const routePath = request.url.split('?')[0];
     if (config.exemptRoutes.includes(routePath)) {
       return;
     }
@@ -59,13 +50,7 @@ export function createRateLimitMiddleware(redis: RedisWrapper, config: RateLimit
     const rateLimitKey = `${config.keyPrefix}${tenantId}`;
 
     try {
-      // Atomically increment counter
-      const requestCount = await redis.incr(rateLimitKey);
-
-      // Set TTL on first request
-      if (requestCount === 1) {
-        await redis.expire(rateLimitKey, windowSec);
-      }
+      const requestCount = await redis.incrWithExpire(rateLimitKey, windowSec);
 
       // Check if limit exceeded
       if (requestCount > config.requestsPerMinute) {
@@ -89,7 +74,7 @@ export function createRateLimitMiddleware(redis: RedisWrapper, config: RateLimit
       // Within limit - allow request to continue
     } catch (error) {
       // Redis error - fail open to maintain availability
-      console.error(`Rate limit check failed for ${tenantId}:`, error);
+      request.log.warn({ err: error, tenantId }, 'Rate limit check failed');
       // Allow request despite error
     }
   };
