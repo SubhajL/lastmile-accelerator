@@ -120,6 +120,6 @@ export async function verifyJwt(input: VerifyJwtInput): Promise<JWTPayload> {
   });
 
   const parsed = jwtPayloadSchema.parse(payload);
-  const aud = Array.isArray(parsed.aud) ? parsed.aud[0] : parsed.aud;
+  const aud = Array.isArray(parsed.aud) ? input.audience : parsed.aud;
   return { ...parsed, aud };
 }
