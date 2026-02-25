@@ -106,8 +106,8 @@ export const optionalAuth: preHandlerHookHandler = async (
   const token = extractBearerToken(header);
   if (!token) return; // proceed unauthenticated
 
+  const cfg = getConfig();
   try {
-    const cfg = getConfig();
     const claims = await verifyJwt({
       token,
       issuer: cfg.jwtIssuer,

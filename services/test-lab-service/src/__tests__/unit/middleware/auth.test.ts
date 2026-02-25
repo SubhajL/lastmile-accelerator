@@ -1,7 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import Fastify from 'fastify';
 import type { FastifyInstance } from 'fastify';
-import { registerAuthPlugin, requireAuth, requireScopes } from '../../../middleware/auth.js';
+import {
+  registerAuthPlugin,
+  requireAuth,
+  optionalAuth,
+  requireScopes,
+  extractBearerToken,
+  toUserContext,
+} from '../../../middleware/auth.js';
 import {
   createMockJWT,
   createExpiredJWT,
@@ -186,6 +193,78 @@ describe('Auth Middleware', () => {
       expect(body.user.tenantId).toBe('custom-tenant');
       expect(body.user.userId).toBe('custom-user');
       expect(body.user.scopes).toEqual(['admin:all']);
+    });
+  });
+
+  describe('optionalAuth', () => {
+    it('should populate request.user when JWT is valid', async () => {
+      const token = createMockJWT();
+
+      app.get('/test', { preHandler: optionalAuth }, async (request) => {
+        return { user: request.user };
+      });
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/test',
+        headers: { authorization: `Bearer ${token}` },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json().user.userId).toBe('user-123');
+    });
+
+    it('should continue unauthenticated when Authorization header is missing', async () => {
+      app.get('/test', { preHandler: optionalAuth }, async (request) => {
+        return { user: request.user };
+      });
+
+      const response = await app.inject({ method: 'GET', url: '/test' });
+      expect(response.statusCode).toBe(200);
+      expect(response.json().user).toBeNull();
+    });
+
+    it('should not swallow config errors', async () => {
+      const token = createMockJWT();
+      const cfg = await import('../../../config.js');
+      vi.mocked(cfg.getConfig).mockImplementationOnce(() => {
+        throw new Error('bad env');
+      });
+
+      app.get('/test', { preHandler: optionalAuth }, async () => {
+        return { ok: true };
+      });
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/test',
+        headers: { authorization: `Bearer ${token}` },
+      });
+
+      expect(response.statusCode).toBe(500);
+    });
+  });
+
+  describe('extractBearerToken', () => {
+    it('parses Bearer tokens with exact prefix', async () => {
+      expect(extractBearerToken(`Bearer ${TEST_JWT_SECRET}`)).toBe(TEST_JWT_SECRET);
+      expect(extractBearerToken(`bearer ${TEST_JWT_SECRET}`)).toBeNull();
+      expect(extractBearerToken('Bearer')).toBeNull();
+    });
+  });
+
+  describe('toUserContext', () => {
+    it('maps JWT claims to user context', async () => {
+      const ctx = toUserContext({
+        sub: 's',
+        tenant_id: 't',
+        user_id: 'u',
+        scopes: [],
+        exp: 0,
+        iat: 0,
+        iss: 'https://auth.example.com/',
+      });
+      expect(ctx).toEqual({ sub: 's', tenantId: 't', userId: 'u', scopes: [] });
     });
   });
 
