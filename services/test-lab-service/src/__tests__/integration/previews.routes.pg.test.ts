@@ -8,7 +8,6 @@ vi.mock('../../lib/jwks.js', () => ({
     return verify(token, TEST_JWT_SECRET, { algorithms: ['HS256'] });
   }),
 }));
-
 process.env.SERVICE_NAME = 'test-lab-service';
 process.env.SERVICE_PORT = '7202';
 process.env.DATABASE_URL = 'pgmem://previews';
