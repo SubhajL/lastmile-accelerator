@@ -1,0 +1,31 @@
+name: pr-ci-observability-service
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "services/observability-service/**"
+      - "packages/contracts/observability/**"
+permissions:
+  contents: read
+jobs:
+  ci:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Unit tests (observability-service)
+        working-directory: services/observability-service
+        run: go test ./... -cover
+
+      - name: Budget (observability-service)
+        working-directory: services/observability-service
+        run: make budget
