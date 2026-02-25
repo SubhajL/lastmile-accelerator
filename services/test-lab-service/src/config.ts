@@ -88,7 +88,7 @@ export function loadConfig(): ServerConfig {
       JWT_JWKS_URL: process.env.JWT_JWKS_URL,
       JWT_ISSUER: process.env.JWT_ISSUER,
       JWT_AUDIENCE: process.env.JWT_AUDIENCE,
-      JWT_ALG: (process.env.JWT_ALG as any) || 'RS256',
+      JWT_ALG: process.env.JWT_ALG,
       JWKS_CACHE_TTL_MS: process.env.JWKS_CACHE_TTL_MS || '600000',
       JWT_CLOCK_SKEW_SEC: process.env.JWT_CLOCK_SKEW_SEC || '60',
       S3_BUCKET_PREVIEWS: process.env.S3_BUCKET_PREVIEWS,

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createApp } from '../../app.js';
-import { requireAuth, requireScopes } from '../../middleware/auth.js';
+import { authenticateRequest, requireScopes } from '../../middleware/auth.js';
 import { registerErrorHandler } from '../../middleware/error-handler.js';
 import { createMockJWT, TEST_JWT_SECRET } from '../fixtures/jwt-helpers.js';
 import { applyTestEnv } from '../fixtures/env.js';
@@ -50,10 +50,14 @@ describe('Server bootstrap', () => {
 
   it('supports protected routes with JWT + scopes', async () => {
     // Mount a protected route for testing
-    app.get('/_protected', { preHandler: [requireAuth, requireScopes('test:read')] }, async (req) => {
+    app.get(
+      '/_protected',
+      { preHandler: [authenticateRequest, requireScopes('test:read')] },
+      async (req) => {
       const u = (req as any).user;
       return { ok: true, uid: u?.userId };
-    });
+      }
+    );
 
     const token = createMockJWT({ scopes: ['test:read'] });
 
