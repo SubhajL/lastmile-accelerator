@@ -76,71 +76,71 @@ export async function createApp() {
       app.decorate('repos', { scaffolds: new InMemoryScaffoldsRepo() });
     }
 
-  // Health & metrics
-  app.get('/healthz', async () => 'ok');
-  createMetricsRoute(app);
+    // Health & metrics
+    app.get('/healthz', async () => 'ok');
+    createMetricsRoute(app);
 
-  // Routes
-  const { registerScaffoldRoutes } = await import('./routes/scaffolds.routes.js');
-  registerScaffoldRoutes(app);
-  if (cfg.repoBackend === 'pg') {
-    const { registerTestRunRoutes } = await import('./routes/test-runs.routes.js');
-    registerTestRunRoutes(app);
-    const { registerPreviewRoutes } = await import('./routes/previews.routes.js');
-    registerPreviewRoutes(app);
+    // Routes
+    const { registerScaffoldRoutes } = await import('./routes/scaffolds.routes.js');
+    registerScaffoldRoutes(app);
+    if (cfg.repoBackend === 'pg') {
+      const { registerTestRunRoutes } = await import('./routes/test-runs.routes.js');
+      registerTestRunRoutes(app);
+      const { registerPreviewRoutes } = await import('./routes/previews.routes.js');
+      registerPreviewRoutes(app);
 
-    // Event subscribers wiring (feature-flagged)
-    if (cfg.enableEventSubscribers) {
-      const { createNatsConnection } = await import('./clients/nats.js');
-      const nats = await createNatsConnection(cfg.natsUrl);
-      const { createS3Client } = await import('./clients/s3.js');
-      const s3 = createS3Client(cfg.s3Region);
-      const { createK8sClient } = await import('./clients/k8s.js');
-      const k8s = await createK8sClient();
-      const { RunnerOrchestrator } = await import('./services/runner.js');
-      const runner = new RunnerOrchestrator({
-        config: {
-          namespace: cfg.k8sNamespace,
-          serviceAccount: cfg.k8sServiceAccount,
-          image: cfg.k8sJobImageDefault,
-          ttlSecondsAfterFinished: cfg.k8sTtlSecondsAfterFinished,
-          bucketArtifacts: cfg.s3BucketArtifacts,
-        },
-        batch: k8s.batch as any,
-        s3: s3 as any,
-        nats,
-        testRunsRepo: app.repos.testRuns!,
-      });
-      const { BrowserGridRunner } = await import('./services/browser-grid.js');
-      const gridRunner = new BrowserGridRunner({
-        createDriver: async (browser: string, gridUrl: string) => {
-          const mod: any = await import('selenium-webdriver');
-          const driver = await new mod.Builder().forBrowser(browser).usingServer(gridUrl).build();
-          return driver as any;
-        },
-        gridUrl: cfg.browserGridUrl,
-        s3: s3 as any,
-        bucketScreenshots: cfg.s3BucketArtifacts,
-        nats,
-        browserRunsRepo: app.repos.browserTestRuns!,
-        testFlow: async (driver: any) => {
-          await driver.get('about:blank');
-        },
-        retry: { retries: 1, backoffMs: 500 },
-      });
-      const { wireEventSubscribers } = await import('./events/subscribers.js');
-      await wireEventSubscribers({ nats, runner, grid: gridRunner });
+      // Event subscribers wiring (feature-flagged)
+      if (cfg.enableEventSubscribers) {
+        const { createNatsConnection } = await import('./clients/nats.js');
+        const nats = await createNatsConnection(cfg.natsUrl);
+        const { createS3Client } = await import('./clients/s3.js');
+        const s3 = createS3Client(cfg.s3Region);
+        const { createK8sClient } = await import('./clients/k8s.js');
+        const k8s = await createK8sClient();
+        const { RunnerOrchestrator } = await import('./services/runner.js');
+        const runner = new RunnerOrchestrator({
+          config: {
+            namespace: cfg.k8sNamespace,
+            serviceAccount: cfg.k8sServiceAccount,
+            image: cfg.k8sJobImageDefault,
+            ttlSecondsAfterFinished: cfg.k8sTtlSecondsAfterFinished,
+            bucketArtifacts: cfg.s3BucketArtifacts,
+          },
+          batch: k8s.batch as any,
+          s3: s3 as any,
+          nats,
+          testRunsRepo: app.repos.testRuns!,
+        });
+        const { BrowserGridRunner } = await import('./services/browser-grid.js');
+        const gridRunner = new BrowserGridRunner({
+          createDriver: async (browser: string, gridUrl: string) => {
+            const mod: any = await import('selenium-webdriver');
+            const driver = await new mod.Builder().forBrowser(browser).usingServer(gridUrl).build();
+            return driver as any;
+          },
+          gridUrl: cfg.browserGridUrl,
+          s3: s3 as any,
+          bucketScreenshots: cfg.s3BucketArtifacts,
+          nats,
+          browserRunsRepo: app.repos.browserTestRuns!,
+          testFlow: async (driver: any) => {
+            await driver.get('about:blank');
+          },
+          retry: { retries: 1, backoffMs: 500 },
+        });
+        const { wireEventSubscribers } = await import('./events/subscribers.js');
+        await wireEventSubscribers({ nats, runner, grid: gridRunner });
 
-      app.addHook('onClose', async () => {
-        await nats.close();
-      });
+        app.addHook('onClose', async () => {
+          await nats.close();
+        });
+      }
     }
-  }
 
-  // Redis cleanup on app shutdown
-  app.addHook('onClose', async () => {
-    await app.redis.close();
-  });
+    // Redis cleanup on app shutdown
+    app.addHook('onClose', async () => {
+      await app.redis.close();
+    });
 
     return app;
   } catch (err) {
