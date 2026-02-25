@@ -14,6 +14,7 @@ export interface RedisWrapper {
   set: (key: string, value: string, ttlSec?: number) => Promise<void>;
   del: (key: string) => Promise<void>;
   incr: (key: string) => Promise<number>;
+  incrWithExpire: (key: string, ttlSec: number) => Promise<number>;
   expire: (key: string, ttlSec: number) => Promise<void>;
   close: () => Promise<void>;
 }
@@ -78,6 +79,20 @@ export async function createRedisClient(
   }
 
   /**
+   * Atomically increment counter and set TTL.
+   * Prevents race where INCR succeeds but EXPIRE is never applied.
+   *
+   * @returns New value after increment
+   */
+  async function incrWithExpire(key: string, ttlSec: number): Promise<number> {
+    const res = await client.multi().incr(key).expire(key, ttlSec).exec();
+    if (!res) throw new Error('Redis transaction aborted');
+    const newValue = res[0];
+    if (typeof newValue !== 'number') throw new Error('Redis INCR returned non-number result');
+    return newValue;
+  }
+
+  /**
    * Set TTL on existing key.
    * @param key - Redis key
    * @param ttlSec - TTL in seconds
@@ -99,6 +114,7 @@ export async function createRedisClient(
     set,
     del,
     incr,
+    incrWithExpire,
     expire,
     close,
   };

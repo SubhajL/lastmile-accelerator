@@ -5,6 +5,7 @@ type MockRedisClient = {
   connect: ReturnType<typeof vi.fn>;
   quit: ReturnType<typeof vi.fn>;
   on: ReturnType<typeof vi.fn>;
+  multi: ReturnType<typeof vi.fn>;
   get: ReturnType<typeof vi.fn>;
   set: ReturnType<typeof vi.fn>;
   setEx: ReturnType<typeof vi.fn>;
@@ -21,6 +22,27 @@ const mockClient: MockRedisClient = {
   quit: vi.fn().mockResolvedValue(undefined),
   on: vi.fn((event: string, handler: (err: unknown) => void) => {
     if (event === 'error') onErrorHandler = handler;
+  }),
+  multi: vi.fn(() => {
+    const commands: Array<() => Promise<unknown>> = [];
+
+    const chain = {
+      incr(key: string) {
+        commands.push(async () => mockClient.incr(key));
+        return chain;
+      },
+      expire(key: string, ttlSec: number) {
+        commands.push(async () => mockClient.expire(key, ttlSec));
+        return chain;
+      },
+      async exec() {
+        const results: unknown[] = [];
+        for (const cmd of commands) results.push(await cmd());
+        return results;
+      },
+    };
+
+    return chain;
   }),
   get: vi.fn(async (key: string) => {
     const entry = mockStore.get(key);
@@ -129,6 +151,24 @@ describe('createRedisClient', () => {
 
     const thirdIncr = await redis.incr(testKey);
     expect(thirdIncr).toBe(3);
+  });
+
+  test('incrWithExpire increments counter and applies TTL', async () => {
+    const { createRedisClient } = await import('../../clients/redis.js');
+    const redis = await createRedisClient('redis://localhost:6379');
+
+    const testKey = 'test:counter:ttl';
+    const now = Date.now();
+    const dateNowSpy = vi.spyOn(Date, 'now');
+    dateNowSpy.mockReturnValue(now);
+
+    const firstIncr = await redis.incrWithExpire(testKey, 1);
+    expect(firstIncr).toBe(1);
+
+    dateNowSpy.mockReturnValue(now + 1500);
+    const expired = await redis.get(testKey);
+    expect(expired).toBeNull();
+    dateNowSpy.mockRestore();
   });
 
   test('del removes key from cache', async () => {
