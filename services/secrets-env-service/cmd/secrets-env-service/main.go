@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"database/sql"
+	"fmt"
 	"net"
 	"net/http"
 	"os"
@@ -26,6 +27,7 @@ import (
 	"example.com/lma/secrets-env-service/internal/security"
 	"example.com/lma/secrets-env-service/internal/server"
 	"example.com/lma/secrets-env-service/internal/service"
+	"example.com/lma/secrets-env-service/internal/startup"
 	"example.com/lma/secrets-env-service/internal/vault"
 )
 
@@ -51,11 +53,12 @@ func main() {
 	var secretsRepo repository.SecretsMetaRepo
 	var auditRepo *repository.AuditLogRepositoryPG
 	var (
+		db            *sql.DB
 		parityRepoAny any
 		leakRepoAny   any
 	)
 	if cfg.Database.UsePGRepos {
-		db, err := sql.Open("pgx", cfg.Database.URL)
+		db, err = sql.Open("pgx", cfg.Database.URL)
 		if err != nil {
 			panic(err)
 		}
@@ -86,9 +89,10 @@ func main() {
 		_ = lrpg
 	}
 
-	// Vault client (test mode for dev wiring; replace with AppRole auth later)
-	v := &vault.Client{}
-	v.SetTestMode(true)
+	v, err := vault.NewClient(&cfg.Vault)
+	if err != nil {
+		panic(err)
+	}
 
 	// Eventing (optional)
 	var publisher events.Publisher
@@ -143,7 +147,21 @@ func main() {
 	limiter := security.NewRateLimiter(float64(cfg.RateLimit.RequestsPerSec), cfg.RateLimit.Burst)
 	mw = append(mw, handlers.RateLimitHTTP(limiter.Allow))
 
-	r := server.SetupRoutes(secretsH, parityH, leakH, mw...)
+	criticalChecks := map[string]startup.CheckFunc{
+		"vault": func(ctx context.Context) error { return v.HealthCheck(ctx) },
+	}
+	if db != nil {
+		criticalChecks["postgres"] = func(ctx context.Context) error { return db.PingContext(ctx) }
+	}
+	readiness := startup.NewReadiness(criticalChecks, nil)
+	startCtx, cancelStartup := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelStartup()
+	rep, ok := readiness.Check(startCtx)
+	if !ok {
+		panic(fmt.Errorf("startup readiness failed: %v", rep.Checks))
+	}
+
+	r := server.SetupRoutes(secretsH, parityH, leakH, handlers.ReadyCheck(readiness), mw...)
 	h := server.NewServer(":"+cfg.ServicePort, r)
 
 	// TLS (mTLS) optional

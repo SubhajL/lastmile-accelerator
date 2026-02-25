@@ -28,13 +28,22 @@ type leakHTTP interface {
 }
 
 // SetupRoutes configures chi router with all endpoints
-func SetupRoutes(secretsH secretsHTTP, parityH parityHTTP, leakH leakHTTP, middlewares ...func(http.Handler) http.Handler) http.Handler {
+func SetupRoutes(secretsH secretsHTTP, parityH parityHTTP, leakH leakHTTP, readyz http.HandlerFunc, middlewares ...func(http.Handler) http.Handler) http.Handler {
 	r := chi.NewRouter()
-	for _, mw := range middlewares { r.Use(mw) }
+	for _, mw := range middlewares {
+		r.Use(mw)
+	}
 	r.Use(handlers.RequireJSONContentType())
 
 	// health
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) { handlers.HealthCheck(w, r) })
+	r.Get("/readyz", func(w http.ResponseWriter, r *http.Request) {
+		if readyz == nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		readyz(w, r)
+	})
 	// metrics (Prometheus)
 	r.Get("/metrics", func(w http.ResponseWriter, r *http.Request) {
 		promhttp.Handler().ServeHTTP(w, r)
@@ -45,47 +54,77 @@ func SetupRoutes(secretsH secretsHTTP, parityH parityHTTP, leakH leakHTTP, middl
 		r.Route("/projects/{projectID}", func(r chi.Router) {
 			// secrets (protected)
 			r.With(handlers.RequireScopes("secrets:write"), handlers.TenantIsolation()).Post("/secrets", func(w http.ResponseWriter, r *http.Request) {
-				if secretsH == nil { handlers.Error(w, http.StatusNotImplemented, "not wired", nil); return }
+				if secretsH == nil {
+					handlers.Error(w, http.StatusNotImplemented, "not wired", nil)
+					return
+				}
 				secretsH.CreateSecret(w, r)
 			})
 			r.With(handlers.RequireScopes("secrets:read"), handlers.TenantIsolation()).Get("/secrets", func(w http.ResponseWriter, r *http.Request) {
-				if secretsH == nil { handlers.Error(w, http.StatusNotImplemented, "not wired", nil); return }
+				if secretsH == nil {
+					handlers.Error(w, http.StatusNotImplemented, "not wired", nil)
+					return
+				}
 				secretsH.ListSecrets(w, r)
 			})
-	r.With(handlers.RequireScopes("secrets:read"), handlers.TenantIsolation(), handlers.ValidateKeyParam()).Get("/secrets/{key}", func(w http.ResponseWriter, r *http.Request) {
-				if secretsH == nil { handlers.Error(w, http.StatusNotImplemented, "not wired", nil); return }
+			r.With(handlers.RequireScopes("secrets:read"), handlers.TenantIsolation(), handlers.ValidateKeyParam()).Get("/secrets/{key}", func(w http.ResponseWriter, r *http.Request) {
+				if secretsH == nil {
+					handlers.Error(w, http.StatusNotImplemented, "not wired", nil)
+					return
+				}
 				secretsH.GetSecret(w, r)
 			})
 			r.With(handlers.RequireScopes("secrets:write"), handlers.TenantIsolation(), handlers.ValidateKeyParam()).Delete("/secrets/{key}", func(w http.ResponseWriter, r *http.Request) {
-				if secretsH == nil { handlers.Error(w, http.StatusNotImplemented, "not wired", nil); return }
+				if secretsH == nil {
+					handlers.Error(w, http.StatusNotImplemented, "not wired", nil)
+					return
+				}
 				secretsH.DeleteSecret(w, r)
 			})
 
 			// parity (protected)
 			r.With(handlers.RequireScopes("parity:compute"), handlers.TenantIsolation()).Post("/env-parity", func(w http.ResponseWriter, r *http.Request) {
-				if parityH == nil { handlers.Error(w, http.StatusNotImplemented, "not wired", nil); return }
+				if parityH == nil {
+					handlers.Error(w, http.StatusNotImplemented, "not wired", nil)
+					return
+				}
 				parityH.CheckParity(w, r)
 			})
 			r.With(handlers.RequireScopes("parity:read"), handlers.TenantIsolation()).Get("/env-parity/latest", func(w http.ResponseWriter, r *http.Request) {
-				if parityH == nil { handlers.Error(w, http.StatusNotImplemented, "not wired", nil); return }
+				if parityH == nil {
+					handlers.Error(w, http.StatusNotImplemented, "not wired", nil)
+					return
+				}
 				parityH.GetLatestCheck(w, r)
 			})
 			r.With(handlers.RequireScopes("parity:read"), handlers.TenantIsolation()).Get("/env-parity/history", func(w http.ResponseWriter, r *http.Request) {
-				if parityH == nil { handlers.Error(w, http.StatusNotImplemented, "not wired", nil); return }
+				if parityH == nil {
+					handlers.Error(w, http.StatusNotImplemented, "not wired", nil)
+					return
+				}
 				parityH.GetCheckHistory(w, r)
 			})
 
 			// client leak scan (protected)
 			r.With(handlers.RequireScopes("leaks:scan"), handlers.TenantIsolation()).Post("/scan/client-leaks", func(w http.ResponseWriter, r *http.Request) {
-				if leakH == nil { handlers.Error(w, http.StatusNotImplemented, "not wired", nil); return }
+				if leakH == nil {
+					handlers.Error(w, http.StatusNotImplemented, "not wired", nil)
+					return
+				}
 				leakH.ScanSnapshot(w, r)
 			})
 			r.With(handlers.RequireScopes("leaks:read"), handlers.TenantIsolation()).Get("/scan/client-leaks/{snapshotID}", func(w http.ResponseWriter, r *http.Request) {
-				if leakH == nil { handlers.Error(w, http.StatusNotImplemented, "not wired", nil); return }
+				if leakH == nil {
+					handlers.Error(w, http.StatusNotImplemented, "not wired", nil)
+					return
+				}
 				leakH.GetScanResults(w, r)
 			})
 			r.With(handlers.RequireScopes("leaks:write"), handlers.TenantIsolation()).Patch("/scan/client-leaks/{scanID}/fix", func(w http.ResponseWriter, r *http.Request) {
-				if leakH == nil { handlers.Error(w, http.StatusNotImplemented, "not wired", nil); return }
+				if leakH == nil {
+					handlers.Error(w, http.StatusNotImplemented, "not wired", nil)
+					return
+				}
 				leakH.MarkAsFixed(w, r)
 			})
 		})
