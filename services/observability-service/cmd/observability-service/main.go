@@ -117,6 +117,9 @@ prom := metrics.NewPromClient(cfg.PrometheusURL, &http.Client{Timeout: 5 * time.
 sloSvc := services.NewSLOService(sloRepo, telProvider.Tracer(), prom)
 sloHandler := handlers.NewSLOHandler(sloSvc)
 
+	// Install scheduler metrics recorder (OTel-backed)
+	scheduler.UseMetricsRecorder(scheduler.NewOTelRecorder(telProvider.Meter()))
+
 	// Start SLO evaluator scheduler with configurable env
 slEval := scheduler.NewSLOEvaluator(sloRepo, sloSvc)
 interval := 1 * time.Minute
