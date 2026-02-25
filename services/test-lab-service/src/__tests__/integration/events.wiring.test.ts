@@ -1,6 +1,19 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createApp } from '../../app.js';
 
+// Mock Redis so tests run without a live Redis instance
+vi.mock('../../clients/redis.js', () => ({
+  createRedisClient: vi.fn().mockResolvedValue({
+    get: vi.fn().mockResolvedValue(null),
+    set: vi.fn().mockResolvedValue(undefined),
+    del: vi.fn().mockResolvedValue(undefined),
+    incr: vi.fn().mockResolvedValue(1),
+    incrWithExpire: vi.fn().mockResolvedValue(1),
+    expire: vi.fn().mockResolvedValue(undefined),
+    close: vi.fn().mockResolvedValue(undefined),
+  }),
+}));
+
 vi.mock('../../clients/nats.js', () => {
   const close = vi.fn().mockResolvedValue(undefined);
   return {

@@ -214,7 +214,7 @@ describe('createRateLimitMiddleware', () => {
     }
 
     // Verify rate limit key uses IP address
-    expect(mockRedis.incrWithExpire).toHaveBeenCalledWith(expect.stringContaining('203.0.113.42'), expect.any(Number));
+    expect(mockRedis.incr).toHaveBeenCalledWith(expect.stringContaining('203.0.113.42'));
   });
 
   test('uses JWT tenantId when user context is present', async () => {
@@ -238,7 +238,7 @@ describe('createRateLimitMiddleware', () => {
     });
 
     expect(response.statusCode).toBe(200);
-    expect(mockRedis.incrWithExpire).toHaveBeenCalledWith(expect.stringContaining('tenant-123'), expect.any(Number));
+    expect(mockRedis.incr).toHaveBeenCalledWith(expect.stringContaining('tenant-123'));
   });
 
   test('allows requests when Redis fails (fail-open)', async () => {

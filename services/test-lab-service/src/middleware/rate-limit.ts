@@ -50,7 +50,12 @@ export function createRateLimitMiddleware(redis: RedisWrapper, config: RateLimit
     const rateLimitKey = `${config.keyPrefix}${tenantId}`;
 
     try {
-      const requestCount = await redis.incrWithExpire(rateLimitKey, windowSec);
+      // Increment first; set TTL only on first request so the window doesn't
+      // extend on every subsequent call (incrWithExpire resets TTL each time).
+      const requestCount = await redis.incr(rateLimitKey);
+      if (requestCount === 1) {
+        await redis.expire(rateLimitKey, windowSec);
+      }
 
       // Check if limit exceeded
       if (requestCount > config.requestsPerMinute) {
