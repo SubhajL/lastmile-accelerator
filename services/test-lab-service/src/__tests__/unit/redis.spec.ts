@@ -1,62 +1,74 @@
 import { describe, expect, test, beforeEach, vi } from 'vitest';
 import type { RedisWrapper } from '../../clients/redis.js';
 
-// Mock the redis module
-vi.mock('redis', () => {
-  const mockStore = new Map<string, { value: string; expiresAt?: number }>();
+type MockRedisClient = {
+  connect: ReturnType<typeof vi.fn>;
+  quit: ReturnType<typeof vi.fn>;
+  on: ReturnType<typeof vi.fn>;
+  get: ReturnType<typeof vi.fn>;
+  set: ReturnType<typeof vi.fn>;
+  setEx: ReturnType<typeof vi.fn>;
+  del: ReturnType<typeof vi.fn>;
+  incr: ReturnType<typeof vi.fn>;
+  expire: ReturnType<typeof vi.fn>;
+};
 
-  const mockClient = {
-    connect: vi.fn().mockResolvedValue(undefined),
-    quit: vi.fn().mockResolvedValue(undefined),
-    on: vi.fn(),
-    get: vi.fn(async (key: string) => {
-      const entry = mockStore.get(key);
-      if (!entry) return null;
-      if (entry.expiresAt && Date.now() > entry.expiresAt) {
-        mockStore.delete(key);
-        return null;
-      }
-      return entry.value;
-    }),
-    set: vi.fn(async (key: string, value: string) => {
-      mockStore.set(key, { value });
-    }),
-    setEx: vi.fn(async (key: string, ttlSec: number, value: string) => {
-      mockStore.set(key, {
-        value,
-        expiresAt: Date.now() + ttlSec * 1000,
-      });
-    }),
-    del: vi.fn(async (key: string) => {
+const mockStore = new Map<string, { value: string; expiresAt?: number }>();
+let onErrorHandler: ((err: unknown) => void) | undefined;
+
+const mockClient: MockRedisClient = {
+  connect: vi.fn().mockResolvedValue(undefined),
+  quit: vi.fn().mockResolvedValue(undefined),
+  on: vi.fn((event: string, handler: (err: unknown) => void) => {
+    if (event === 'error') onErrorHandler = handler;
+  }),
+  get: vi.fn(async (key: string) => {
+    const entry = mockStore.get(key);
+    if (!entry) return null;
+    if (entry.expiresAt && Date.now() > entry.expiresAt) {
       mockStore.delete(key);
-    }),
-    incr: vi.fn(async (key: string) => {
-      const entry = mockStore.get(key);
-      const currentValue = entry ? parseInt(entry.value, 10) : 0;
-      const newValue = currentValue + 1;
-      mockStore.set(key, { value: String(newValue) });
-      return newValue;
-    }),
-    expire: vi.fn(async (key: string, ttlSec: number) => {
-      const entry = mockStore.get(key);
-      if (entry) {
-        entry.expiresAt = Date.now() + ttlSec * 1000;
-      }
-    }),
-    _clearStore: () => mockStore.clear(),
-  };
+      return null;
+    }
+    return entry.value;
+  }),
+  set: vi.fn(async (key: string, value: string) => {
+    mockStore.set(key, { value });
+  }),
+  setEx: vi.fn(async (key: string, ttlSec: number, value: string) => {
+    mockStore.set(key, {
+      value,
+      expiresAt: Date.now() + ttlSec * 1000,
+    });
+  }),
+  del: vi.fn(async (key: string) => {
+    mockStore.delete(key);
+  }),
+  incr: vi.fn(async (key: string) => {
+    const entry = mockStore.get(key);
+    const currentValue = entry ? parseInt(entry.value, 10) : 0;
+    const newValue = currentValue + 1;
+    mockStore.set(key, { value: String(newValue) });
+    return newValue;
+  }),
+  expire: vi.fn(async (key: string, ttlSec: number) => {
+    const entry = mockStore.get(key);
+    if (entry) {
+      entry.expiresAt = Date.now() + ttlSec * 1000;
+    }
+  }),
+};
 
-  return {
-    createClient: vi.fn(() => mockClient),
-  };
-});
+const createClient = vi.fn(() => mockClient);
+
+vi.mock('redis', () => ({
+  createClient,
+}));
 
 describe('createRedisClient', () => {
   beforeEach(async () => {
-    // Reset mock store before each test
-    const { createClient } = await import('redis');
-    const mockClient = createClient() as any;
-    mockClient._clearStore();
+    mockStore.clear();
+    onErrorHandler = undefined;
+    vi.clearAllMocks();
   });
 
   test('connects successfully with valid URL', async () => {
@@ -156,5 +168,15 @@ describe('createRedisClient', () => {
     const redis = await createRedisClient('redis://localhost:6379');
 
     await expect(redis.close()).resolves.not.toThrow();
+  });
+
+  test('logs Redis errors via provided logger', async () => {
+    const logger = { error: vi.fn() };
+    const { createRedisClient } = await import('../../clients/redis.js');
+    await createRedisClient('redis://localhost:6379', { logger });
+
+    const err = new Error('boom');
+    onErrorHandler?.(err);
+    expect(logger.error).toHaveBeenCalledWith({ err }, 'Redis client error');
   });
 });

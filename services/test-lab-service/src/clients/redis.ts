@@ -1,6 +1,14 @@
 import { createClient } from 'redis';
 import type { RedisClientType } from 'redis';
 
+export interface RedisClientLogger {
+  error: (obj: unknown, msg?: string) => void;
+}
+
+export interface CreateRedisClientOptions {
+  logger?: RedisClientLogger;
+}
+
 export interface RedisWrapper {
   get: (key: string) => Promise<string | null>;
   set: (key: string, value: string, ttlSec?: number) => Promise<void>;
@@ -17,12 +25,15 @@ export interface RedisWrapper {
  * @param url - Redis connection URL (e.g., redis://localhost:6379)
  * @returns RedisWrapper with typed operations
  */
-export async function createRedisClient(url: string): Promise<RedisWrapper> {
+export async function createRedisClient(
+  url: string,
+  opts: CreateRedisClientOptions = {}
+): Promise<RedisWrapper> {
   const client: RedisClientType = createClient({ url });
 
   // Handle connection errors
   client.on('error', (err) => {
-    console.error('Redis Client Error:', err);
+    opts.logger?.error({ err }, 'Redis client error');
   });
 
   // Connect to Redis
