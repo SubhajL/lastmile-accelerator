@@ -16,10 +16,16 @@ import (
 	"example.com/lma/secrets-env-service/internal/vault"
 )
 
-type smokeFakeVerifier struct{ allow bool; claims handlers.Claims; err error }
+type smokeFakeVerifier struct {
+	allow  bool
+	claims handlers.Claims
+	err    error
+}
 
 func (f *smokeFakeVerifier) Verify(_ context.Context, _ string) (*handlers.Claims, error) {
-	if !f.allow { return nil, f.err }
+	if !f.allow {
+		return nil, f.err
+	}
 	return &f.claims, nil
 }
 
@@ -52,20 +58,24 @@ func buildSecretsStack(t *testing.T, ver *smokeFakeVerifier) (http.Handler, *smo
 	v := &vault.Client{}
 	v.SetTestMode(true)
 	cap := &smokeCapturePublisher{}
-svc := service.NewSecretsService(v, secretsRepo, nil, cap)
+	svc := service.NewSecretsService(v, secretsRepo, nil, cap)
 	h := handlers.NewSecretsHandler(smokeSecretsAdapter{s: svc}, handlers.EnvAllowlist{})
-	r := SetupRoutes(h, nil, nil, handlers.PanicRecovery(log), handlers.RequestLogger(log), handlers.JWTAuth(ver))
+	r := SetupRoutes(h, nil, nil, nil, handlers.PanicRecovery(log), handlers.RequestLogger(log), handlers.JWTAuth(ver))
 	return r, cap
 }
 
 func TestSmoke_Healthz_OK(t *testing.T) {
 	log := appLogger.New("test", "info", new(bytes.Buffer))
-	r := SetupRoutes(nil, nil, nil, handlers.PanicRecovery(log), handlers.RequestLogger(log))
+	r := SetupRoutes(nil, nil, nil, nil, handlers.PanicRecovery(log), handlers.RequestLogger(log))
 	ts := httptest.NewServer(r)
 	defer ts.Close()
 	resp, err := http.Get(ts.URL + "/healthz")
-	if err != nil { t.Fatalf("healthz req err: %v", err) }
-	if resp.StatusCode != http.StatusOK { t.Fatalf("want 200, got %d", resp.StatusCode) }
+	if err != nil {
+		t.Fatalf("healthz req err: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("want 200, got %d", resp.StatusCode)
+	}
 }
 
 func TestSmoke_SecretsCreate_FullStack_401_403_201(t *testing.T) {
@@ -77,7 +87,9 @@ func TestSmoke_SecretsCreate_FullStack_401_403_201(t *testing.T) {
 		"key": "API_KEY", "environment": "prod", "value": map[string]any{"k": "v"}, "createdBy": "user@example.com",
 	})
 	resp, _ := http.Post(ts.URL+"/v1/projects/p/secrets", "application/json", bytes.NewReader(b))
-	if resp.StatusCode != http.StatusUnauthorized { t.Fatalf("want 401, got %d", resp.StatusCode) }
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("want 401, got %d", resp.StatusCode)
+	}
 
 	// 403 with missing scope
 	r2, _ := buildSecretsStack(t, &smokeFakeVerifier{allow: true, claims: handlers.Claims{TenantID: "t1", ProjectID: "p", Scopes: []string{"secrets:read"}}})
@@ -88,7 +100,9 @@ func TestSmoke_SecretsCreate_FullStack_401_403_201(t *testing.T) {
 	req.Header.Set("Authorization", "Bearer ok")
 	req.Header.Set("X-Tenant-ID", "t1")
 	resp2, _ := http.DefaultClient.Do(req)
-	if resp2.StatusCode != http.StatusForbidden { t.Fatalf("want 403, got %d", resp2.StatusCode) }
+	if resp2.StatusCode != http.StatusForbidden {
+		t.Fatalf("want 403, got %d", resp2.StatusCode)
+	}
 
 	// 201 with correct scope and tenant, and publish
 	verYes := &smokeFakeVerifier{allow: true, claims: handlers.Claims{TenantID: "t1", ProjectID: "p", Scopes: []string{"secrets:write"}}}
@@ -100,6 +114,10 @@ func TestSmoke_SecretsCreate_FullStack_401_403_201(t *testing.T) {
 	req3.Header.Set("Authorization", "Bearer ok")
 	req3.Header.Set("X-Tenant-ID", "t1")
 	resp3, _ := http.DefaultClient.Do(req3)
-	if resp3.StatusCode != http.StatusCreated { t.Fatalf("want 201, got %d", resp3.StatusCode) }
-	if len(cap.topics) == 0 || cap.topics[0] != "secret.created" { t.Fatalf("expected secret.created publish, got %v", cap.topics) }
+	if resp3.StatusCode != http.StatusCreated {
+		t.Fatalf("want 201, got %d", resp3.StatusCode)
+	}
+	if len(cap.topics) == 0 || cap.topics[0] != "secret.created" {
+		t.Fatalf("expected secret.created publish, got %v", cap.topics)
+	}
 }
