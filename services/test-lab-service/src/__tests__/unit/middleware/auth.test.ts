@@ -17,33 +17,10 @@ import {
 } from '../../fixtures/jwt-helpers.js';
 import { registerErrorHandler } from '../../../middleware/error-handler.js';
 
-// Mock JWKS verifier to use test JWT secret instead of fetching from URL
 vi.mock('../../../lib/jwks.js', () => ({
-  verifyJwt: vi.fn(async (opts: { token: string }) => {
-    // Simple JWT decode for testing (not secure, only for tests)
-    const parts = opts.token.split('.');
-    if (parts.length !== 3) throw new Error('Invalid token');
-    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
-    // Simulate signature verification: reject tokens signed with wrong secret
-    // (tokens from createInvalidSignatureJWT use 'wrong-secret-key')
-    const header = JSON.parse(Buffer.from(parts[0], 'base64url').toString());
-    // We detect invalid signature by checking the header alg and known test secrets
-    // For testing purposes: decode the payload and verify exp/iss
-    const now = Math.floor(Date.now() / 1000);
-    if (payload.exp && payload.exp < now) throw new Error('Token expired');
-    // Verify signature: valid test JWTs are signed with TEST_JWT_SECRET; we simulate
-    // invalid signature by checking if this is a mock by re-signing and comparing
-    // For simplicity, we trust all tokens with HS256 algorithm signed with the right key.
-    // Invalid signature tokens are created with 'wrong-secret-key'; we simulate failure
-    // by using a flag: if iss is present but payload lacks tenant_id, it's a test marker.
-    // Actually: the real differentiator is the signature itself. In this mock, we
-    // replicate the jsonwebtoken verify behaviour using the test secret.
+  verifyJwt: vi.fn(async ({ token }: { token: string }) => {
     const { verify } = await import('jsonwebtoken');
-    try {
-      return verify(opts.token, 'test-secret-key-for-testing-only', { algorithms: ['HS256'] }) as any;
-    } catch (e: any) {
-      throw new Error(e.message ?? 'Token verification failed');
-    }
+    return verify(token, TEST_JWT_SECRET, { algorithms: ['HS256'] }) as any;
   }),
 }));
 

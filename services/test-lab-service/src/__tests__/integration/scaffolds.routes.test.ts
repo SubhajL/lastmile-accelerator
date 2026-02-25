@@ -1,7 +1,14 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createApp } from '../../app.js';
 import { createMockJWT, TEST_JWT_SECRET } from '../fixtures/jwt-helpers.js';
 import { applyTestEnv } from '../fixtures/env.js';
+
+vi.mock('../../lib/jwks.js', () => ({
+  verifyJwt: vi.fn(async ({ token }: { token: string }) => {
+    const { verify } = await import('jsonwebtoken');
+    return verify(token, TEST_JWT_SECRET, { algorithms: ['HS256'] });
+  }),
+}));
 
 // Minimal env
 applyTestEnv();
