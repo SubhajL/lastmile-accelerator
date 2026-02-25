@@ -1,9 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { createS3Client, putArtifact } from '../../../clients/s3.js';
 
+const mockSend = vi.fn();
+
 (vi as any).mock('@aws-sdk/client-s3', () => ({
-  S3Client: vi.fn().mockImplementation(() => ({ send: vi.fn() })),
+  S3Client: vi.fn().mockImplementation(() => ({ send: mockSend })),
   PutObjectCommand: vi.fn().mockImplementation((input: any) => ({ input })),
 }), { virtual: true });
 
@@ -12,6 +14,11 @@ describe('S3 client', () => {
 
   beforeEach(() => {
     s3 = createS3Client('us-east-1') as any;
+    s3.send = mockSend;
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
   });
 
   it('uploads artifact and returns bucket/key', async () => {
