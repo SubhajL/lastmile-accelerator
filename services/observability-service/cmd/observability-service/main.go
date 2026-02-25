@@ -21,6 +21,7 @@ import (
 	"example.com/lma/observability-service/internal/telemetry"
 
 	"example.com/lma/observability-service/internal/grpcserver"
+	obs "example.com/lma/observability-service/internal/gen/observability/v1/observability"
 	"example.com/lma/observability-service/internal/handlers"
 	"example.com/lma/observability-service/internal/metrics"
 	"example.com/lma/observability-service/internal/messaging"
@@ -110,13 +111,13 @@ mux.Handle("/v1/otel/presets", middleware.JWT(verifier)(middleware.RequireScopes
 // GET /v1/otel/presets/{framework} (read)
 mux.Handle("/v1/otel/presets/", middleware.JWT(verifier)(middleware.RequireScopes("observability:read")(http.HandlerFunc(otelHandler.GetPresetByFramework))))
 
-// Prepare SLO service and handler
+	// Prepare SLO service and handler
 sloRepo := repository.NewSLORepository(db)
 prom := metrics.NewPromClient(cfg.PrometheusURL, &http.Client{Timeout: 5 * time.Second})
 sloSvc := services.NewSLOService(sloRepo, telProvider.Tracer(), prom)
 sloHandler := handlers.NewSLOHandler(sloSvc)
 
-// Start SLO evaluator scheduler with configurable env
+	// Start SLO evaluator scheduler with configurable env
 slEval := scheduler.NewSLOEvaluator(sloRepo, sloSvc)
 interval := 1 * time.Minute
 if d, err := time.ParseDuration(strings.TrimSpace(cfg.SLOEvalInterval)); err == nil && d > 0 { interval = d }
@@ -252,11 +253,10 @@ srv := &http.Server{
 		IdleTimeout:  60 * time.Second,
 	}
 
-// Start gRPC server using JSON codec and auth interceptor
-grpcserver.RegisterJSONCodec()
-grps := grpc.NewServer(grpc.UnaryInterceptor(grpcserver.UnaryAuthInterceptor(verifier)))
-obsSrv := grpcserver.NewObservabilityServer(sloSvc, queriesSvc)
-grpcserver.RegisterObservabilityServer(grps, obsSrv)
+    // Start gRPC server with generated protobuf API and auth interceptor
+    grps := grpc.NewServer(grpc.UnaryInterceptor(grpcserver.UnaryAuthInterceptor(verifier)))
+    protoSrv := grpcserver.NewProtoObservabilityServer(sloSvc, alertSvc, errSvc, queriesSvc)
+    obs.RegisterObservabilityServiceServer(grps, protoSrv)
 
 l, err := net.Listen("tcp", ":"+cfg.GRPCPort)
 if err != nil { return fmt.Errorf("grpc listen: %w", err) }
