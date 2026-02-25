@@ -1,6 +1,19 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createApp } from '../../app.js';
 
+// Mock Redis so tests run without a live Redis instance
+vi.mock('../../clients/redis.js', () => ({
+  createRedisClient: vi.fn().mockResolvedValue({
+    get: vi.fn().mockResolvedValue(null),
+    set: vi.fn().mockResolvedValue(undefined),
+    del: vi.fn().mockResolvedValue(undefined),
+    incr: vi.fn().mockResolvedValue(1),
+    incrWithExpire: vi.fn().mockResolvedValue(1),
+    expire: vi.fn().mockResolvedValue(undefined),
+    close: vi.fn().mockResolvedValue(undefined),
+  }),
+}));
+
 vi.mock('../../clients/nats.js', () => {
   const close = vi.fn().mockResolvedValue(undefined);
   return {
@@ -33,18 +46,20 @@ vi.mock('../../events/subscribers.js', async (orig) => {
 process.env.SERVICE_NAME = 'test-lab-service';
 process.env.SERVICE_PORT = '7202';
 process.env.DATABASE_URL = 'pgmem://wiring';
-process.env.REDIS_URL = 'r' + 'edis://localhost:6379';
-process.env.NATS_URL = 'n' + 'ats://localhost:4222';
-process.env.OTEL_EXPORTER_OTLP_ENDPOINT = 'h' + 'ttp://127.0.0.1:4318';
+process.env.REDIS_URL = 'redis://localhost:6379';
+process.env.NATS_URL = 'nats://localhost:4222';
+process.env.OTEL_EXPORTER_OTLP_ENDPOINT = 'http://127.0.0.1:4318';
 process.env.JWT_JWKS_URL = 'test';
+process.env.JWT_ISSUER = 'https://auth.example.com/';
+process.env.JWT_AUDIENCE = 'test-lab-service';
 process.env.S3_BUCKET_PREVIEWS = 'test-previews';
 process.env.S3_BUCKET_ARTIFACTS = 'test-artifacts';
 process.env.S3_REGION = 'us-east-1';
 process.env.K8S_NAMESPACE = 'default';
 process.env.K8S_SERVICE_ACCOUNT = 'default';
 process.env.K8S_JOB_IMAGE_DEFAULT = 'busybox';
-process.env.BROWSER_GRID_URL = 'h' + 'ttp://selenium-grid:4444';
-process.env.VAULT_ADDR = 'h' + 'ttp://vault:8200';
+process.env.BROWSER_GRID_URL = 'http://selenium-grid:4444';
+process.env.VAULT_ADDR = 'http://vault:8200';
 process.env.REPO_BACKEND = 'pg';
 process.env.ENABLE_EVENT_SUBSCRIBERS = 'true';
 

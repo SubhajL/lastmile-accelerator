@@ -1,11 +1,20 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createApp } from '../../app.js';
 import { createMockJWT, TEST_JWT_SECRET } from '../fixtures/jwt-helpers.js';
 import { applyTestEnv } from '../fixtures/env.js';
 
+vi.mock('../../lib/jwks.js', () => ({
+  verifyJwt: vi.fn(async ({ token }: { token: string }) => {
+    const { verify } = await import('jsonwebtoken');
+    return verify(token, TEST_JWT_SECRET, { algorithms: ['HS256'] });
+  }),
+}));
+
 // Minimal env
 applyTestEnv();
 process.env.JWT_JWKS_URL = TEST_JWT_SECRET;
+process.env.JWT_ISSUER = 'https://auth.example.com/';
+process.env.JWT_AUDIENCE = 'test-lab-service';
 
 describe('scaffolds routes', () => {
   let app: Awaited<ReturnType<typeof createApp>>;
@@ -114,5 +123,14 @@ describe('scaffolds routes', () => {
       payload: { type: 'unit', framework: 'vitest', language: 'ts', config: {} },
     });
     expect(denied.statusCode).toBe(403);
+  });
+
+  it('returns 401 and does not call verifyJwt when Authorization header is missing', async () => {
+    const denied = await app.inject({
+      method: 'POST',
+      url: `/v1/projects/${projectId}/test-scaffolds`,
+      payload: { type: 'unit', framework: 'vitest', language: 'ts', config: {} },
+    });
+    expect(denied.statusCode).toBe(401);
   });
 });
