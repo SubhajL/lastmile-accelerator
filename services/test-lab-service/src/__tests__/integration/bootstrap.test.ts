@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createApp } from '../../app.js';
 import { authenticateRequest, requireScopes } from '../../middleware/auth.js';
 import { registerErrorHandler } from '../../middleware/error-handler.js';
@@ -8,6 +8,18 @@ import { applyTestEnv } from '../fixtures/env.js';
 // Set minimal env for config loading with safe placeholders
 applyTestEnv();
 process.env.JWT_JWKS_URL = TEST_JWT_SECRET; // use shared secret in tests
+process.env.JWT_ISSUER = 'https://auth.example.com/';
+process.env.JWT_AUDIENCE = 'test-lab-service';
+
+// Mock JWKS verifier to decode JWT for testing
+vi.mock('../../lib/jwks.js', () => ({
+  verifyJwt: vi.fn(async (opts: { token: string }) => {
+    const parts = opts.token.split('.');
+    if (parts.length !== 3) throw new Error('Invalid token');
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
+    return payload;
+  }),
+}));
 
 describe('Server bootstrap', () => {
   let app: Awaited<ReturnType<typeof createApp>>;
@@ -18,6 +30,8 @@ describe('Server bootstrap', () => {
 
   afterEach(async () => {
     await app.close();
+    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   it('exposes /healthz', async () => {
@@ -36,10 +50,14 @@ describe('Server bootstrap', () => {
 
   it('supports protected routes with JWT + scopes', async () => {
     // Mount a protected route for testing
-    app.get('/_protected', { preHandler: [authenticateRequest as any, requireScopes('test:read') as any] }, async (req) => {
+    app.get(
+      '/_protected',
+      { preHandler: [authenticateRequest, requireScopes('test:read')] },
+      async (req) => {
       const u = (req as any).user;
       return { ok: true, uid: u?.userId };
-    });
+      }
+    );
 
     const token = createMockJWT({ scopes: ['test:read'] });
 
