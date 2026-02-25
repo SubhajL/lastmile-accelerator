@@ -5,9 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"example.com/lma/observability-service/internal/logs"
 	"example.com/lma/observability-service/internal/services"
-	"example.com/lma/observability-service/internal/traces"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -71,13 +69,6 @@ type GoldenResponse struct {
 	RequestRate float64 `json:"request_rate"`
 	ErrorRate   float64 `json:"error_rate"`
 	P95Latency  float64 `json:"p95_latency"`
-}
-
-type TraceQuery interface {
-	SearchTraces(ctx context.Context, service, operation string, minDur, maxDur time.Duration, errorOnly bool, userQuery string, start, end time.Time, limit int) ([]traces.TraceSummary, error)
-	GetTrace(ctx context.Context, id string) (*traces.TraceDetail, error)
-	SearchLogs(ctx context.Context, q string, start, end time.Time, limit int, direction string) ([]logs.LogEntry, error)
-	Golden(ctx context.Context, service string, window time.Duration) (*services.GoldenSignals, error)
 }
 
 type ObservabilityServer interface {
