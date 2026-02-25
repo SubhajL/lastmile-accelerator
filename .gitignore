@@ -37,6 +37,9 @@ lma-devstack-compose-gitea4001/vol/prometheus/
 # Service temp/build outputs
 services/**/tmp/
 
+# Generated protobuf stubs (run `make proto` locally)
+services/observability-service/internal/gen/
+
 # Env files
 .env
 .env.local
