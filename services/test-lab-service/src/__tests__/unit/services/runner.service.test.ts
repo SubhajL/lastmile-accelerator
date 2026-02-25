@@ -1,22 +1,15 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { buildTestJobManifest, RunnerOrchestrator } from '../../../services/runner.js';
 import { SUBJECTS } from '../../../events/contracts.js';
-import * as k8sClient from '../../../clients/k8s.js';
-import * as artifactsService from '../../../services/artifacts.js';
 
-vi.mock('../../../clients/k8s.js');
-vi.mock('../../../services/artifacts.js');
+vi.mock('../../../clients/k8s.js', () => ({
+  createJob: vi.fn().mockResolvedValue({ name: 'job-1' }),
+  getJobStatus: vi.fn().mockResolvedValue('succeeded'),
+}));
 
-beforeEach(() => {
-  vi.mocked(k8sClient.createJob).mockResolvedValue({ name: 'job-1' } as any);
-  vi.mocked(k8sClient.getJobStatus).mockResolvedValue('succeeded');
-  vi.mocked(artifactsService.uploadArtifactsMap).mockResolvedValue([{ bucket: 'b', key: 'artifacts/run/file.txt' }]);
-});
-
-afterEach(() => {
-  vi.restoreAllMocks();
-  vi.clearAllMocks();
-});
+vi.mock('../../../services/artifacts.js', () => ({
+  uploadArtifactsMap: vi.fn().mockResolvedValue([{ bucket: 'b', key: 'artifacts/run/file.txt' }]),
+}));
 
 describe('Runner service', () => {
   it('buildTestJobManifest sets labels, image, ttl, SA', () => {
