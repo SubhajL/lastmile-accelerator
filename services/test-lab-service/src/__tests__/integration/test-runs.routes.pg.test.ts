@@ -5,13 +5,15 @@ import { createMockJWT, TEST_JWT_SECRET } from '../fixtures/jwt-helpers.js';
 process.env.SERVICE_NAME = 'test-lab-service';
 process.env.SERVICE_PORT = '7202';
 process.env.DATABASE_URL = 'pgmem://testruns';
-process.env.REDIS_URL = 'r' + 'edis://localhost:6379';
-process.env.NATS_URL = 'n' + 'ats://localhost:4222';
-process.env.OTEL_EXPORTER_OTLP_ENDPOINT = 'h' + 'ttp://127.0.0.1:4318';
+process.env.REDIS_URL = 'redis://localhost:6379';
+process.env.NATS_URL = 'nats://localhost:4222';
+process.env.OTEL_EXPORTER_OTLP_ENDPOINT = 'http://127.0.0.1:4318';
 process.env.JWT_JWKS_URL = TEST_JWT_SECRET;
+process.env.JWT_ISSUER = 'https://auth.example.com/';
+process.env.JWT_AUDIENCE = 'test-lab-service';
 process.env.S3_BUCKET_PREVIEWS = 'test-previews';
-process.env.BROWSER_GRID_URL = 'h' + 'ttp://selenium-grid:4444';
-process.env.VAULT_ADDR = 'h' + 'ttp://vault:8200';
+process.env.BROWSER_GRID_URL = 'http://selenium-grid:4444';
+process.env.VAULT_ADDR = 'http://vault:8200';
 process.env.REPO_BACKEND = 'pg';
 
 const projectId = '11111111-1111-1111-1111-111111111111';
@@ -132,5 +134,10 @@ describe('test runs & browser runs routes (pg)', () => {
     });
     expect(bGet.statusCode).toBe(200);
     expect(bGet.json().id).toBe(br2.id);
+  });
+
+  it('returns 401 and does not call verifyJwt when Authorization header missing', async () => {
+    const res = await app.inject({ method: 'GET', url: `/v1/projects/${projectId}/test-runs` });
+    expect(res.statusCode).toBe(401);
   });
 });
