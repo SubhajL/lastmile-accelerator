@@ -14,7 +14,7 @@ type SnapshotRes = {
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 export async function createSnapshotViaOrchestrator(args: {
@@ -22,7 +22,8 @@ export async function createSnapshotViaOrchestrator(args: {
   projectId: string;
   body: CreateSnapshotReq;
 }): Promise<SnapshotRes> {
-  const res = await fetch(`${args.baseUrl}/v1/projects/${args.projectId}/snapshots`, {
+  const projectId = encodeURIComponent(args.projectId);
+  const res = await fetch(`${args.baseUrl}/v1/projects/${projectId}/snapshots`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(args.body),

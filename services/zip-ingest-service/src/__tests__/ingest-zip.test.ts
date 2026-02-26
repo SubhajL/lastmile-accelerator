@@ -35,6 +35,9 @@ function startStubOrchestrator(args: {
 
 describe('POST /v1/projects/:projectId/ingest/zip', () => {
   test('delegates to snapshot-orchestrator and returns snapshotId', async () => {
+    const snapshotId = 'snap_0123456789abcdef0123456789abcdef';
+    const sha256 = 'a'.repeat(64);
+
     const stub = await startStubOrchestrator({
       handler: (req, body) => {
         expect(req.method).toBe('POST');
@@ -42,39 +45,59 @@ describe('POST /v1/projects/:projectId/ingest/zip', () => {
         expect(JSON.parse(body)).toEqual({
           mode: 'C',
           sourceRef: {
-            zip: { filename: 'repo.zip', sizeBytes: 123, sha256: 'abc' },
+            zip: { filename: 'repo.zip', sizeBytes: 123, sha256 },
           },
         });
 
         return {
-          body: { snapshotId: 'snap_123', projectId: 'p123', mode: 'C', status: 'created' },
+          body: { snapshotId, projectId: 'p123', mode: 'C', status: 'created' },
         };
       },
     });
 
-    const app = await createApp({ snapshotOrchestratorUrl: stub.url });
+    const app = await createApp({ snapshotOrchestratorUrl: stub.url, logger: false });
     const res = await app.inject({
       method: 'POST',
       url: '/v1/projects/p123/ingest/zip',
-      payload: { filename: 'repo.zip', sizeBytes: 123, sha256: 'abc' },
+      payload: { filename: 'repo.zip', sizeBytes: 123, sha256 },
     });
 
-    expect(res.statusCode).toBe(200);
-    expect(res.json()).toEqual({ snapshotId: 'snap_123' });
+    expect(res.statusCode).toBe(201);
+    expect(res.json()).toEqual({ snapshotId });
 
     await Promise.all([app.close(), stub.close()]);
   });
 
   test('returns 502 when snapshot-orchestrator fails', async () => {
+    const sha256 = 'a'.repeat(64);
     const stub = await startStubOrchestrator({
       handler: () => ({ statusCode: 500, body: { error: 'nope' } }),
     });
 
-    const app = await createApp({ snapshotOrchestratorUrl: stub.url });
+    const app = await createApp({ snapshotOrchestratorUrl: stub.url, logger: false });
     const res = await app.inject({
       method: 'POST',
       url: '/v1/projects/p123/ingest/zip',
-      payload: { filename: 'repo.zip', sizeBytes: 1, sha256: 'abc' },
+      payload: { filename: 'repo.zip', sizeBytes: 1, sha256 },
+    });
+
+    expect(res.statusCode).toBe(502);
+    expect(res.json()).toEqual({ error: 'snapshot_orchestrator_unavailable' });
+
+    await Promise.all([app.close(), stub.close()]);
+  });
+
+  test('returns 502 when snapshot-orchestrator returns invalid json', async () => {
+    const sha256 = 'a'.repeat(64);
+    const stub = await startStubOrchestrator({
+      handler: () => ({ body: { ok: true } }),
+    });
+
+    const app = await createApp({ snapshotOrchestratorUrl: stub.url, logger: false });
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/projects/p123/ingest/zip',
+      payload: { filename: 'repo.zip', sizeBytes: 1, sha256 },
     });
 
     expect(res.statusCode).toBe(502);

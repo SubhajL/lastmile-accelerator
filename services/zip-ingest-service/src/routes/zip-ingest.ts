@@ -31,8 +31,8 @@ export function registerZipIngestRoutes(
           required: ['filename', 'sizeBytes', 'sha256'],
           properties: {
             filename: { type: 'string', minLength: 1 },
-            sizeBytes: { type: 'integer', minimum: 0 },
-            sha256: { type: 'string', minLength: 1 },
+            sizeBytes: { type: 'integer', minimum: 1 },
+            sha256: { type: 'string', pattern: '^[a-f0-9]{64}$' },
           },
         },
       },
@@ -54,8 +54,9 @@ export function registerZipIngestRoutes(
           },
         });
 
-        return reply.send({ snapshotId });
-      } catch {
+        return reply.code(201).send({ snapshotId });
+      } catch (err) {
+        req.log.error({ err }, 'snapshot-orchestrator request failed');
         return reply.code(502).send({ error: 'snapshot_orchestrator_unavailable' });
       }
     },
