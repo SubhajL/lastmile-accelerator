@@ -1,6 +1,6 @@
 import http from 'node:http';
 
-import { afterEach, describe, expect, test, vi } from 'vitest';
+import { describe, expect, test } from 'vitest';
 
 import { createApp } from '../app.js';
 
@@ -34,10 +34,6 @@ function startStubOrchestrator(args: {
 }
 
 describe('POST /v1/projects/:projectId/ingest/zip', () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
   test('delegates to snapshot-orchestrator and returns snapshotId', async () => {
     const stub = await startStubOrchestrator({
       handler: (req, body) => {
@@ -66,8 +62,7 @@ describe('POST /v1/projects/:projectId/ingest/zip', () => {
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({ snapshotId: 'snap_123' });
 
-    await app.close();
-    await stub.close();
+    await Promise.all([app.close(), stub.close()]);
   });
 
   test('returns 502 when snapshot-orchestrator fails', async () => {
@@ -85,7 +80,6 @@ describe('POST /v1/projects/:projectId/ingest/zip', () => {
     expect(res.statusCode).toBe(502);
     expect(res.json()).toEqual({ error: 'snapshot_orchestrator_unavailable' });
 
-    await app.close();
-    await stub.close();
+    await Promise.all([app.close(), stub.close()]);
   });
 });
