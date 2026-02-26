@@ -13,6 +13,10 @@ type SnapshotRes = {
   snapshotId: string;
 };
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
 export async function createSnapshotViaOrchestrator(args: {
   baseUrl: string;
   projectId: string;
@@ -29,14 +33,10 @@ export async function createSnapshotViaOrchestrator(args: {
   }
 
   const json = (await res.json()) as unknown;
-  if (
-    !json ||
-    typeof json !== 'object' ||
-    !('snapshotId' in json) ||
-    typeof (json as any).snapshotId !== 'string'
-  ) {
+  const snapshotId = isRecord(json) && typeof json.snapshotId === 'string' ? json.snapshotId : null;
+  if (!snapshotId) {
     throw new Error('snapshot-orchestrator returned invalid response');
   }
 
-  return { snapshotId: (json as any).snapshotId };
+  return { snapshotId };
 }
