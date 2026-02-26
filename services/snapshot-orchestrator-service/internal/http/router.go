@@ -32,6 +32,8 @@ func NewRouter(store *snapshots.Store) http.Handler {
 			return
 		}
 
+		r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+
 		var req CreateSnapshotReq
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, "invalid json", http.StatusBadRequest)
@@ -53,7 +55,8 @@ func NewRouter(store *snapshots.Store) http.Handler {
 			return
 		}
 
-		w.Header().Set("content-type", "application/json")
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
 		_ = json.NewEncoder(w).Encode(snapshot)
 	})
 
@@ -74,7 +77,7 @@ func NewRouter(store *snapshots.Store) http.Handler {
 			return
 		}
 
-		w.Header().Set("content-type", "application/json")
+		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(snapshot)
 	})
 

@@ -34,7 +34,7 @@ func TestCreateSnapshotAndGetSnapshotRoundTrip(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/v1/projects/p123/snapshots", bytes.NewReader(body))
 	res := httptest.NewRecorder()
 	router.ServeHTTP(res, req)
-	if res.Code != http.StatusOK {
+	if res.Code != http.StatusCreated {
 		t.Fatalf("unexpected status: %d body=%s", res.Code, res.Body.String())
 	}
 
