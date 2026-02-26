@@ -5,7 +5,7 @@ TAG?=dev
 build:
 	go build -o bin/app ./cmd/$(SVC)
 test:
-	go test ./... -cover || true
+	go test ./... -cover
 image:
 	docker build -t ghcr.io/${GITHUB_REPOSITORY}-$(SVC):$(TAG) .
 sbom:
