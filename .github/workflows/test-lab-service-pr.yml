@@ -39,18 +39,22 @@ jobs:
         run: bun install
 
       - name: Typecheck (test-lab-service)
-        run: bun -C services/test-lab-service run typecheck
+        working-directory: services/test-lab-service
+        run: bun run typecheck
 
       - name: Lint (test-lab-service)
-        run: bun -C services/test-lab-service run lint
+        working-directory: services/test-lab-service
+        run: bun run lint
 
       - name: Test (test-lab-service)
-        run: bun -C services/test-lab-service run test -- --reporter=dot
+        working-directory: services/test-lab-service
+        run: bun run test -- --reporter=dot
         env:
           CI: "true"
 
       - name: Build (test-lab-service)
-        run: bun -C services/test-lab-service run build
+        working-directory: services/test-lab-service
+        run: bun run build
 
   security:
     name: Security Scans
@@ -59,7 +63,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0
 
       - name: Secret scan (gitleaks)
         uses: gitleaks/gitleaks-action@v2
