@@ -23,6 +23,12 @@ describe('createCacheHelper', () => {
         mockStore.set(key, String(newValue));
         return newValue;
       }),
+      incrWithExpire: vi.fn(async (key: string) => {
+        const current = parseInt(mockStore.get(key) ?? '0', 10);
+        const newValue = current + 1;
+        mockStore.set(key, String(newValue));
+        return newValue;
+      }),
       expire: vi.fn(async () => {}),
       close: vi.fn(async () => {}),
     };
@@ -83,6 +89,7 @@ describe('createCacheHelper', () => {
         set: vi.fn(async () => {}),
         del: vi.fn(async () => {}),
         incr: vi.fn(async () => 1),
+        incrWithExpire: vi.fn(async () => 1),
         expire: vi.fn(async () => {}),
         close: vi.fn(async () => {}),
       };

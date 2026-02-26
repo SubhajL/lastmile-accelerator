@@ -1,23 +1,10 @@
 import { describe, expect, test, beforeEach, vi } from 'vitest';
 import type { RedisWrapper } from '../../clients/redis.js';
 
-type MockRedisClient = {
-  connect: ReturnType<typeof vi.fn>;
-  quit: ReturnType<typeof vi.fn>;
-  on: ReturnType<typeof vi.fn>;
-  multi: ReturnType<typeof vi.fn>;
-  get: ReturnType<typeof vi.fn>;
-  set: ReturnType<typeof vi.fn>;
-  setEx: ReturnType<typeof vi.fn>;
-  del: ReturnType<typeof vi.fn>;
-  incr: ReturnType<typeof vi.fn>;
-  expire: ReturnType<typeof vi.fn>;
-};
-
 const mockStore = new Map<string, { value: string; expiresAt?: number }>();
 let onErrorHandler: ((err: unknown) => void) | undefined;
 
-const mockClient: MockRedisClient = {
+const mockClient = {
   connect: vi.fn().mockResolvedValue(undefined),
   quit: vi.fn().mockResolvedValue(undefined),
   on: vi.fn((event: string, handler: (err: unknown) => void) => {

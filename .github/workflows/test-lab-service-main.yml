@@ -1,0 +1,76 @@
+name: test-lab-service (main)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "services/test-lab-service/**"
+      - "packages/**"
+      - "package.json"
+      - "bun.lock"
+      - "turbo.json"
+      - ".github/workflows/test-lab-service-*.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Quality Gates
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.2"
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Typecheck (test-lab-service)
+        working-directory: services/test-lab-service
+        run: bun run typecheck
+
+      - name: Lint (test-lab-service)
+        working-directory: services/test-lab-service
+        run: bun run lint
+
+      - name: Test (test-lab-service)
+        working-directory: services/test-lab-service
+        run: bun run test -- --reporter=dot
+        env:
+          CI: "true"
+
+      - name: Build (test-lab-service)
+        working-directory: services/test-lab-service
+        run: bun run build
+
+  security:
+    name: Security Scans
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Secret scan (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .github/gitleaks.toml
+
+      - name: Hadolint
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: services/test-lab-service/Dockerfile

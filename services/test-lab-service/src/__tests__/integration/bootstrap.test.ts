@@ -5,6 +5,19 @@ import { registerErrorHandler } from '../../middleware/error-handler.js';
 import { createMockJWT, TEST_JWT_SECRET } from '../fixtures/jwt-helpers.js';
 import { applyTestEnv } from '../fixtures/env.js';
 
+// Mock Redis so tests run without a live Redis instance
+vi.mock('../../clients/redis.js', () => ({
+  createRedisClient: vi.fn().mockResolvedValue({
+    get: vi.fn().mockResolvedValue(null),
+    set: vi.fn().mockResolvedValue(undefined),
+    del: vi.fn().mockResolvedValue(undefined),
+    incr: vi.fn().mockResolvedValue(1),
+    incrWithExpire: vi.fn().mockResolvedValue(1),
+    expire: vi.fn().mockResolvedValue(undefined),
+    close: vi.fn().mockResolvedValue(undefined),
+  }),
+}));
+
 // Set minimal env for config loading with safe placeholders
 applyTestEnv();
 process.env.JWT_JWKS_URL = TEST_JWT_SECRET; // use shared secret in tests
