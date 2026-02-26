@@ -5,7 +5,7 @@ TAG?=dev
 build:
 	bun run build
 test:
-	bun run test || true
+	bun run test
 image:
 	docker build -t ghcr.io/${GITHUB_REPOSITORY}-$(SVC):$(TAG) .
 sbom:
