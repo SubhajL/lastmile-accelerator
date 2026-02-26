@@ -10,11 +10,8 @@ function startStubOrchestrator(args: {
   handler: (req: http.IncomingMessage, body: string) => { statusCode?: number; body: unknown };
 }) {
   const server = http.createServer(async (req, res) => {
-    const chunks: Buffer[] = [];
-    for await (const chunk of req) {
-      chunks.push(Buffer.from(chunk));
-    }
-    const body = Buffer.concat(chunks).toString('utf-8');
+    let body = '';
+    for await (const chunk of req) body += chunk;
     const response = args.handler(req, body);
     res.statusCode = response.statusCode ?? 200;
     res.setHeader('content-type', 'application/json');
@@ -24,9 +21,7 @@ function startStubOrchestrator(args: {
   return new Promise<{ url: string; close: () => Promise<void> }>((resolve) => {
     server.listen(0, '127.0.0.1', () => {
       const address = server.address();
-      if (!address || typeof address === 'string') {
-        throw new Error('unexpected server address');
-      }
+      if (!address || typeof address === 'string') throw new Error('unexpected server address');
       resolve({
         url: `http://127.0.0.1:${address.port}`,
         close: () => new Promise((r) => server.close(() => r())),
@@ -50,9 +45,7 @@ describe('POST /v1/projects/:projectId/ingest/zip', () => {
           },
         });
 
-        return {
-          body: { snapshotId, projectId: 'p123', mode: 'C', status: 'created' },
-        };
+        return { body: { snapshotId, projectId: 'p123', mode: 'C', status: 'created' } };
       },
     });
 
