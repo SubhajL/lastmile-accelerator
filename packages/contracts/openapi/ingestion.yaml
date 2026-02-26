@@ -1,0 +1,45 @@
+openapi: 3.0.3
+info:
+  title: ingestion API
+  version: 1.0.0
+paths:
+  /v1/projects/{projectId}/ingest/zip:
+    post:
+      summary: Ingest a ZIP upload and create a snapshot
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ZipIngestReq'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ZipIngestRes'
+components:
+  schemas:
+    ZipIngestReq:
+      type: object
+      required: [filename, sizeBytes, sha256]
+      properties:
+        filename: { type: string }
+        sizeBytes: { type: integer, minimum: 1 }
+        sha256:
+          type: string
+          description: Lowercase hex SHA-256 of the uploaded archive
+          pattern: '^[a-f0-9]{64}$'
+    ZipIngestRes:
+      type: object
+      required: [snapshotId]
+      properties:
+        snapshotId:
+          type: string
+          pattern: '^snap_[0-9a-f]{32}$'

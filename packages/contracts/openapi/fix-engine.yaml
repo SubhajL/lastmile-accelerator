@@ -1,0 +1,39 @@
+openapi: 3.0.3
+info:
+  title: fix-engine-service API
+  version: 1.0.0
+paths:
+  /v1/snapshots/{snapshotId}/fix-list:
+    get:
+      summary: Get fix list for a snapshot
+      parameters:
+        - name: snapshotId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FixListRes'
+components:
+  schemas:
+    FixListRes:
+      type: object
+      required: [snapshotId, fixes]
+      properties:
+        snapshotId: { type: string }
+        fixes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Fix'
+    Fix:
+      type: object
+      required: [id, tier, title]
+      properties:
+        id: { type: string }
+        tier: { type: integer, enum: [1, 2, 3] }
+        title: { type: string }
+        description: { type: string }

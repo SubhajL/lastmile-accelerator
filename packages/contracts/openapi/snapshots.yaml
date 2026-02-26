@@ -1,0 +1,77 @@
+openapi: 3.0.3
+info:
+  title: snapshots API
+  version: 1.0.0
+paths:
+  /v1/projects/{projectId}/snapshots:
+    post:
+      summary: Create a snapshot
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSnapshotReq'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Snapshot'
+  /v1/snapshots/{snapshotId}:
+    get:
+      summary: Get snapshot status and attached artifacts
+      parameters:
+        - name: snapshotId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Snapshot'
+        '404':
+          description: Not found
+components:
+  schemas:
+    CreateSnapshotReq:
+      type: object
+      required: [mode, sourceRef]
+      properties:
+        mode: { type: string, enum: ['A', 'B', 'C'] }
+        sourceRef:
+          type: object
+          description: Mode-specific source reference (repo+sha, zipId, agentRunId, etc.)
+    Snapshot:
+      type: object
+      required: [snapshotId, projectId, mode, status]
+      properties:
+        snapshotId:
+          type: string
+          pattern: '^snap_[0-9a-f]{32}$'
+        projectId: { type: string }
+        mode: { type: string, enum: ['A', 'B', 'C'] }
+        status: { type: string, enum: [created, processing, ready, failed] }
+        createdAt: { type: string, format: date-time }
+        sourceRef:
+          type: object
+          description: Mode-specific source reference
+        artifacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/SnapshotArtifact'
+    SnapshotArtifact:
+      type: object
+      required: [type, uri]
+      properties:
+        type: { type: string }
+        uri: { type: string }
