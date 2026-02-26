@@ -139,7 +139,7 @@ export async function createApp() {
 
     // Redis cleanup on app shutdown (catch to guard against double-close)
     app.addHook('onClose', async () => {
-      await app.redis.close().catch(() => {});
+      await redis?.close().catch(() => {});
     });
 
     return app;
