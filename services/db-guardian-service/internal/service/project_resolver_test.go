@@ -88,3 +88,55 @@ func TestProjectResolver_ResolveInspector_VaultError(t *testing.T) {
 		t.Fatal("expected error")
 	}
 }
+
+func TestProjectResolver_ResolveInspector_EmptyProjectID(t *testing.T) {
+	r := NewProjectResolver(
+		&fakeConnGetter{conn: &models.DBConnection{ProjectID: "p1", Driver: "postgres", DSNRef: "secret/data/dbs/p1/default"}},
+		&fakeVault{dsn: "postgres://example"},
+		func(ctx context.Context, dsn string) (*sql.DB, error) { return nil, nil },
+	)
+
+	_, _, err := r.ResolveInspector(context.Background(), "")
+	if err == nil || err.Error() != "projectID is required" {
+		t.Fatalf("expected projectID is required, got %v", err)
+	}
+}
+
+func TestProjectResolver_ResolveInspector_NilConnection(t *testing.T) {
+	r := NewProjectResolver(
+		&fakeConnGetter{conn: nil},
+		&fakeVault{dsn: "postgres://example"},
+		func(ctx context.Context, dsn string) (*sql.DB, error) { return nil, nil },
+	)
+
+	_, _, err := r.ResolveInspector(context.Background(), "p1")
+	if err == nil || err.Error() != "default connection not found" {
+		t.Fatalf("expected default connection not found, got %v", err)
+	}
+}
+
+func TestProjectResolver_ResolveInspector_EmptyDSNRef(t *testing.T) {
+	r := NewProjectResolver(
+		&fakeConnGetter{conn: &models.DBConnection{ProjectID: "p1", Driver: "postgres", DSNRef: ""}},
+		&fakeVault{dsn: "postgres://example"},
+		func(ctx context.Context, dsn string) (*sql.DB, error) { return nil, nil },
+	)
+
+	_, _, err := r.ResolveInspector(context.Background(), "p1")
+	if err == nil || err.Error() != "dsn_ref is required" {
+		t.Fatalf("expected dsn_ref is required, got %v", err)
+	}
+}
+
+func TestProjectResolver_ResolveInspector_DBOpenFailure(t *testing.T) {
+	r := NewProjectResolver(
+		&fakeConnGetter{conn: &models.DBConnection{ProjectID: "p1", Driver: "postgres", DSNRef: "secret/data/dbs/p1/default"}},
+		&fakeVault{dsn: "postgres://example"},
+		func(ctx context.Context, dsn string) (*sql.DB, error) { return nil, fmt.Errorf("boom") },
+	)
+
+	_, _, err := r.ResolveInspector(context.Background(), "p1")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}

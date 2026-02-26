@@ -21,11 +21,19 @@ func TestNewPostgresPool_InvalidDSN_ReturnsError(t *testing.T) {
 	}
 }
 
+func TestNewProjectPostgresPool_EmptyDSN_ReturnsError(t *testing.T) {
+	ctx := context.Background()
+	_, err := NewProjectPostgresPool(ctx, "")
+	if err == nil {
+		t.Fatal("expected error for empty DSN, got nil")
+	}
+}
+
 func TestPing_WithTimeout_RespectsContext(t *testing.T) {
 	// Arrange - use a valid DSN format but unreachable host
 	ctx := context.Background()
 	dsn := "postgres://user:pass@localhost:9999/nonexistent?sslmode=disable&connect_timeout=1"
-	
+
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		t.Fatalf("failed to open database: %v", err)
@@ -35,7 +43,7 @@ func TestPing_WithTimeout_RespectsContext(t *testing.T) {
 	// Act with timeout
 	ctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
 	defer cancel()
-	
+
 	err = Ping(ctx, db)
 
 	// Assert
@@ -48,10 +56,10 @@ func TestPing_HealthyDB_ReturnsNil(t *testing.T) {
 	// This test would require a real database or testcontainers
 	// For now, we'll test the nil DB case
 	ctx := context.Background()
-	
+
 	// Act
 	err := Ping(ctx, nil)
-	
+
 	// Assert
 	if err == nil {
 		t.Fatal("expected error for nil DB, got nil")

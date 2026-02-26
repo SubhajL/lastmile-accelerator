@@ -3,6 +3,7 @@ package secrets
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	vault "github.com/hashicorp/vault/api"
 )
@@ -17,13 +18,22 @@ type VaultClient struct {
 	client *vault.Client
 }
 
+func sortedKeys(m map[string]string) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
 func extractProjectDSN(secret map[string]string) (string, error) {
 	for _, key := range []string{"dsn", "DSN", "database_url", "DATABASE_URL", "url", "URL"} {
 		if v := secret[key]; v != "" {
 			return v, nil
 		}
 	}
-	return "", fmt.Errorf("dsn not found in secret")
+	return "", fmt.Errorf("dsn not found in secret (available keys: %v)", sortedKeys(secret))
 }
 
 func NewVaultClient(cfg *VaultConfig) (*VaultClient, error) {

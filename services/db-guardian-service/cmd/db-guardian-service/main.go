@@ -135,7 +135,7 @@ func run() error {
 
 		connSvc = service.NewConnectionService(db)
 		if vaultClient != nil {
-			resolver := service.NewProjectResolver(connSvc, vaultClient, database.NewPostgresPool)
+			resolver := service.NewProjectResolver(connSvc, vaultClient, database.NewProjectPostgresPool)
 			analysisSvc = service.NewAnalysisServiceWithProjectResolver(db, natsConn, resolver)
 		} else {
 			analysisSvc = service.NewAnalysisService(db, natsConn, roleAnalyzer, migrationGuard, indexAdvisor)

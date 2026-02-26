@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 
 	"example.com/lma/db-guardian-service/internal/analyzer"
 	"example.com/lma/db-guardian-service/internal/events"
@@ -77,7 +78,11 @@ func (s *AnalysisService) RunFullAnalysis(
 			return nil, err
 		}
 		if cleanup != nil {
-			defer func() { _ = cleanup() }()
+			defer func() {
+				if err := cleanup(); err != nil {
+					log.Printf("project DB cleanup error: %v", err)
+				}
+			}()
 		}
 		roles = analyzer.NewRoleAnalyzer(inspector)
 		migrations = analyzer.NewMigrationGuard(inspector)
