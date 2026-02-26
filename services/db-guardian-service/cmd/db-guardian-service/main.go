@@ -7,9 +7,10 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-    "time"
+	"time"
 
 	"example.com/lma/db-guardian-service/internal/analyzer"
+	"example.com/lma/db-guardian-service/internal/auth"
 	"example.com/lma/db-guardian-service/internal/cache"
 	"example.com/lma/db-guardian-service/internal/config"
 	"example.com/lma/db-guardian-service/internal/database"
@@ -20,7 +21,6 @@ import (
 	"example.com/lma/db-guardian-service/internal/service"
 	"example.com/lma/db-guardian-service/internal/telemetry"
 	"example.com/lma/db-guardian-service/pkg/logger"
-	"example.com/lma/db-guardian-service/internal/auth"
 	"github.com/nats-io/nats.go"
 	"github.com/redis/go-redis/v9"
 )
@@ -87,7 +87,7 @@ func run() error {
 		}
 	}
 
-    // Initialize NATS (optional)
+	// Initialize NATS (optional)
 	var natsConn *nats.Conn
 	if cfg.NATSUrl != "" {
 		natsConn, err = events.NewNATSClient(cfg.NATSUrl)
@@ -100,21 +100,21 @@ func run() error {
 		}
 	}
 
-    // Initialize Vault (optional)
-    var vaultClient *secrets.VaultClient
-    if cfg.VaultAddr != "" && cfg.VaultRoleID != "" && cfg.VaultSecretID != "" {
+	// Initialize Vault (optional)
+	var vaultClient *secrets.VaultClient
+	if cfg.VaultAddr != "" && cfg.VaultRoleID != "" && cfg.VaultSecretID != "" {
 		vaultCfg := &secrets.VaultConfig{
 			Address:  cfg.VaultAddr,
 			RoleID:   cfg.VaultRoleID,
 			SecretID: cfg.VaultSecretID,
 		}
-        vc, err := secrets.NewVaultClient(vaultCfg)
+		vc, err := secrets.NewVaultClient(vaultCfg)
 		if err != nil {
 			log.Error("Failed to connect to Vault", logger.Field{Key: "error", Value: err.Error()})
 			// Not fatal - service can start without Vault
 		} else {
 			log.Info("Vault connection established")
-            vaultClient = vc
+			vaultClient = vc
 		}
 	}
 
@@ -134,7 +134,12 @@ func run() error {
 		indexAdvisor := analyzer.NewIndexAdvisor(inspector)
 
 		connSvc = service.NewConnectionService(db)
-		analysisSvc = service.NewAnalysisService(db, natsConn, roleAnalyzer, migrationGuard, indexAdvisor)
+		if vaultClient != nil {
+			resolver := service.NewProjectResolver(connSvc, vaultClient, database.NewPostgresPool)
+			analysisSvc = service.NewAnalysisServiceWithProjectResolver(db, natsConn, resolver)
+		} else {
+			analysisSvc = service.NewAnalysisService(db, natsConn, roleAnalyzer, migrationGuard, indexAdvisor)
+		}
 
 		// Additional services for gRPC v1
 		idxRepo := repository.NewIndexRecommendationsRepository(db)
@@ -146,7 +151,7 @@ func run() error {
 		log.Info("Analyzers and services wired")
 	}
 
-    // Create HTTP server
+	// Create HTTP server
 	deps := &server.Dependencies{
 		DB:          db,
 		RedisClient: redisClient,
@@ -162,18 +167,18 @@ func run() error {
 		DriftCheck:   driftSvc,
 	}
 
-    // Authenticator: use JWT/JWKS when configured; otherwise, simple (dev/local)
-    if cfg.AuthJWKSURL != "" && cfg.AuthIssuer != "" && cfg.AuthAudience != "" {
-        deps.Authenticator = auth.NewJWTAuthenticator(cfg.AuthJWKSURL, cfg.AuthIssuer, cfg.AuthAudience, time.Duration(cfg.AuthClockSkewSeconds)*time.Second)
-        log.Info("JWT/JWKS authentication enabled")
-    } else {
-        deps.Authenticator = auth.NewSimpleAuthenticator()
-        log.Info("Simple authentication enabled (dev)")
-    }
-    // If Vault client was successfully created above, attach health function now
-    if vaultClient != nil {
-        deps.VaultHealth = func(ctx context.Context) error { return vaultClient.Health(ctx) }
-    }
+	// Authenticator: use JWT/JWKS when configured; otherwise, simple (dev/local)
+	if cfg.AuthJWKSURL != "" && cfg.AuthIssuer != "" && cfg.AuthAudience != "" {
+		deps.Authenticator = auth.NewJWTAuthenticator(cfg.AuthJWKSURL, cfg.AuthIssuer, cfg.AuthAudience, time.Duration(cfg.AuthClockSkewSeconds)*time.Second)
+		log.Info("JWT/JWKS authentication enabled")
+	} else {
+		deps.Authenticator = auth.NewSimpleAuthenticator()
+		log.Info("Simple authentication enabled (dev)")
+	}
+	// If Vault client was successfully created above, attach health function now
+	if vaultClient != nil {
+		deps.VaultHealth = func(ctx context.Context) error { return vaultClient.Health(ctx) }
+	}
 	srv := server.New(cfg, deps)
 
 	// Start gRPC (if enabled via build tag)

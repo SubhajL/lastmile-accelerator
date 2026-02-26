@@ -17,6 +17,15 @@ type VaultClient struct {
 	client *vault.Client
 }
 
+func extractProjectDSN(secret map[string]string) (string, error) {
+	for _, key := range []string{"dsn", "DSN", "database_url", "DATABASE_URL", "url", "URL"} {
+		if v := secret[key]; v != "" {
+			return v, nil
+		}
+	}
+	return "", fmt.Errorf("dsn not found in secret")
+}
+
 func NewVaultClient(cfg *VaultConfig) (*VaultClient, error) {
 	if cfg.Address == "" {
 		return nil, fmt.Errorf("Vault address is required")
@@ -56,16 +65,24 @@ func NewVaultClient(cfg *VaultConfig) (*VaultClient, error) {
 	return &VaultClient{client: client}, nil
 }
 
+func (vc *VaultClient) GetProjectDSN(ctx context.Context, path string) (string, error) {
+	secret, err := GetSecret(ctx, vc, path)
+	if err != nil {
+		return "", err
+	}
+	return extractProjectDSN(secret)
+}
+
 // Health checks Vault sys health; returns error if unhealthy or unreachable.
 func (vc *VaultClient) Health(ctx context.Context) error {
-    if vc == nil || vc.client == nil {
-        return fmt.Errorf("vault client not initialized")
-    }
-    // The API does not support context here; call and rely on handler timeout.
-    if _, err := vc.client.Sys().Health(); err != nil {
-        return fmt.Errorf("vault health: %w", err)
-    }
-    return nil
+	if vc == nil || vc.client == nil {
+		return fmt.Errorf("vault client not initialized")
+	}
+	// The API does not support context here; call and rely on handler timeout.
+	if _, err := vc.client.Sys().Health(); err != nil {
+		return fmt.Errorf("vault health: %w", err)
+	}
+	return nil
 }
 
 func GetSecret(ctx context.Context, vc *VaultClient, path string) (map[string]string, error) {

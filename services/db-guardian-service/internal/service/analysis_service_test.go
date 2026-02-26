@@ -76,3 +76,64 @@ func TestAnalysisService_RunFullAnalysis_Persists(t *testing.T) {
 		t.Errorf("unmet expectations: %v", err)
 	}
 }
+
+type fakeResolver struct {
+	inspector analyzer.DBInspector
+	cleanup   func() error
+}
+
+func (f *fakeResolver) ResolveInspector(ctx context.Context, projectID string) (analyzer.DBInspector, func() error, error) {
+	return f.inspector, f.cleanup, nil
+}
+
+func TestAnalysisService_RunFullAnalysis_ProjectScoped_UsesResolver(t *testing.T) {
+	// Arrange
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	insp := &fakeInspector{}
+	cleanupCalled := false
+	resolver := &fakeResolver{
+		inspector: insp,
+		cleanup: func() error {
+			cleanupCalled = true
+			return nil
+		},
+	}
+
+	svc := NewAnalysisServiceWithProjectResolver(db, nil, resolver)
+	ctx := context.Background()
+
+	mock.ExpectQuery(regexp.QuoteMeta("INSERT INTO migration_audits (project_id, migration_name, status, findings_json) VALUES ($1, $2, $3, $4) RETURNING id")).
+		WithArgs("proj-1", "001_drop_col", sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow("audit-1"))
+
+	mock.ExpectQuery(regexp.QuoteMeta("INSERT INTO index_recommendations (project_id, table_name, column_names, reason, benefit_score, applied) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (project_id, table_name, column_names) DO UPDATE SET reason = EXCLUDED.reason, benefit_score = EXCLUDED.benefit_score, applied = EXCLUDED.applied, updated_at = NOW() RETURNING id")).
+		WithArgs("proj-1", "users", sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), false).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow("rec-1"))
+
+	// Act
+	_, err = svc.RunFullAnalysis(
+		ctx,
+		"proj-1",
+		"001_drop_col",
+		"ALTER TABLE users DROP COLUMN email",
+		analyzer.AnalyzeOptions{},
+		analyzer.ValidationOptions{CheckBreaking: true},
+		analyzer.IndexAnalysisOptions{MinQueryExecutions: 100, MinTableSize: 1},
+	)
+
+	// Assert
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if !cleanupCalled {
+		t.Fatal("expected resolver cleanup to be called")
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unmet expectations: %v", err)
+	}
+}
