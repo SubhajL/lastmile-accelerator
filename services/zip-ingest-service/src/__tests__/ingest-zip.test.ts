@@ -4,6 +4,8 @@ import { describe, expect, test } from 'vitest';
 
 import { createApp } from '../app.js';
 
+const sha256 = 'a'.repeat(64);
+
 function startStubOrchestrator(args: {
   handler: (req: http.IncomingMessage, body: string) => { statusCode?: number; body: unknown };
 }) {
@@ -36,7 +38,6 @@ function startStubOrchestrator(args: {
 describe('POST /v1/projects/:projectId/ingest/zip', () => {
   test('delegates to snapshot-orchestrator and returns snapshotId', async () => {
     const snapshotId = 'snap_0123456789abcdef0123456789abcdef';
-    const sha256 = 'a'.repeat(64);
 
     const stub = await startStubOrchestrator({
       handler: (req, body) => {
@@ -68,30 +69,17 @@ describe('POST /v1/projects/:projectId/ingest/zip', () => {
     await Promise.all([app.close(), stub.close()]);
   });
 
-  test('returns 502 when snapshot-orchestrator fails', async () => {
-    const sha256 = 'a'.repeat(64);
-    const stub = await startStubOrchestrator({
+  test.each([
+    {
+      name: 'returns 502 when snapshot-orchestrator fails',
       handler: () => ({ statusCode: 500, body: { error: 'nope' } }),
-    });
-
-    const app = await createApp({ snapshotOrchestratorUrl: stub.url, logger: false });
-    const res = await app.inject({
-      method: 'POST',
-      url: '/v1/projects/p123/ingest/zip',
-      payload: { filename: 'repo.zip', sizeBytes: 1, sha256 },
-    });
-
-    expect(res.statusCode).toBe(502);
-    expect(res.json()).toEqual({ error: 'snapshot_orchestrator_unavailable' });
-
-    await Promise.all([app.close(), stub.close()]);
-  });
-
-  test('returns 502 when snapshot-orchestrator returns invalid json', async () => {
-    const sha256 = 'a'.repeat(64);
-    const stub = await startStubOrchestrator({
+    },
+    {
+      name: 'returns 502 when snapshot-orchestrator returns invalid json',
       handler: () => ({ body: { ok: true } }),
-    });
+    },
+  ])('$name', async ({ handler }) => {
+    const stub = await startStubOrchestrator({ handler });
 
     const app = await createApp({ snapshotOrchestratorUrl: stub.url, logger: false });
     const res = await app.inject({
