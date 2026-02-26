@@ -3,6 +3,7 @@ package secrets
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	vault "github.com/hashicorp/vault/api"
 )
@@ -15,6 +16,24 @@ type VaultConfig struct {
 
 type VaultClient struct {
 	client *vault.Client
+}
+
+func sortedKeys(m map[string]string) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func extractProjectDSN(secret map[string]string) (string, error) {
+	for _, key := range []string{"dsn", "DSN", "database_url", "DATABASE_URL", "url", "URL"} {
+		if v := secret[key]; v != "" {
+			return v, nil
+		}
+	}
+	return "", fmt.Errorf("dsn not found in secret (available keys: %v)", sortedKeys(secret))
 }
 
 func NewVaultClient(cfg *VaultConfig) (*VaultClient, error) {
@@ -56,16 +75,24 @@ func NewVaultClient(cfg *VaultConfig) (*VaultClient, error) {
 	return &VaultClient{client: client}, nil
 }
 
+func (vc *VaultClient) GetProjectDSN(ctx context.Context, path string) (string, error) {
+	secret, err := GetSecret(ctx, vc, path)
+	if err != nil {
+		return "", err
+	}
+	return extractProjectDSN(secret)
+}
+
 // Health checks Vault sys health; returns error if unhealthy or unreachable.
 func (vc *VaultClient) Health(ctx context.Context) error {
-    if vc == nil || vc.client == nil {
-        return fmt.Errorf("vault client not initialized")
-    }
-    // The API does not support context here; call and rely on handler timeout.
-    if _, err := vc.client.Sys().Health(); err != nil {
-        return fmt.Errorf("vault health: %w", err)
-    }
-    return nil
+	if vc == nil || vc.client == nil {
+		return fmt.Errorf("vault client not initialized")
+	}
+	// The API does not support context here; call and rely on handler timeout.
+	if _, err := vc.client.Sys().Health(); err != nil {
+		return fmt.Errorf("vault health: %w", err)
+	}
+	return nil
 }
 
 func GetSecret(ctx context.Context, vc *VaultClient, path string) (map[string]string, error) {

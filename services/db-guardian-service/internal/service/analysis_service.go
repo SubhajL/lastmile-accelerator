@@ -5,11 +5,12 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 
 	"example.com/lma/db-guardian-service/internal/analyzer"
+	"example.com/lma/db-guardian-service/internal/events"
 	"example.com/lma/db-guardian-service/internal/models"
 	"example.com/lma/db-guardian-service/internal/repository"
-	"example.com/lma/db-guardian-service/internal/events"
 	"github.com/nats-io/nats.go"
 )
 
@@ -30,10 +31,21 @@ type AnalysisService struct {
 	migrations *analyzer.MigrationGuard
 	indexes    *analyzer.IndexAdvisor
 	publish    EventPublisher
+	resolver   InspectorResolver
 }
 
 func NewAnalysisService(db *sql.DB, natsConn *nats.Conn, role *analyzer.RoleAnalyzer, guard *analyzer.MigrationGuard, idx *analyzer.IndexAdvisor) *AnalysisService {
 	s := &AnalysisService{db: db, nats: natsConn, roles: role, migrations: guard, indexes: idx}
+	s.publish = events.PublishEvent
+	return s
+}
+
+type InspectorResolver interface {
+	ResolveInspector(ctx context.Context, projectID string) (analyzer.DBInspector, func() error, error)
+}
+
+func NewAnalysisServiceWithProjectResolver(db *sql.DB, natsConn *nats.Conn, resolver InspectorResolver) *AnalysisService {
+	s := &AnalysisService{db: db, nats: natsConn, resolver: resolver}
 	s.publish = events.PublishEvent
 	return s
 }
@@ -57,18 +69,42 @@ func (s *AnalysisService) RunFullAnalysis(
 		return nil, fmt.Errorf("projectID is required")
 	}
 
+	roles := s.roles
+	migrations := s.migrations
+	indexes := s.indexes
+	if s.resolver != nil {
+		inspector, cleanup, err := s.resolver.ResolveInspector(ctx, projectID)
+		if err != nil {
+			return nil, err
+		}
+		if cleanup != nil {
+			defer func() {
+				if err := cleanup(); err != nil {
+					log.Printf("project DB cleanup error: %v", err)
+				}
+			}()
+		}
+		roles = analyzer.NewRoleAnalyzer(inspector)
+		migrations = analyzer.NewMigrationGuard(inspector)
+		indexes = analyzer.NewIndexAdvisor(inspector)
+	}
+
+	if roles == nil || migrations == nil || indexes == nil {
+		return nil, fmt.Errorf("analysis service not configured")
+	}
+
 	// Execute analyzers
-	roleRes, err := s.roles.Analyze(ctx, roleOpts)
+	roleRes, err := roles.Analyze(ctx, roleOpts)
 	if err != nil {
 		return nil, fmt.Errorf("role analysis failed: %w", err)
 	}
 
-	migRes, err := s.migrations.ValidateMigration(ctx, migrationSQL, valOpts)
+	migRes, err := migrations.ValidateMigration(ctx, migrationSQL, valOpts)
 	if err != nil {
 		return nil, fmt.Errorf("migration validation failed: %w", err)
 	}
 
-	idxRes, err := s.indexes.AnalyzeIndexes(ctx, idxOpts)
+	idxRes, err := indexes.AnalyzeIndexes(ctx, idxOpts)
 	if err != nil {
 		return nil, fmt.Errorf("index analysis failed: %w", err)
 	}
