@@ -14,6 +14,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Go
         if: inputs.lang == 'go'
@@ -61,22 +63,39 @@ jobs:
         if: inputs.lang == 'node'
         working-directory: ${{ inputs.context }}
         run: |
-          bun run -s typecheck || true
-          bun run test -- --reporter=dot || true
+          if node -e "const p=require('./package.json'); process.exit(p.scripts?.typecheck ? 0 : 1)"; then
+            bun run -s typecheck
+          else
+            echo "No typecheck script; skipping"
+          fi
+
+          if node -e "const p=require('./package.json'); process.exit(p.scripts?.test ? 0 : 1)"; then
+            bun run test
+          else
+            echo "No test script; skipping"
+          fi
 
       - name: Unit tests (python)
         if: inputs.lang == 'python'
         working-directory: ${{ inputs.context }}
-        run: pytest -q || true
+        run: |
+          if command -v pytest >/dev/null 2>&1; then
+            pytest -q
+          else
+            echo "::warning::pytest not installed; skipping"
+          fi
 
       - name: Unit tests (rust)
         if: inputs.lang == 'rust'
         working-directory: ${{ inputs.context }}
-        run: cargo test --all --locked || true
+        run: cargo test --all --locked
 
       - name: Secret scan (gitleaks)
-        uses: zricethezav/gitleaks-action@v2
-        with: { config-path: .github/gitleaks.toml }
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .github/gitleaks.toml
+          GITLEAKS_ENABLE_COMMENTS: "false"
 
       - name: Hadolint
         uses: hadolint/hadolint-action@v3.1.0
