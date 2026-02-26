@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: fix engine API
+  title: fix-engine-service API
   version: 1.0.0
 paths:
   /v1/snapshots/{snapshotId}/fix-list:
@@ -37,4 +37,3 @@ components:
         tier: { type: integer, enum: [1, 2, 3] }
         title: { type: string }
         description: { type: string }
-

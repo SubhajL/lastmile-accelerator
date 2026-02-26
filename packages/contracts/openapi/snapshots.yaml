@@ -18,8 +18,8 @@ paths:
             schema:
               $ref: '#/components/schemas/CreateSnapshotReq'
       responses:
-        '200':
-          description: OK
+        '201':
+          description: Created
           content:
             application/json:
               schema:
@@ -55,7 +55,9 @@ components:
       type: object
       required: [snapshotId, projectId, mode, status]
       properties:
-        snapshotId: { type: string }
+        snapshotId:
+          type: string
+          pattern: '^snap_[0-9a-f]{32}$'
         projectId: { type: string }
         mode: { type: string, enum: ['A', 'B', 'C'] }
         status: { type: string, enum: [created, processing, ready, failed] }
@@ -73,4 +75,3 @@ components:
       properties:
         type: { type: string }
         uri: { type: string }
-

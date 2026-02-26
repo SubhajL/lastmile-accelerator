@@ -18,8 +18,8 @@ paths:
             schema:
               $ref: '#/components/schemas/ZipIngestReq'
       responses:
-        '200':
-          description: OK
+        '201':
+          description: Created
           content:
             application/json:
               schema:
@@ -31,13 +31,15 @@ components:
       required: [filename, sizeBytes, sha256]
       properties:
         filename: { type: string }
-        sizeBytes: { type: integer, minimum: 0 }
+        sizeBytes: { type: integer, minimum: 1 }
         sha256:
           type: string
           description: Lowercase hex SHA-256 of the uploaded archive
+          pattern: '^[a-f0-9]{64}$'
     ZipIngestRes:
       type: object
       required: [snapshotId]
       properties:
-        snapshotId: { type: string }
-
+        snapshotId:
+          type: string
+          pattern: '^snap_[0-9a-f]{32}$'
