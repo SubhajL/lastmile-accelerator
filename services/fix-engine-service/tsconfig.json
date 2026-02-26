@@ -9,7 +9,6 @@
     "skipLibCheck": true,
     "sourceMap": true
   },
-  "include": [
-    "src"
-  ]
+  "include": ["src"],
+  "exclude": ["dist", "src/**/*.spec.ts", "src/**/*.test.ts", "src/**/__tests__/**"]
 }
