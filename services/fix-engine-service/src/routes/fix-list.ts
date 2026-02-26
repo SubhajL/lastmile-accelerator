@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 
 function isValidSnapshotId(snapshotId: string): boolean {
-  return /^snap_[0-9a-f]{32}$/i.test(snapshotId);
+  return /^snap_[0-9a-f]{32}$/.test(snapshotId);
 }
 
 export function registerFixListRoutes(app: FastifyInstance): void {
@@ -12,7 +12,12 @@ export function registerFixListRoutes(app: FastifyInstance): void {
         params: {
           type: 'object',
           required: ['snapshotId'],
-          properties: { snapshotId: { type: 'string', minLength: 1 } },
+          properties: {
+            snapshotId: {
+              type: 'string',
+              minLength: 1,
+            },
+          },
         },
       },
     },

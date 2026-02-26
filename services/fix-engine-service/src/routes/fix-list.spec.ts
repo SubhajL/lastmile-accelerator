@@ -4,7 +4,7 @@ import { createApp } from '../app.js';
 
 describe('GET /v1/snapshots/:snapshotId/fix-list', () => {
   test('returns deterministic empty fix list', async () => {
-    const app = await createApp();
+    const app = await createApp({ logger: false });
     const res = await app.inject({
       method: 'GET',
       url: '/v1/snapshots/snap_0123456789abcdef0123456789abcdef/fix-list',
@@ -20,7 +20,7 @@ describe('GET /v1/snapshots/:snapshotId/fix-list', () => {
   });
 
   test('returns 400 for invalid snapshotId', async () => {
-    const app = await createApp();
+    const app = await createApp({ logger: false });
     const res = await app.inject({
       method: 'GET',
       url: '/v1/snapshots/not-a-snapshot/fix-list',

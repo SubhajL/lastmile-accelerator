@@ -4,8 +4,12 @@ import type { FastifyInstance } from 'fastify';
 import { registerHealthRoutes } from './routes/health.js';
 import { registerFixListRoutes } from './routes/fix-list.js';
 
-export async function createApp(): Promise<FastifyInstance> {
-  const app = Fastify({ logger: false });
+type CreateAppOptions = {
+  logger?: boolean;
+};
+
+export async function createApp(opts: CreateAppOptions = {}): Promise<FastifyInstance> {
+  const app = Fastify({ logger: opts.logger ?? true });
 
   registerHealthRoutes(app);
   registerFixListRoutes(app);
