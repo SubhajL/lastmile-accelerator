@@ -6,13 +6,13 @@ on:
       - 'services/db-guardian-service/**'
       - 'packages/contracts/**'
   push:
-    branches: [main]
+    branches: [main, db-guardian-service]
     paths:
       - 'services/db-guardian-service/**'
       - 'packages/contracts/**'
 jobs:
   push-build:
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && github.ref_name == 'main'
     uses: ./.github/workflows/_service-ci.yml
     with:
       lang: go
@@ -24,6 +24,44 @@ jobs:
       contents: read
       packages: write
       id-token: write
+
+  push-ci:
+    if: github.event_name == 'push' && github.ref_name == 'db-guardian-service'
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: services/db-guardian-service
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Setup protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: '27.1'
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          working-directory: services/db-guardian-service
+          args: -c .golangci.yml
+
+      - name: Unit tests (go)
+        run: go test ./... -cover
+
+      - name: Verify gRPC codegen
+        run: |
+          make grpc-codegen
+          git --no-pager diff --exit-code -- dbguardian/v1 || (echo "Run 'make grpc-codegen' and commit generated code" && exit 1)
 
   pr-ci:
     if: github.event_name == 'pull_request'
