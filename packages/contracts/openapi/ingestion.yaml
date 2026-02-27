@@ -67,6 +67,27 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ZipIngestInitiateRes'
+  /v1/projects/{projectId}/ingest/zip/complete:
+    post:
+      summary: Complete an initiated ZIP upload and create a snapshot
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ZipIngestCompleteReq'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ZipIngestRes'
   /v1/projects/{projectId}/ingest/zip/uploads/{uploadId}:
     put:
       summary: Upload a ZIP to the signed URL and create a snapshot
@@ -131,9 +152,31 @@ components:
       properties:
         uploadId: { type: string }
         uploadUrl: { type: string }
+        uploadBackend:
+          type: string
+          enum: [service, s3]
         expiresAt: { type: string }
+        method:
+          type: string
+          enum: [PUT]
+        contentType:
+          type: string
+          enum: [application/zip]
         filename: { type: string }
         maxBytes: { type: integer, minimum: 1 }
+        bucket: { type: string, minLength: 1 }
+        objectKey: { type: string, minLength: 1 }
+    ZipIngestCompleteReq:
+      type: object
+      additionalProperties: false
+      required: [uploadId, filename]
+      properties:
+        uploadId: { type: string, minLength: 1 }
+        filename: { type: string, minLength: 1 }
+        sha256:
+          type: string
+          description: Optional lowercase hex SHA-256 claim for the uploaded archive
+          pattern: '^[a-f0-9]{64}$'
     ZipUploadRes:
       type: object
       required: [snapshotId, sha256, sizeBytes]
