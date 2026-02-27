@@ -29,6 +29,28 @@ function startStubOrchestrator(args: {
   });
 }
 
+function startStubS3(args: {
+  handler: (req: http.IncomingMessage) => { statusCode?: number; headers?: Record<string, string>; body?: string };
+}) {
+  const server = http.createServer((req, res) => {
+    const response = args.handler(req);
+    res.statusCode = response.statusCode ?? 200;
+    for (const [k, v] of Object.entries(response.headers ?? {})) res.setHeader(k, v);
+    res.end(response.body ?? '');
+  });
+
+  return new Promise<{ url: string; close: () => Promise<void> }>((resolve) => {
+    server.listen(0, '127.0.0.1', () => {
+      const address = server.address();
+      if (!address || typeof address === 'string') throw new Error('unexpected server address');
+      resolve({
+        url: `http://127.0.0.1:${address.port}`,
+        close: () => new Promise((r) => server.close(() => r())),
+      });
+    });
+  });
+}
+
 describe('zip signed-upload flow', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
@@ -171,6 +193,246 @@ describe('zip signed-upload flow', () => {
     expect(initRes.json()).toEqual({ error: 's3_not_configured' });
 
     await app.close();
+  });
+
+  test('complete HEADs object and creates snapshot (S3 backend)', async () => {
+    const snapshotId = 'snap_0123456789abcdef0123456789abcdef';
+    const sizeBytes = 1234;
+    const sha256 = 'a'.repeat(64);
+
+    const s3 = await startStubS3({
+      handler: (req) => {
+        expect(req.method).toBe('HEAD');
+        expect(req.url).toContain('/snapshots/zip-uploads/p123/');
+        return { headers: { 'content-length': String(sizeBytes) } };
+      },
+    });
+
+    const stub = await startStubOrchestrator({
+      handler: (req, body) => {
+        expect(req.method).toBe('POST');
+        expect(req.url).toBe('/v1/projects/p123/snapshots');
+
+        const parsed = JSON.parse(body) as {
+          mode: string;
+          sourceRef: {
+            zip: {
+              filename: string;
+              sizeBytes: number;
+              sha256?: string;
+              storageKey?: string;
+              uploadId?: string;
+            };
+          };
+        };
+        expect(parsed).toEqual({
+          mode: 'C',
+          sourceRef: {
+            zip: {
+              filename: 'repo.zip',
+              sizeBytes,
+              sha256,
+              storageKey: expect.any(String),
+              uploadId: expect.any(String),
+            },
+          },
+        });
+        expect(parsed.sourceRef.zip.storageKey).toMatch(/^s3:\/\//);
+
+        return { body: { snapshotId } };
+      },
+    });
+
+    vi.stubEnv('ZIP_UPLOAD_BACKEND', 's3');
+    vi.stubEnv('SNAPSHOT_BUCKET', 'snapshots');
+    vi.stubEnv('SNAPSHOT_S3_ENDPOINT', s3.url);
+    vi.stubEnv('SNAPSHOT_S3_REGION', 'us-east-1');
+    vi.stubEnv('SNAPSHOT_S3_ACCESS_KEY', 'minio-access-key');
+    vi.stubEnv('SNAPSHOT_S3_SECRET_KEY', 'minio-secret-key');
+    vi.stubEnv('SNAPSHOT_S3_FORCE_PATH_STYLE', 'true');
+    vi.stubEnv('ZIP_UPLOAD_PREFIX', 'zip-uploads/');
+
+    const app = await createApp({ snapshotOrchestratorUrl: stub.url, logger: false });
+
+    const initRes = await app.inject({
+      method: 'POST',
+      url: '/v1/projects/p123/ingest/zip/initiate',
+      payload: { filename: 'repo.zip' },
+    });
+    expect(initRes.statusCode).toBe(201);
+    const initJson = initRes.json() as { uploadId: string; objectKey?: string };
+    expect(initJson.uploadId).toMatch(/^upl_/);
+    expect(initJson.objectKey).toContain(`/p123/${initJson.uploadId}.zip`);
+
+    const completeRes = await app.inject({
+      method: 'POST',
+      url: '/v1/projects/p123/ingest/zip/complete',
+      payload: { uploadId: initJson.uploadId, filename: 'repo.zip', sha256 },
+    });
+
+    expect(completeRes.statusCode).toBe(201);
+    expect(completeRes.json()).toEqual({ snapshotId });
+
+    await Promise.all([app.close(), stub.close(), s3.close()]);
+  });
+
+  test('complete returns 400 when ZIP_UPLOAD_BACKEND is not s3', async () => {
+    const app = await createApp({ logger: false });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/projects/p123/ingest/zip/complete',
+      payload: { uploadId: 'upl_deadbeefdeadbeefdeadbeefdeadbeef', filename: 'repo.zip' },
+    });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.json()).toEqual({ error: 'zip_upload_backend_not_s3' });
+
+    await app.close();
+  });
+
+  test('complete returns 404 when uploadId is unknown', async () => {
+    const s3 = await startStubS3({
+      handler: () => ({ statusCode: 200, headers: { 'content-length': '1' } }),
+    });
+
+    vi.stubEnv('ZIP_UPLOAD_BACKEND', 's3');
+    vi.stubEnv('SNAPSHOT_BUCKET', 'snapshots');
+    vi.stubEnv('SNAPSHOT_S3_ENDPOINT', s3.url);
+    vi.stubEnv('SNAPSHOT_S3_REGION', 'us-east-1');
+    vi.stubEnv('SNAPSHOT_S3_ACCESS_KEY', 'minio-access-key');
+    vi.stubEnv('SNAPSHOT_S3_SECRET_KEY', 'minio-secret-key');
+    vi.stubEnv('SNAPSHOT_S3_FORCE_PATH_STYLE', 'true');
+
+    const app = await createApp({ logger: false });
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/projects/p123/ingest/zip/complete',
+      payload: { uploadId: 'upl_deadbeefdeadbeefdeadbeefdeadbeef', filename: 'repo.zip' },
+    });
+
+    expect(res.statusCode).toBe(404);
+    expect(res.json()).toEqual({ error: 'zip_upload_not_found' });
+
+    await Promise.all([app.close(), s3.close()]);
+  });
+
+  test('complete returns 404 after session has been pruned (stale beyond TTL grace)', async () => {
+    const s3 = await startStubS3({
+      handler: () => ({ statusCode: 200, headers: { 'content-length': '1' } }),
+    });
+
+    vi.stubEnv('ZIP_UPLOAD_BACKEND', 's3');
+    vi.stubEnv('SNAPSHOT_BUCKET', 'snapshots');
+    vi.stubEnv('SNAPSHOT_S3_ENDPOINT', s3.url);
+    vi.stubEnv('SNAPSHOT_S3_REGION', 'us-east-1');
+    vi.stubEnv('SNAPSHOT_S3_ACCESS_KEY', 'minio-access-key');
+    vi.stubEnv('SNAPSHOT_S3_SECRET_KEY', 'minio-secret-key');
+    vi.stubEnv('SNAPSHOT_S3_FORCE_PATH_STYLE', 'true');
+    vi.stubEnv('ZIP_UPLOAD_PREFIX', 'zip-uploads/');
+
+    const realNow = Date.now;
+    let nowMs = 1_700_000_000_000;
+    Date.now = () => nowMs;
+
+    try {
+      const app = await createApp({ uploadTokenTtlSeconds: 1, logger: false });
+
+      const initRes = await app.inject({
+        method: 'POST',
+        url: '/v1/projects/p123/ingest/zip/initiate',
+        payload: { filename: 'repo.zip' },
+      });
+      const initJson = initRes.json() as { uploadId: string };
+
+      nowMs += 3_000;
+      const res = await app.inject({
+        method: 'POST',
+        url: '/v1/projects/p123/ingest/zip/complete',
+        payload: { uploadId: initJson.uploadId, filename: 'repo.zip' },
+      });
+
+      expect(res.statusCode).toBe(404);
+      expect(res.json()).toEqual({ error: 'zip_upload_not_found' });
+
+      await Promise.all([app.close(), s3.close()]);
+    } finally {
+      Date.now = realNow;
+    }
+  });
+
+  test('complete returns 404 when S3 object is missing', async () => {
+    const s3 = await startStubS3({
+      handler: () => ({ statusCode: 404 }),
+    });
+
+    vi.stubEnv('ZIP_UPLOAD_BACKEND', 's3');
+    vi.stubEnv('SNAPSHOT_BUCKET', 'snapshots');
+    vi.stubEnv('SNAPSHOT_S3_ENDPOINT', s3.url);
+    vi.stubEnv('SNAPSHOT_S3_REGION', 'us-east-1');
+    vi.stubEnv('SNAPSHOT_S3_ACCESS_KEY', 'minio-access-key');
+    vi.stubEnv('SNAPSHOT_S3_SECRET_KEY', 'minio-secret-key');
+    vi.stubEnv('SNAPSHOT_S3_FORCE_PATH_STYLE', 'true');
+    vi.stubEnv('ZIP_UPLOAD_PREFIX', 'zip-uploads/');
+
+    const app = await createApp({ logger: false });
+
+    const initRes = await app.inject({
+      method: 'POST',
+      url: '/v1/projects/p123/ingest/zip/initiate',
+      payload: { filename: 'repo.zip' },
+    });
+    const initJson = initRes.json() as { uploadId: string };
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/projects/p123/ingest/zip/complete',
+      payload: { uploadId: initJson.uploadId, filename: 'repo.zip' },
+    });
+
+    expect(res.statusCode).toBe(404);
+    expect(res.json()).toEqual({ error: 'zip_upload_not_found' });
+
+    await Promise.all([app.close(), s3.close()]);
+  });
+
+  test('complete returns 502 when snapshot-orchestrator fails', async () => {
+    const s3 = await startStubS3({
+      handler: () => ({ statusCode: 200, headers: { 'content-length': '1' } }),
+    });
+
+    const stub = await startStubOrchestrator({
+      handler: () => ({ statusCode: 500, body: { error: 'nope' } }),
+    });
+
+    vi.stubEnv('ZIP_UPLOAD_BACKEND', 's3');
+    vi.stubEnv('SNAPSHOT_BUCKET', 'snapshots');
+    vi.stubEnv('SNAPSHOT_S3_ENDPOINT', s3.url);
+    vi.stubEnv('SNAPSHOT_S3_REGION', 'us-east-1');
+    vi.stubEnv('SNAPSHOT_S3_ACCESS_KEY', 'minio-access-key');
+    vi.stubEnv('SNAPSHOT_S3_SECRET_KEY', 'minio-secret-key');
+    vi.stubEnv('SNAPSHOT_S3_FORCE_PATH_STYLE', 'true');
+    vi.stubEnv('ZIP_UPLOAD_PREFIX', 'zip-uploads/');
+
+    const app = await createApp({ snapshotOrchestratorUrl: stub.url, logger: false });
+
+    const initRes = await app.inject({
+      method: 'POST',
+      url: '/v1/projects/p123/ingest/zip/initiate',
+      payload: { filename: 'repo.zip' },
+    });
+    const initJson = initRes.json() as { uploadId: string };
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/projects/p123/ingest/zip/complete',
+      payload: { uploadId: initJson.uploadId, filename: 'repo.zip' },
+    });
+
+    expect(res.statusCode).toBe(502);
+    expect(res.json()).toEqual({ error: 'snapshot_orchestrator_unavailable' });
+
+    await Promise.all([app.close(), stub.close(), s3.close()]);
   });
 
   test('upload rejects invalid token', async () => {
