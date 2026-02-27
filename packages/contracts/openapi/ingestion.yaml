@@ -24,8 +24,90 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ZipIngestRes'
+  /v1/projects/{projectId}/ingest/zip/upload:
+    post:
+      summary: Upload a ZIP directly and create a snapshot
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/zip:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ZipIngestRes'
+  /v1/projects/{projectId}/ingest/zip/initiate:
+    post:
+      summary: Initiate a signed upload for a ZIP and return an upload URL
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ZipIngestInitiateReq'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ZipIngestInitiateRes'
+  /v1/projects/{projectId}/ingest/zip/uploads/{uploadId}:
+    put:
+      summary: Upload a ZIP to the signed URL and create a snapshot
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema: { type: string }
+        - name: uploadId
+          in: path
+          required: true
+          schema: { type: string }
+        - name: expires
+          in: query
+          required: true
+          schema: { type: integer, minimum: 1 }
+        - name: token
+          in: query
+          required: true
+          schema: { type: string, minLength: 1 }
+      requestBody:
+        required: true
+        content:
+          application/zip:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ZipUploadRes'
 components:
   schemas:
+    ZipIngestInitiateReq:
+      type: object
+      additionalProperties: false
+      properties:
+        filename: { type: string, minLength: 1 }
     ZipIngestReq:
       type: object
       required: [filename, sizeBytes, sha256]
@@ -43,3 +125,24 @@ components:
         snapshotId:
           type: string
           pattern: '^snap_[0-9a-f]{32}$'
+    ZipIngestInitiateRes:
+      type: object
+      required: [uploadId, uploadUrl, expiresAt, filename, maxBytes]
+      properties:
+        uploadId: { type: string }
+        uploadUrl: { type: string }
+        expiresAt: { type: string }
+        filename: { type: string }
+        maxBytes: { type: integer, minimum: 1 }
+    ZipUploadRes:
+      type: object
+      required: [snapshotId, sha256, sizeBytes]
+      properties:
+        snapshotId:
+          type: string
+          pattern: '^snap_[0-9a-f]{32}$'
+        sha256:
+          type: string
+          description: Lowercase hex SHA-256 of the uploaded archive
+          pattern: '^[a-f0-9]{64}$'
+        sizeBytes: { type: integer, minimum: 1 }

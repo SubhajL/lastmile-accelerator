@@ -18,6 +18,21 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/FixListRes'
+  /v1/fixes/{fixId}/manifest:
+    get:
+      summary: Get fix manifest
+      parameters:
+        - name: fixId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FixManifest'
 components:
   schemas:
     FixListRes:
@@ -37,3 +52,16 @@ components:
         tier: { type: integer, enum: [1, 2, 3] }
         title: { type: string }
         description: { type: string }
+    FixManifest:
+      type: object
+      required: [fixId, summary, files, locDelta, tests]
+      properties:
+        fixId: { type: string }
+        summary: { type: string }
+        files:
+          type: array
+          items: { type: string }
+        locDelta: { type: integer }
+        tests:
+          type: array
+          items: { type: string }
