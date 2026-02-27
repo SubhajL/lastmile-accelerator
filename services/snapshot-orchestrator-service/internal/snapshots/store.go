@@ -38,6 +38,9 @@ func (s *Store) Create(ctx context.Context, projectID string, mode Mode, sourceR
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.snapshots[snapshot.SnapshotID] = snapshot
+	ready := snapshot
+	ready.Status = StatusReady
+	s.snapshots[snapshot.SnapshotID] = ready
 	return snapshot, nil
 }
 

@@ -48,6 +48,10 @@ func NewRouter(store *snapshots.Store) http.Handler {
 			http.Error(w, "missing sourceRef", http.StatusBadRequest)
 			return
 		}
+		if err := validateSourceRef(req.Mode, req.SourceRef); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 
 		snapshot, err := store.Create(r.Context(), projectID, req.Mode, req.SourceRef)
 		if err != nil {
@@ -91,4 +95,19 @@ func validateMode(mode snapshots.Mode) error {
 	default:
 		return errors.New("invalid mode")
 	}
+}
+
+func validateSourceRef(mode snapshots.Mode, sourceRef map[string]any) error {
+	if mode != snapshots.ModeC {
+		return nil
+	}
+
+	zip, ok := sourceRef["zip"]
+	if !ok || zip == nil {
+		return errors.New("missing sourceRef.zip")
+	}
+	if _, ok := zip.(map[string]any); !ok {
+		return errors.New("invalid sourceRef.zip")
+	}
+	return nil
 }

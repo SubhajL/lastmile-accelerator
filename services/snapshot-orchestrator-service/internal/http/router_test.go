@@ -69,6 +69,9 @@ func TestCreateSnapshotAndGetSnapshotRoundTrip(t *testing.T) {
 	if fetched.SnapshotID != created.SnapshotID {
 		t.Fatalf("snapshotId mismatch: created=%q fetched=%q", created.SnapshotID, fetched.SnapshotID)
 	}
+	if fetched.Status != snapshots.StatusReady {
+		t.Fatalf("unexpected fetched status: %q", fetched.Status)
+	}
 }
 
 func TestGetSnapshot_NotFound(t *testing.T) {
