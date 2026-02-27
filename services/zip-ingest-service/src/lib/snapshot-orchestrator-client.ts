@@ -1,11 +1,15 @@
+type ZipSourceRef = {
+  filename: string;
+  sizeBytes: number;
+  sha256: string;
+  storageKey?: string;
+  uploadId?: string;
+};
+
 type CreateSnapshotReq = {
   mode: 'C';
   sourceRef: {
-    zip: {
-      filename: string;
-      sizeBytes: number;
-      sha256: string;
-    };
+    zip: ZipSourceRef;
   };
 };
 
