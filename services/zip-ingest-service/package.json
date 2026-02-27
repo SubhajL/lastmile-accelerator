@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@aws-crypto/sha256-js": "^5.2.0",
+    "@aws-sdk/client-s3": "3.927.0",
     "@aws-sdk/util-format-url": "3.922.0",
     "@smithy/protocol-http": "5.3.4",
     "@smithy/signature-v4": "5.3.4",

@@ -2,6 +2,7 @@ import { Sha256 } from '@aws-crypto/sha256-js';
 import { formatUrl } from '@aws-sdk/util-format-url';
 import { HttpRequest } from '@smithy/protocol-http';
 import { SignatureV4 } from '@smithy/signature-v4';
+import { HeadObjectCommand, S3Client } from '@aws-sdk/client-s3';
 
 export type S3ZipUploadsConfig = {
   bucket: string;
@@ -49,6 +50,18 @@ export function buildZipUploadObjectKey(args: {
   return `${normalizePrefix(args.prefix)}${encodeURIComponent(args.projectId)}/${args.uploadId}.zip`;
 }
 
+export function createS3Client(cfg: S3ZipUploadsConfig): S3Client {
+  return new S3Client({
+    region: cfg.region,
+    endpoint: cfg.endpoint,
+    forcePathStyle: cfg.forcePathStyle,
+    credentials: {
+      accessKeyId: cfg.accessKeyId,
+      secretAccessKey: cfg.secretAccessKey,
+    },
+  });
+}
+
 export async function createPresignedZipPutUrl(args: {
   cfg: S3ZipUploadsConfig;
   objectKey: string;
@@ -86,4 +99,25 @@ export async function createPresignedZipPutUrl(args: {
 
   const signed = await signer.presign(request, { expiresIn: args.expiresInSeconds });
   return formatUrl(signed);
+}
+
+export async function headZipUploadSizeBytes(args: {
+  client: S3Client;
+  cfg: S3ZipUploadsConfig;
+  objectKey: string;
+}): Promise<number | null> {
+  try {
+    const res = await args.client.send(
+      new HeadObjectCommand({ Bucket: args.cfg.bucket, Key: args.objectKey }),
+    );
+    const sizeBytes = res.ContentLength;
+    return typeof sizeBytes === 'number' ? sizeBytes : null;
+  } catch (err) {
+    const statusCode =
+      typeof err === 'object' && err !== null
+        ? (err as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode
+        : null;
+    if (statusCode === 404) return null;
+    throw err;
+  }
 }
