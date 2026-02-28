@@ -5,10 +5,13 @@ import { join } from 'node:path';
 import type { FastifyInstance } from 'fastify';
 
 import { createSnapshotViaOrchestrator } from '../lib/snapshot-orchestrator-client.js';
+import type { ZipSourceRefWithSha256 } from '../lib/snapshot-orchestrator-client.js';
 import {
   buildZipUploadObjectKey,
+  createS3Client,
   createPresignedZipPutUrl,
   getS3ZipUploadsConfigFromEnv,
+  headZipUploadSizeBytes,
 } from '../lib/s3-zip-uploads.js';
 
 type InitiateZipIngestBody = {
@@ -23,6 +26,12 @@ type UploadQuery = {
 type UploadParams = {
   projectId: string;
   uploadId: string;
+};
+
+type CompleteZipIngestBody = {
+  uploadId: string;
+  filename: string;
+  sha256?: string;
 };
 
 function hmacToken(args: { secret: string; uploadId: string; expires: number }): string {
@@ -65,6 +74,13 @@ function parseUploadBackend(value: string | undefined): UploadBackend {
   return 'service';
 }
 
+type S3UploadSession = {
+  projectId: string;
+  bucket: string;
+  objectKey: string;
+  expiresAtUnixSeconds: number;
+};
+
 export function registerZipUploadRoutes(
   app: FastifyInstance,
   opts?: {
@@ -95,6 +111,18 @@ export function registerZipUploadRoutes(
 
   const uploadBackend = parseUploadBackend(process.env.ZIP_UPLOAD_BACKEND);
   const s3Cfg = uploadBackend === 's3' ? getS3ZipUploadsConfigFromEnv() : null;
+  const s3Client = uploadBackend === 's3' && s3Cfg ? createS3Client(s3Cfg) : null;
+  const s3Sessions = new Map<string, S3UploadSession>();
+  const s3SessionPruneGraceSeconds = uploadTokenTtlSeconds;
+
+  function pruneStaleS3Sessions(nowUnixSeconds: number): void {
+    const hardExpiryUnixSeconds = nowUnixSeconds - s3SessionPruneGraceSeconds;
+    for (const [uploadId, session] of s3Sessions.entries()) {
+      if (session.expiresAtUnixSeconds < hardExpiryUnixSeconds) {
+        s3Sessions.delete(uploadId);
+      }
+    }
+  }
 
   app.post<{ Params: { projectId: string }; Body: InitiateZipIngestBody }>(
     '/v1/projects/:projectId/ingest/zip/initiate',
@@ -115,6 +143,8 @@ export function registerZipUploadRoutes(
       },
     },
     async (req, reply) => {
+      pruneStaleS3Sessions(Math.floor(Date.now() / 1000));
+
       const uploadId = newUploadId();
       const expires = Math.floor(Date.now() / 1000) + uploadTokenTtlSeconds;
       const filename = req.body?.filename ?? `${uploadId}.zip`;
@@ -135,6 +165,13 @@ export function registerZipUploadRoutes(
           cfg: s3Cfg,
           objectKey,
           expiresInSeconds: uploadTokenTtlSeconds,
+        });
+
+        s3Sessions.set(uploadId, {
+          projectId: req.params.projectId,
+          bucket: s3Cfg.bucket,
+          objectKey,
+          expiresAtUnixSeconds: expires,
         });
 
         return reply.code(201).send({
@@ -164,6 +201,99 @@ export function registerZipUploadRoutes(
         filename,
         maxBytes: uploadMaxBytes,
       });
+    },
+  );
+
+  app.post<{ Params: { projectId: string }; Body: CompleteZipIngestBody }>(
+    '/v1/projects/:projectId/ingest/zip/complete',
+    {
+      schema: {
+        params: {
+          type: 'object',
+          required: ['projectId'],
+          properties: { projectId: { type: 'string', minLength: 1 } },
+        },
+        body: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['uploadId', 'filename'],
+          properties: {
+            uploadId: { type: 'string', minLength: 1 },
+            filename: { type: 'string', minLength: 1 },
+            sha256: { type: 'string', pattern: '^[a-f0-9]{64}$' },
+          },
+        },
+      },
+    },
+    async (req, reply) => {
+      if (uploadBackend !== 's3') {
+        return reply.code(400).send({ error: 'zip_upload_backend_not_s3' });
+      }
+
+      if (!s3Cfg || !s3Client) {
+        req.log.error('ZIP_UPLOAD_BACKEND=s3 but S3 env is not configured');
+        return reply.code(500).send({ error: 's3_not_configured' });
+      }
+
+      pruneStaleS3Sessions(Math.floor(Date.now() / 1000));
+
+      const session = s3Sessions.get(req.body.uploadId);
+      if (!session || session.projectId !== req.params.projectId) {
+        return reply.code(404).send({ error: 'zip_upload_not_found' });
+      }
+      const now = Math.floor(Date.now() / 1000);
+      if (session.expiresAtUnixSeconds < now) {
+        s3Sessions.delete(req.body.uploadId);
+        return reply.code(401).send({ error: 'zip_upload_expired' });
+      }
+
+      let sizeBytes: number | null = null;
+      try {
+        sizeBytes = await headZipUploadSizeBytes({
+          client: s3Client,
+          cfg: s3Cfg,
+          objectKey: session.objectKey,
+        });
+      } catch (err) {
+        req.log.error({ err }, 's3 head object failed');
+        return reply.code(502).send({ error: 'zip_storage_unavailable' });
+      }
+      if (sizeBytes === null) {
+        return reply.code(404).send({ error: 'zip_upload_not_found' });
+      }
+      if (sizeBytes < 1) {
+        return reply.code(400).send({ error: 'zip_upload_empty' });
+      }
+      if (sizeBytes > uploadMaxBytes) {
+        return reply.code(413).send({ error: 'zip_upload_too_large' });
+      }
+
+      const storageKey = `s3://${session.bucket}/${session.objectKey}`;
+
+      try {
+        const { snapshotId } = await createSnapshotViaOrchestrator({
+          baseUrl: snapshotOrchestratorUrl,
+          projectId: req.params.projectId,
+          body: {
+            mode: 'C',
+            sourceRef: {
+              zip: {
+                filename: req.body.filename,
+                sizeBytes,
+                sha256: req.body.sha256,
+                storageKey,
+                uploadId: req.body.uploadId,
+              },
+            },
+          },
+        });
+
+        s3Sessions.delete(req.body.uploadId);
+        return reply.code(201).send({ snapshotId });
+      } catch (err) {
+        req.log.error({ err }, 'snapshot-orchestrator request failed');
+        return reply.code(502).send({ error: 'snapshot_orchestrator_unavailable' });
+      }
     },
   );
 
@@ -220,6 +350,13 @@ export function registerZipUploadRoutes(
 
       const sha256 = sha256Hex(req.body);
       const sizeBytes = req.body.length;
+      const zipSourceRef: ZipSourceRefWithSha256 = {
+        filename,
+        sizeBytes,
+        sha256,
+        storageKey: `local:${storagePath}`,
+        uploadId,
+      };
 
       try {
         const { snapshotId } = await createSnapshotViaOrchestrator({
@@ -228,13 +365,7 @@ export function registerZipUploadRoutes(
           body: {
             mode: 'C',
             sourceRef: {
-              zip: {
-                filename,
-                sizeBytes,
-                sha256,
-                storageKey: `local:${storagePath}`,
-                uploadId,
-              },
+              zip: zipSourceRef,
             },
           },
         });

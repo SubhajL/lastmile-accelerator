@@ -1,4 +1,4 @@
-type ZipSourceRef = {
+export type ZipSourceRefWithSha256 = {
   filename: string;
   sizeBytes: number;
   sha256: string;
@@ -6,10 +6,18 @@ type ZipSourceRef = {
   uploadId?: string;
 };
 
+export type ZipSourceRefCreate = {
+  filename: string;
+  sizeBytes: number;
+  sha256?: string;
+  storageKey?: string;
+  uploadId?: string;
+};
+
 type CreateSnapshotReq = {
   mode: 'C';
   sourceRef: {
-    zip: ZipSourceRef;
+    zip: ZipSourceRefCreate;
   };
 };
 
