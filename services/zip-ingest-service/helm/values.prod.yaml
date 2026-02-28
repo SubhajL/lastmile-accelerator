@@ -9,7 +9,10 @@ env:
   OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.lma-prod.svc.cluster.local:4317
   MAX_UPLOAD_MB: ''
   CLAMAV_URL: ''
-  SNAPSHOT_BUCKET: ''
+  ZIP_UPLOAD_BACKEND: s3
+  ZIP_UPLOAD_PREFIX: zip-uploads/
+  SNAPSHOT_S3_REGION: us-east-1
+  SNAPSHOT_S3_FORCE_PATH_STYLE: 'true'
 resources:
   requests:
     cpu: 300m
@@ -18,7 +21,7 @@ resources:
     cpu: '2'
     memory: 2Gi
 hpa:
-  enabled: true
+  enabled: false
   minReplicas: 3
   maxReplicas: 10
 externalSecrets:
@@ -26,4 +29,8 @@ externalSecrets:
   storeRefName: vault-prod
   targetName: zip-ingest-service-secrets
   remotePath: secret/data/lma/zip-ingest-service/prod
-  keys: []
+  keys:
+  - SNAPSHOT_BUCKET
+  - SNAPSHOT_S3_ENDPOINT
+  - SNAPSHOT_S3_ACCESS_KEY
+  - SNAPSHOT_S3_SECRET_KEY
