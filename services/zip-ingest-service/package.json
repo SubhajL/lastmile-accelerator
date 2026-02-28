@@ -15,7 +15,8 @@
     "@aws-sdk/util-format-url": "3.922.0",
     "@smithy/protocol-http": "5.3.4",
     "@smithy/signature-v4": "5.3.4",
-    "fastify": "4.27.0"
+    "fastify": "4.27.0",
+    "redis": "4.6.12"
   },
   "devDependencies": {
     "@types/node": "^20.10.6",
