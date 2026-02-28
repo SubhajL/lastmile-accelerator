@@ -4,6 +4,7 @@ import { join } from 'node:path';
 
 import type { FastifyInstance } from 'fastify';
 
+import { createRedisZipUploadSessionStoreFromUrl } from '../lib/redis-zip-upload-session-store.js';
 import { createSnapshotViaOrchestrator } from '../lib/snapshot-orchestrator-client.js';
 import type { ZipSourceRefWithSha256 } from '../lib/snapshot-orchestrator-client.js';
 import {
@@ -13,6 +14,7 @@ import {
   getS3ZipUploadsConfigFromEnv,
   headZipUploadSizeBytes,
 } from '../lib/s3-zip-uploads.js';
+import type { ZipUploadSession, ZipUploadSessionStore } from '../lib/zip-upload-session-store.js';
 
 type InitiateZipIngestBody = {
   filename?: string;
@@ -74,13 +76,6 @@ function parseUploadBackend(value: string | undefined): UploadBackend {
   return 'service';
 }
 
-type S3UploadSession = {
-  projectId: string;
-  bucket: string;
-  objectKey: string;
-  expiresAtUnixSeconds: number;
-};
-
 export function registerZipUploadRoutes(
   app: FastifyInstance,
   opts?: {
@@ -89,6 +84,7 @@ export function registerZipUploadRoutes(
     uploadSigningSecret?: string;
     uploadTokenTtlSeconds?: number;
     uploadMaxBytes?: number;
+    zipUploadSessionStore?: ZipUploadSessionStore;
   },
 ): void {
   const snapshotOrchestratorUrl =
@@ -112,17 +108,41 @@ export function registerZipUploadRoutes(
   const uploadBackend = parseUploadBackend(process.env.ZIP_UPLOAD_BACKEND);
   const s3Cfg = uploadBackend === 's3' ? getS3ZipUploadsConfigFromEnv() : null;
   const s3Client = uploadBackend === 's3' && s3Cfg ? createS3Client(s3Cfg) : null;
-  const s3Sessions = new Map<string, S3UploadSession>();
-  const s3SessionPruneGraceSeconds = uploadTokenTtlSeconds;
+  const injectedZipUploadSessionStore = opts?.zipUploadSessionStore ?? null;
+  const redisUrl = process.env.REDIS_URL;
+  const s3SessionTtlSeconds = uploadTokenTtlSeconds * 2;
+  let redisZipUploadSessionStorePromise: Promise<ZipUploadSessionStore> | null = null;
 
-  function pruneStaleS3Sessions(nowUnixSeconds: number): void {
-    const hardExpiryUnixSeconds = nowUnixSeconds - s3SessionPruneGraceSeconds;
-    for (const [uploadId, session] of s3Sessions.entries()) {
-      if (session.expiresAtUnixSeconds < hardExpiryUnixSeconds) {
-        s3Sessions.delete(uploadId);
+  async function getZipUploadSessionStore(): Promise<ZipUploadSessionStore | null> {
+    if (injectedZipUploadSessionStore) return injectedZipUploadSessionStore;
+    if (uploadBackend !== 's3') return null;
+    if (!redisUrl) return null;
+
+    if (!redisZipUploadSessionStorePromise) {
+      redisZipUploadSessionStorePromise = createRedisZipUploadSessionStoreFromUrl({
+        redisUrl,
+        keyPrefix: 'zip-upload-sessions:',
+        logger: { error: (obj, msg) => app.log.error({ obj }, msg ?? 'Redis client error') },
+      }).catch((err) => {
+        redisZipUploadSessionStorePromise = null;
+        throw err;
+      });
+    }
+
+    return await redisZipUploadSessionStorePromise;
+  }
+
+  app.addHook('onClose', async () => {
+    await injectedZipUploadSessionStore?.close();
+    if (redisZipUploadSessionStorePromise) {
+      try {
+        const store = await redisZipUploadSessionStorePromise;
+        await store.close();
+      } catch (err) {
+        app.log.error({ err }, 'Redis store close skipped due to init error');
       }
     }
-  }
+  });
 
   app.post<{ Params: { projectId: string }; Body: InitiateZipIngestBody }>(
     '/v1/projects/:projectId/ingest/zip/initiate',
@@ -143,8 +163,6 @@ export function registerZipUploadRoutes(
       },
     },
     async (req, reply) => {
-      pruneStaleS3Sessions(Math.floor(Date.now() / 1000));
-
       const uploadId = newUploadId();
       const expires = Math.floor(Date.now() / 1000) + uploadTokenTtlSeconds;
       const filename = req.body?.filename ?? `${uploadId}.zip`;
@@ -153,6 +171,18 @@ export function registerZipUploadRoutes(
         if (!s3Cfg) {
           req.log.error('ZIP_UPLOAD_BACKEND=s3 but S3 env is not configured');
           return reply.code(500).send({ error: 's3_not_configured' });
+        }
+
+        let sessionStore: ZipUploadSessionStore | null = null;
+        try {
+          sessionStore = await getZipUploadSessionStore();
+        } catch (err) {
+          req.log.error({ err }, 'zip upload session store init failed');
+          return reply.code(502).send({ error: 'redis_unavailable' });
+        }
+        if (!sessionStore) {
+          req.log.error('ZIP_UPLOAD_BACKEND=s3 but REDIS_URL is not configured');
+          return reply.code(500).send({ error: 'redis_not_configured' });
         }
 
         const objectKey = buildZipUploadObjectKey({
@@ -167,12 +197,13 @@ export function registerZipUploadRoutes(
           expiresInSeconds: uploadTokenTtlSeconds,
         });
 
-        s3Sessions.set(uploadId, {
+        const session: ZipUploadSession = {
           projectId: req.params.projectId,
           bucket: s3Cfg.bucket,
           objectKey,
           expiresAtUnixSeconds: expires,
-        });
+        };
+        await sessionStore.putSession({ uploadId, session, ttlSeconds: s3SessionTtlSeconds });
 
         return reply.code(201).send({
           uploadId,
@@ -235,15 +266,25 @@ export function registerZipUploadRoutes(
         return reply.code(500).send({ error: 's3_not_configured' });
       }
 
-      pruneStaleS3Sessions(Math.floor(Date.now() / 1000));
+      let sessionStore: ZipUploadSessionStore | null = null;
+      try {
+        sessionStore = await getZipUploadSessionStore();
+      } catch (err) {
+        req.log.error({ err }, 'zip upload session store init failed');
+        return reply.code(502).send({ error: 'redis_unavailable' });
+      }
+      if (!sessionStore) {
+        req.log.error('ZIP_UPLOAD_BACKEND=s3 but REDIS_URL is not configured');
+        return reply.code(500).send({ error: 'redis_not_configured' });
+      }
 
-      const session = s3Sessions.get(req.body.uploadId);
+      const session = await sessionStore.getSession(req.body.uploadId);
       if (!session || session.projectId !== req.params.projectId) {
         return reply.code(404).send({ error: 'zip_upload_not_found' });
       }
       const now = Math.floor(Date.now() / 1000);
       if (session.expiresAtUnixSeconds < now) {
-        s3Sessions.delete(req.body.uploadId);
+        await sessionStore.deleteSession(req.body.uploadId);
         return reply.code(401).send({ error: 'zip_upload_expired' });
       }
 
@@ -288,7 +329,7 @@ export function registerZipUploadRoutes(
           },
         });
 
-        s3Sessions.delete(req.body.uploadId);
+        await sessionStore.deleteSession(req.body.uploadId);
         return reply.code(201).send({ snapshotId });
       } catch (err) {
         req.log.error({ err }, 'snapshot-orchestrator request failed');

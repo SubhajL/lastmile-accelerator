@@ -4,6 +4,7 @@ import http from 'node:http';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 
 import { createApp } from '../app.js';
+import { createInMemoryZipUploadSessionStore } from '../lib/zip-upload-session-store.js';
 
 function startStubOrchestrator(args: {
   handler: (req: http.IncomingMessage, body: string) => { statusCode?: number; body: unknown };
@@ -143,7 +144,8 @@ describe('zip signed-upload flow', () => {
     vi.stubEnv('SNAPSHOT_S3_FORCE_PATH_STYLE', 'true');
     vi.stubEnv('ZIP_UPLOAD_PREFIX', 'zip-uploads/');
 
-    const app = await createApp({ logger: false });
+    const sessionStore = createInMemoryZipUploadSessionStore();
+    const app = await createApp({ zipUploadSessionStore: sessionStore, logger: false });
 
     const initRes = await app.inject({
       method: 'POST',
@@ -176,6 +178,13 @@ describe('zip signed-upload flow', () => {
     expect(uploadUrl.searchParams.get('X-Amz-Expires')).toBeTruthy();
     expect(uploadUrl.searchParams.get('X-Amz-Signature')).toBeTruthy();
 
+    await expect(sessionStore.getSession(initJson.uploadId)).resolves.toEqual({
+      projectId: 'p123',
+      bucket: 'snapshots',
+      objectKey: `zip-uploads/p123/${initJson.uploadId}.zip`,
+      expiresAtUnixSeconds: expect.any(Number),
+    });
+
     await app.close();
   });
 
@@ -191,6 +200,29 @@ describe('zip signed-upload flow', () => {
     });
     expect(initRes.statusCode).toBe(500);
     expect(initRes.json()).toEqual({ error: 's3_not_configured' });
+
+    await app.close();
+  });
+
+  test('initiate returns 500 when ZIP_UPLOAD_BACKEND=s3 but REDIS_URL is missing (no injected store)', async () => {
+    vi.stubEnv('ZIP_UPLOAD_BACKEND', 's3');
+    vi.stubEnv('SNAPSHOT_BUCKET', 'snapshots');
+    vi.stubEnv('SNAPSHOT_S3_ENDPOINT', 'http://minio.example:9000');
+    vi.stubEnv('SNAPSHOT_S3_REGION', 'us-east-1');
+    vi.stubEnv('SNAPSHOT_S3_ACCESS_KEY', 'minio-access-key');
+    vi.stubEnv('SNAPSHOT_S3_SECRET_KEY', 'minio-secret-key');
+    vi.stubEnv('SNAPSHOT_S3_FORCE_PATH_STYLE', 'true');
+    vi.stubEnv('ZIP_UPLOAD_PREFIX', 'zip-uploads/');
+
+    const app = await createApp({ logger: false });
+
+    const initRes = await app.inject({
+      method: 'POST',
+      url: '/v1/projects/p123/ingest/zip/initiate',
+      payload: { filename: 'repo.zip' },
+    });
+    expect(initRes.statusCode).toBe(500);
+    expect(initRes.json()).toEqual({ error: 'redis_not_configured' });
 
     await app.close();
   });
@@ -252,7 +284,12 @@ describe('zip signed-upload flow', () => {
     vi.stubEnv('SNAPSHOT_S3_FORCE_PATH_STYLE', 'true');
     vi.stubEnv('ZIP_UPLOAD_PREFIX', 'zip-uploads/');
 
-    const app = await createApp({ snapshotOrchestratorUrl: stub.url, logger: false });
+    const sessionStore = createInMemoryZipUploadSessionStore();
+    const app = await createApp({
+      snapshotOrchestratorUrl: stub.url,
+      zipUploadSessionStore: sessionStore,
+      logger: false,
+    });
 
     const initRes = await app.inject({
       method: 'POST',
@@ -304,7 +341,8 @@ describe('zip signed-upload flow', () => {
     vi.stubEnv('SNAPSHOT_S3_SECRET_KEY', 'minio-secret-key');
     vi.stubEnv('SNAPSHOT_S3_FORCE_PATH_STYLE', 'true');
 
-    const app = await createApp({ logger: false });
+    const sessionStore = createInMemoryZipUploadSessionStore();
+    const app = await createApp({ zipUploadSessionStore: sessionStore, logger: false });
     const res = await app.inject({
       method: 'POST',
       url: '/v1/projects/p123/ingest/zip/complete',
@@ -315,50 +353,6 @@ describe('zip signed-upload flow', () => {
     expect(res.json()).toEqual({ error: 'zip_upload_not_found' });
 
     await Promise.all([app.close(), s3.close()]);
-  });
-
-  test('complete returns 404 after session has been pruned (stale beyond TTL grace)', async () => {
-    const s3 = await startStubS3({
-      handler: () => ({ statusCode: 200, headers: { 'content-length': '1' } }),
-    });
-
-    vi.stubEnv('ZIP_UPLOAD_BACKEND', 's3');
-    vi.stubEnv('SNAPSHOT_BUCKET', 'snapshots');
-    vi.stubEnv('SNAPSHOT_S3_ENDPOINT', s3.url);
-    vi.stubEnv('SNAPSHOT_S3_REGION', 'us-east-1');
-    vi.stubEnv('SNAPSHOT_S3_ACCESS_KEY', 'minio-access-key');
-    vi.stubEnv('SNAPSHOT_S3_SECRET_KEY', 'minio-secret-key');
-    vi.stubEnv('SNAPSHOT_S3_FORCE_PATH_STYLE', 'true');
-    vi.stubEnv('ZIP_UPLOAD_PREFIX', 'zip-uploads/');
-
-    const realNow = Date.now;
-    let nowMs = 1_700_000_000_000;
-    Date.now = () => nowMs;
-
-    try {
-      const app = await createApp({ uploadTokenTtlSeconds: 1, logger: false });
-
-      const initRes = await app.inject({
-        method: 'POST',
-        url: '/v1/projects/p123/ingest/zip/initiate',
-        payload: { filename: 'repo.zip' },
-      });
-      const initJson = initRes.json() as { uploadId: string };
-
-      nowMs += 3_000;
-      const res = await app.inject({
-        method: 'POST',
-        url: '/v1/projects/p123/ingest/zip/complete',
-        payload: { uploadId: initJson.uploadId, filename: 'repo.zip' },
-      });
-
-      expect(res.statusCode).toBe(404);
-      expect(res.json()).toEqual({ error: 'zip_upload_not_found' });
-
-      await Promise.all([app.close(), s3.close()]);
-    } finally {
-      Date.now = realNow;
-    }
   });
 
   test('complete returns 404 when S3 object is missing', async () => {
@@ -375,7 +369,8 @@ describe('zip signed-upload flow', () => {
     vi.stubEnv('SNAPSHOT_S3_FORCE_PATH_STYLE', 'true');
     vi.stubEnv('ZIP_UPLOAD_PREFIX', 'zip-uploads/');
 
-    const app = await createApp({ logger: false });
+    const sessionStore = createInMemoryZipUploadSessionStore();
+    const app = await createApp({ zipUploadSessionStore: sessionStore, logger: false });
 
     const initRes = await app.inject({
       method: 'POST',
@@ -414,7 +409,12 @@ describe('zip signed-upload flow', () => {
     vi.stubEnv('SNAPSHOT_S3_FORCE_PATH_STYLE', 'true');
     vi.stubEnv('ZIP_UPLOAD_PREFIX', 'zip-uploads/');
 
-    const app = await createApp({ snapshotOrchestratorUrl: stub.url, logger: false });
+    const sessionStore = createInMemoryZipUploadSessionStore();
+    const app = await createApp({
+      snapshotOrchestratorUrl: stub.url,
+      zipUploadSessionStore: sessionStore,
+      logger: false,
+    });
 
     const initRes = await app.inject({
       method: 'POST',

@@ -28,6 +28,7 @@ externalSecrets:
   targetName: zip-ingest-service-secrets
   remotePath: secret/data/lma/zip-ingest-service/dev
   keys:
+  - REDIS_URL
   - SNAPSHOT_BUCKET
   - SNAPSHOT_S3_ENDPOINT
   - SNAPSHOT_S3_ACCESS_KEY
