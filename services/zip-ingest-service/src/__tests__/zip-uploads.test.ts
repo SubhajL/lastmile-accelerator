@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import http from 'node:http';
 
-import { describe, expect, test } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 
 import { createApp } from '../app.js';
 
@@ -30,6 +30,10 @@ function startStubOrchestrator(args: {
 }
 
 describe('zip signed-upload flow', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   test('initiate returns uploadUrl and upload creates snapshot', async () => {
     const snapshotId = 'snap_0123456789abcdef0123456789abcdef';
     const zipBytes = Buffer.from('not really a zip but good enough for MVP tests', 'utf8');
@@ -105,6 +109,68 @@ describe('zip signed-upload flow', () => {
     });
 
     await Promise.all([app.close(), stub.close()]);
+  });
+
+  test('initiate returns S3 presigned URL when ZIP_UPLOAD_BACKEND=s3', async () => {
+    vi.stubEnv('ZIP_UPLOAD_BACKEND', 's3');
+    vi.stubEnv('SNAPSHOT_BUCKET', 'snapshots');
+    vi.stubEnv('SNAPSHOT_S3_ENDPOINT', 'http://minio.example:9000');
+    vi.stubEnv('SNAPSHOT_S3_REGION', 'us-east-1');
+    vi.stubEnv('SNAPSHOT_S3_ACCESS_KEY', 'minio-access-key');
+    vi.stubEnv('SNAPSHOT_S3_SECRET_KEY', 'minio-secret-key');
+    vi.stubEnv('SNAPSHOT_S3_FORCE_PATH_STYLE', 'true');
+    vi.stubEnv('ZIP_UPLOAD_PREFIX', 'zip-uploads/');
+
+    const app = await createApp({ logger: false });
+
+    const initRes = await app.inject({
+      method: 'POST',
+      url: '/v1/projects/p123/ingest/zip/initiate',
+      payload: { filename: 'repo.zip' },
+    });
+    expect(initRes.statusCode).toBe(201);
+    const initJson = initRes.json() as {
+      uploadId: string;
+      uploadUrl: string;
+      uploadBackend?: string;
+      bucket?: string;
+      objectKey?: string;
+      method?: string;
+      contentType?: string;
+      filename: string;
+      maxBytes: number;
+    };
+    expect(initJson.uploadId).toMatch(/^upl_/);
+    expect(initJson.uploadBackend).toBe('s3');
+    expect(initJson.bucket).toBe('snapshots');
+    expect(initJson.objectKey).toBe(`zip-uploads/p123/${initJson.uploadId}.zip`);
+    expect(initJson.method).toBe('PUT');
+    expect(initJson.contentType).toBe('application/zip');
+
+    const uploadUrl = new URL(initJson.uploadUrl);
+    expect(uploadUrl.origin).toBe('http://minio.example:9000');
+    expect(uploadUrl.pathname).toBe(`/snapshots/${initJson.objectKey}`);
+    expect(uploadUrl.searchParams.get('X-Amz-Algorithm')).toBe('AWS4-HMAC-SHA256');
+    expect(uploadUrl.searchParams.get('X-Amz-Expires')).toBeTruthy();
+    expect(uploadUrl.searchParams.get('X-Amz-Signature')).toBeTruthy();
+
+    await app.close();
+  });
+
+  test('initiate returns 500 when ZIP_UPLOAD_BACKEND=s3 but S3 env is missing', async () => {
+    vi.stubEnv('ZIP_UPLOAD_BACKEND', 's3');
+
+    const app = await createApp({ logger: false });
+
+    const initRes = await app.inject({
+      method: 'POST',
+      url: '/v1/projects/p123/ingest/zip/initiate',
+      payload: { filename: 'repo.zip' },
+    });
+    expect(initRes.statusCode).toBe(500);
+    expect(initRes.json()).toEqual({ error: 's3_not_configured' });
+
+    await app.close();
   });
 
   test('upload rejects invalid token', async () => {
